@@ -1,0 +1,71 @@
+:root {
+  --paper: #FAFAF8;
+  --ink: #111111;
+  --hairline: #E4E2DD;
+  --accent: #E0102A;
+}
+
+html,
+body {
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+body {
+  min-height: 100%;
+  background: var(--paper);
+  color: var(--ink);
+}
+
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  font: inherit;
+}
+
+.disp {
+  font-family: var(--font-archivo), sans-serif;
+  font-weight: 900;
+}
+
+.mono {
+  font-family: var(--font-jetbrains-mono), monospace;
+}
+
+.row-hover {
+  transition: background 0.12s ease;
+}
+.row-hover:hover {
+  background: #F1F0EB;
+}
+
+.book-btn {
+  transition: background 0.12s ease, color 0.12s ease;
+  background: transparent;
+}
+.book-btn:hover {
+  background: #111111;
+  color: #FAFAF8 !important;
+}
+.row-hover:hover .book-btn {
+  background: #111111;
+  color: #FAFAF8;
+}
+
+::selection {
+  background: #E0102A;
+  color: #FAFAF8;
+}
+
+input:focus {
+  outline: none;
+}
