@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import type { CalendarEvent, Club } from "@/lib/types";
-import type { EventRow, ClubRow } from "@/lib/supabase/types";
+import type { EventRow, ClubRow, EventPendingRow } from "@/lib/supabase/types";
 
 function toCalendarEvent(row: EventRow): CalendarEvent {
   return {
@@ -81,4 +81,15 @@ export async function getAllEventRows(): Promise<EventRow[]> {
 
   if (error) throw error;
   return data as EventRow[];
+}
+
+export async function getPendingChangeRows(): Promise<EventPendingRow[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("events_pending")
+    .select("*")
+    .order("created_at", { ascending: true });
+
+  if (error) throw error;
+  return data as EventPendingRow[];
 }
