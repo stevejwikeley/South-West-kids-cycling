@@ -4,10 +4,11 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { MapPin, Search, X, Rss, ArrowUpRight } from "lucide-react";
 import RouteLine from "./RouteLine";
-import { EVENT_DISCIPLINES, EVENTS, eventDisc, ageLabel, type DisciplineId, type CalendarEvent } from "@/lib/mock-data";
+import { EVENT_DISCIPLINES, eventDisc, ageLabel } from "@/lib/mock-data";
+import type { DisciplineId, CalendarEvent } from "@/lib/types";
 import { MONTHS, fmtDay } from "@/lib/format";
 
-export default function CalendarPage() {
+export default function CalendarPage({ events }: { events: CalendarEvent[] }) {
   const [activeDisc, setActiveDisc] = useState<Set<DisciplineId>>(new Set());
   const [region, setRegion] = useState("all");
   const [search, setSearch] = useState("");
@@ -21,13 +22,13 @@ export default function CalendarPage() {
 
   const filtered = useMemo(
     () =>
-      EVENTS.filter((e) => {
+      events.filter((e) => {
         if (activeDisc.size > 0 && !activeDisc.has(e.discipline)) return false;
-        if (region !== "all" && e.region !== region) return false;
+        if (region !== "all" && e.region !== region && e.region !== "both") return false;
         if (search && !`${e.title} ${e.venue}`.toLowerCase().includes(search.toLowerCase())) return false;
         return true;
       }).sort((a, b) => a.date.localeCompare(b.date)),
-    [activeDisc, region, search]
+    [events, activeDisc, region, search]
   );
 
   const grouped = useMemo(() => {
@@ -62,7 +63,7 @@ export default function CalendarPage() {
           </Link>
         </div>
         <div className="mono" style={{ display: "flex", gap: 40, marginTop: 44, fontSize: 11.5, color: "#6B6B66" }}>
-          <div><span className="disp" style={{ fontSize: 26, color: "#111111", display: "block" }}>{EVENTS.length}</span>EVENTS TRACKED</div>
+          <div><span className="disp" style={{ fontSize: 26, color: "#111111", display: "block" }}>{events.length}</span>EVENTS TRACKED</div>
           <div><span className="disp" style={{ fontSize: 26, color: "#111111", display: "block" }}>5–16</span>AGE RANGE</div>
           <div><span className="disp" style={{ fontSize: 26, color: "#111111", display: "block" }}>2</span>COUNTIES</div>
         </div>

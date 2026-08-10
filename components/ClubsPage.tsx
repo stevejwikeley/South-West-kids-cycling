@@ -2,9 +2,10 @@
 
 import { useMemo, useState } from "react";
 import { MapPin, Search, X, ExternalLink } from "lucide-react";
-import { CLUB_DISCIPLINES, CLUBS, clubDisc } from "@/lib/mock-data";
+import { CLUB_DISCIPLINES, clubDisc } from "@/lib/mock-data";
+import type { Club } from "@/lib/types";
 
-export default function ClubsPage() {
+export default function ClubsPage({ clubs }: { clubs: Club[] }) {
   const [activeDisc, setActiveDisc] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
 
@@ -17,12 +18,12 @@ export default function ClubsPage() {
 
   const filtered = useMemo(
     () =>
-      CLUBS.filter((c) => {
+      clubs.filter((c) => {
         if (activeDisc.size > 0 && !c.disciplines.some((d) => activeDisc.has(d))) return false;
         if (search && !`${c.name} ${c.location}`.toLowerCase().includes(search.toLowerCase())) return false;
         return true;
       }),
-    [activeDisc, search]
+    [clubs, activeDisc, search]
   );
 
   return (
@@ -100,7 +101,7 @@ export default function ClubsPage() {
                     {c.kidsOnly ? "YOUTH ONLY" : "OPEN AGES"}
                   </span>
                 </div>
-                <a href={c.website} target="_blank" rel="noreferrer" style={{ flexShrink: 0, fontSize: 12, fontWeight: 700, color: "#111111", display: "flex", alignItems: "center", gap: 6, borderBottom: "1px solid #111111", paddingBottom: 2, marginLeft: "auto" }}>
+                <a href={c.website ?? "#"} target="_blank" rel="noreferrer" style={{ flexShrink: 0, fontSize: 12, fontWeight: 700, color: "#111111", display: "flex", alignItems: "center", gap: 6, borderBottom: "1px solid #111111", paddingBottom: 2, marginLeft: "auto" }}>
                   Visit site <ExternalLink size={12} />
                 </a>
               </div>
