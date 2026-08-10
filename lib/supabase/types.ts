@@ -91,14 +91,23 @@ export interface ProfileRow {
   created_at: string;
 }
 
+// GenericTable (postgrest-js) requires Row/Insert/Update to structurally
+// satisfy Record<string, unknown> — a plain interface without an index
+// signature doesn't, even though every field is one, so it silently
+// resolves table operations to `never`. Intersecting keeps EventRow etc.
+// clean everywhere else while satisfying that structural check here.
+type AsRecord<T> = T & Record<string, unknown>;
+
 export interface Database {
   public: {
     Tables: {
-      events: { Row: EventRow; Insert: Partial<EventRow>; Update: Partial<EventRow> };
-      clubs: { Row: ClubRow; Insert: Partial<ClubRow>; Update: Partial<ClubRow> };
-      events_pending: { Row: EventPendingRow; Insert: Partial<EventPendingRow>; Update: Partial<EventPendingRow> };
-      watched_sources: { Row: WatchedSourceRow; Insert: Partial<WatchedSourceRow>; Update: Partial<WatchedSourceRow> };
-      profiles: { Row: ProfileRow; Insert: Partial<ProfileRow>; Update: Partial<ProfileRow> };
+      events: { Row: AsRecord<EventRow>; Insert: AsRecord<Partial<EventRow>>; Update: AsRecord<Partial<EventRow>>; Relationships: [] };
+      clubs: { Row: AsRecord<ClubRow>; Insert: AsRecord<Partial<ClubRow>>; Update: AsRecord<Partial<ClubRow>>; Relationships: [] };
+      events_pending: { Row: AsRecord<EventPendingRow>; Insert: AsRecord<Partial<EventPendingRow>>; Update: AsRecord<Partial<EventPendingRow>>; Relationships: [] };
+      watched_sources: { Row: AsRecord<WatchedSourceRow>; Insert: AsRecord<Partial<WatchedSourceRow>>; Update: AsRecord<Partial<WatchedSourceRow>>; Relationships: [] };
+      profiles: { Row: AsRecord<ProfileRow>; Insert: AsRecord<Partial<ProfileRow>>; Update: AsRecord<Partial<ProfileRow>>; Relationships: [] };
     };
+    Views: Record<string, never>;
+    Functions: Record<string, never>;
   };
 }

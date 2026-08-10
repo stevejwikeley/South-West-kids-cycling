@@ -51,3 +51,34 @@ export async function getClubs(): Promise<Club[]> {
   if (error) throw error;
   return (data as ClubRow[]).map(toClub);
 }
+
+export async function getEventRowById(id: string): Promise<EventRow | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("events").select("*").eq("id", id).single();
+
+  if (error) return null;
+  return data as EventRow;
+}
+
+export async function getMyEventRows(userId: string): Promise<EventRow[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("events")
+    .select("*")
+    .eq("created_by", userId)
+    .order("start_datetime", { ascending: true });
+
+  if (error) throw error;
+  return data as EventRow[];
+}
+
+export async function getAllEventRows(): Promise<EventRow[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("events")
+    .select("*")
+    .order("start_datetime", { ascending: true });
+
+  if (error) throw error;
+  return data as EventRow[];
+}
