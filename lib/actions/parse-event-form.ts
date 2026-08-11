@@ -1,4 +1,4 @@
-import { ukLocalToUtcIso, ukMidnightUtcIso } from "@/lib/uk-time";
+import { ukMidnightUtcIso } from "@/lib/uk-time";
 import type {
   AgeCategory,
   BookingStatusType,
@@ -29,6 +29,9 @@ export type EventFormValues = Pick<
   | "organiser_contact"
 >;
 
+// Every event is all-day — there is no time-of-day concept anywhere in this
+// app (extraction, display, or editing), so start_datetime is always
+// midnight UTC on the given date and end_datetime is always null.
 export function parseEventForm(
   formData: FormData
 ): { ok: false; error: string } | { ok: true; values: EventFormValues } {
@@ -36,9 +39,6 @@ export function parseEventForm(
   const discipline = String(formData.get("discipline") ?? "") as DisciplineType;
   const status = String(formData.get("status") ?? "confirmed") as EventStatus;
   const date = String(formData.get("date") ?? "");
-  const allDay = formData.get("all_day") === "on";
-  const startTime = String(formData.get("start_time") ?? "");
-  const endTime = String(formData.get("end_time") ?? "");
   const venueName = String(formData.get("venue_name") ?? "").trim();
   const address = String(formData.get("address") ?? "").trim() || null;
   const postcode = String(formData.get("postcode") ?? "").trim() || null;
@@ -59,10 +59,6 @@ export function parseEventForm(
   if (ages.length === 0) return { ok: false, error: "Pick at least one age category." };
   if (!organiserUrl) return { ok: false, error: "Organiser URL is required." };
   if (bookingStatus === "open" && !bookingLink) return { ok: false, error: "Booking link is required when entries are open." };
-  if (!allDay && !startTime) return { ok: false, error: "Start time is required for a timed event." };
-
-  const start_datetime = allDay ? ukMidnightUtcIso(date) : ukLocalToUtcIso(date, startTime);
-  const end_datetime = !allDay && endTime ? ukLocalToUtcIso(date, endTime) : null;
 
   return {
     ok: true,
@@ -70,9 +66,9 @@ export function parseEventForm(
       title,
       discipline,
       status,
-      all_day: allDay,
-      start_datetime,
-      end_datetime,
+      all_day: true,
+      start_datetime: ukMidnightUtcIso(date),
+      end_datetime: null,
       venue_name: venueName,
       address,
       postcode,

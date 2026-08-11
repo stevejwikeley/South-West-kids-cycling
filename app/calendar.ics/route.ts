@@ -12,11 +12,9 @@ function dateOnly(iso: string): DateArray {
   return [y, m, d];
 }
 
-function utcDateTime(iso: string): DateArray {
-  const d = new Date(iso);
-  return [d.getUTCFullYear(), d.getUTCMonth() + 1, d.getUTCDate(), d.getUTCHours(), d.getUTCMinutes()];
-}
-
+// Every event is all-day, full stop — this ignores whatever time-of-day
+// might be sitting in start_datetime (including on rows saved before that
+// was true) rather than branching on the all_day column.
 function toIcsEvent(e: EventRow): EventAttributes {
   const location = [e.venue_name, e.address, e.postcode].filter(Boolean).join(", ");
   const description = [
@@ -28,12 +26,6 @@ function toIcsEvent(e: EventRow): EventAttributes {
     .filter(Boolean)
     .join("\n");
 
-  const timing = e.all_day
-    ? { start: dateOnly(e.start_datetime), duration: { days: 1 } }
-    : e.end_datetime
-      ? { start: utcDateTime(e.start_datetime), startInputType: "utc" as const, end: utcDateTime(e.end_datetime), endInputType: "utc" as const }
-      : { start: utcDateTime(e.start_datetime), startInputType: "utc" as const, duration: { hours: 2 } };
-
   return {
     uid: `${e.id}@southwestkidscycling.co.uk`,
     title: e.title,
@@ -41,7 +33,8 @@ function toIcsEvent(e: EventRow): EventAttributes {
     description,
     url: e.booking_link ?? e.organiser_url,
     status: e.status === "provisional" ? "TENTATIVE" : "CONFIRMED",
-    ...timing,
+    start: dateOnly(e.start_datetime),
+    duration: { days: 1 },
   };
 }
 

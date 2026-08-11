@@ -28,11 +28,9 @@ const col: React.CSSProperties = { flex: "1 1 140px" };
 export default function SuggestChangeForm({ event }: { event: EventRow }) {
   const boundSubmit = submitChangeRequest.bind(null, event.id);
   const [state, formAction, pending] = useActionState<SuggestChangeState, FormData>(boundSubmit, {});
-  const [allDay, setAllDay] = useState(event.all_day);
   const [bookingStatus, setBookingStatus] = useState(event.booking_status);
 
   const startParts = utcIsoToUkLocalParts(event.start_datetime);
-  const endParts = event.end_datetime ? utcIsoToUkLocalParts(event.end_datetime) : null;
 
   if (state.success) {
     return (
@@ -69,29 +67,8 @@ export default function SuggestChangeForm({ event }: { event: EventRow }) {
       </div>
 
       <div style={field}>
-        <label className="mono" style={{ ...label, display: "flex", alignItems: "center", gap: 8 }}>
-          <input type="checkbox" name="all_day" defaultChecked={allDay} onChange={(e) => setAllDay(e.target.checked)} />
-          ALL DAY (NO SPECIFIC TIME)
-        </label>
-      </div>
-
-      <div style={row}>
-        <div style={col}>
-          <label className="mono" style={label}>DATE</label>
-          <input style={input} type="date" name="date" defaultValue={startParts.date} required />
-        </div>
-        {!allDay && (
-          <>
-            <div style={col}>
-              <label className="mono" style={label}>START TIME</label>
-              <input style={input} type="time" name="start_time" defaultValue={startParts.time} />
-            </div>
-            <div style={col}>
-              <label className="mono" style={label}>END TIME</label>
-              <input style={input} type="time" name="end_time" defaultValue={endParts?.time} />
-            </div>
-          </>
-        )}
+        <label className="mono" style={label}>DATE</label>
+        <input style={input} type="date" name="date" defaultValue={startParts.date} required />
       </div>
 
       <div style={field}>

@@ -1,4 +1,4 @@
-import { ukLocalToUtcIso, ukMidnightUtcIso } from "@/lib/uk-time";
+import { ukMidnightUtcIso } from "@/lib/uk-time";
 import type {
   AgeCategory,
   BookingStatusType,
@@ -31,14 +31,14 @@ export interface PendingFormValues {
   organiser_contact: string | null;
 }
 
+// Every event is all-day — there is no time-of-day concept anywhere in this
+// app, so start_datetime is always midnight UTC and end_datetime is always
+// null when a date is present at all.
 export function parsePendingForm(formData: FormData): PendingFormValues {
   const title = String(formData.get("title") ?? "").trim() || null;
   const discipline = (String(formData.get("discipline") ?? "").trim() || null) as DisciplineType | null;
   const status = (String(formData.get("status") ?? "").trim() || null) as EventStatus | null;
   const date = String(formData.get("date") ?? "").trim();
-  const allDay = formData.get("all_day") === "on";
-  const startTime = String(formData.get("start_time") ?? "").trim();
-  const endTime = String(formData.get("end_time") ?? "").trim();
   const venueName = String(formData.get("venue_name") ?? "").trim() || null;
   const address = String(formData.get("address") ?? "").trim() || null;
   const postcode = String(formData.get("postcode") ?? "").trim() || null;
@@ -51,19 +51,13 @@ export function parsePendingForm(formData: FormData): PendingFormValues {
   const organiserName = String(formData.get("organiser_name") ?? "").trim() || null;
   const organiserContact = String(formData.get("organiser_contact") ?? "").trim() || null;
 
-  let start_datetime: string | null = null;
-  if (date) {
-    start_datetime = allDay || !startTime ? ukMidnightUtcIso(date) : ukLocalToUtcIso(date, startTime);
-  }
-  const end_datetime = date && !allDay && endTime ? ukLocalToUtcIso(date, endTime) : null;
-
   return {
     title,
     discipline,
     status,
-    all_day: allDay,
-    start_datetime,
-    end_datetime,
+    all_day: true,
+    start_datetime: date ? ukMidnightUtcIso(date) : null,
+    end_datetime: null,
     venue_name: venueName,
     address,
     postcode,

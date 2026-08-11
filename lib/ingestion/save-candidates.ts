@@ -43,7 +43,6 @@ export async function saveCandidates(
       discipline: candidate.discipline,
       status: candidate.status ?? "confirmed",
       start_datetime: candidate.date ? `${candidate.date}T00:00:00.000Z` : null,
-      all_day: candidate.all_day,
       venue_name: candidate.venue_name,
       address: candidate.address,
       postcode: candidate.postcode,

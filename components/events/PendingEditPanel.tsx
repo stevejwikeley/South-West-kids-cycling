@@ -36,10 +36,7 @@ interface FormValues {
   title: string;
   discipline: DisciplineType | "";
   status: EventStatus;
-  all_day: boolean;
   date: string;
-  start_time: string;
-  end_time: string;
   venue_name: string;
   address: string;
   postcode: string;
@@ -69,18 +66,13 @@ function resolveField(row: EventPendingRow, liveEvent: EventRow | null, key: str
 
 function computeInitial(row: EventPendingRow, liveEvent: EventRow | null): FormValues {
   const startDatetime = resolveField(row, liveEvent, "start_datetime") as string | null;
-  const endDatetime = resolveField(row, liveEvent, "end_datetime") as string | null;
   const startParts = startDatetime ? utcIsoToUkLocalParts(startDatetime) : null;
-  const endParts = endDatetime ? utcIsoToUkLocalParts(endDatetime) : null;
 
   return {
     title: (resolveField(row, liveEvent, "title") as string) ?? "",
     discipline: (resolveField(row, liveEvent, "discipline") as DisciplineType) ?? "",
     status: (resolveField(row, liveEvent, "status") as EventStatus) ?? "confirmed",
-    all_day: (resolveField(row, liveEvent, "all_day") as boolean) ?? true,
     date: startParts?.date ?? "",
-    start_time: startParts?.time ?? "",
-    end_time: endParts?.time ?? "",
     venue_name: (resolveField(row, liveEvent, "venue_name") as string) ?? "",
     address: (resolveField(row, liveEvent, "address") as string) ?? "",
     postcode: (resolveField(row, liveEvent, "postcode") as string) ?? "",
@@ -155,10 +147,7 @@ export default function PendingEditPanel({
     formData.set("title", values.title);
     formData.set("discipline", values.discipline);
     formData.set("status", values.status);
-    if (values.all_day) formData.set("all_day", "on");
     formData.set("date", values.date);
-    formData.set("start_time", values.start_time);
-    formData.set("end_time", values.end_time);
     formData.set("venue_name", values.venue_name);
     formData.set("address", values.address);
     formData.set("postcode", values.postcode);
@@ -233,30 +222,9 @@ export default function PendingEditPanel({
         </div>
 
         <div style={fieldStyle}>
-          <label className="mono" style={{ ...labelStyle, display: "flex", alignItems: "center", gap: 8 }}>
-            <input type="checkbox" checked={values.all_day} onChange={(e) => set("all_day", e.target.checked)} />
-            ALL DAY (NO SPECIFIC TIME)
-          </label>
-        </div>
-
-        <div style={rowStyle}>
-          <div style={colStyle}>
-            <label className="mono" style={labelStyle}>DATE</label>
-            <input style={inputStyle} type="date" value={values.date} onChange={(e) => set("date", e.target.value)} />
-            <LiveHint liveValue={liveFor("start_datetime") ? liveFor("start_datetime").slice(0, 10) : ""} onUse={() => liveEvent && set("date", utcIsoToUkLocalParts(liveEvent.start_datetime).date)} />
-          </div>
-          {!values.all_day && (
-            <>
-              <div style={colStyle}>
-                <label className="mono" style={labelStyle}>START TIME</label>
-                <input style={inputStyle} type="time" value={values.start_time} onChange={(e) => set("start_time", e.target.value)} />
-              </div>
-              <div style={colStyle}>
-                <label className="mono" style={labelStyle}>END TIME</label>
-                <input style={inputStyle} type="time" value={values.end_time} onChange={(e) => set("end_time", e.target.value)} />
-              </div>
-            </>
-          )}
+          <label className="mono" style={labelStyle}>DATE</label>
+          <input style={inputStyle} type="date" value={values.date} onChange={(e) => set("date", e.target.value)} />
+          <LiveHint liveValue={liveFor("start_datetime") ? liveFor("start_datetime").slice(0, 10) : ""} onUse={() => liveEvent && set("date", utcIsoToUkLocalParts(liveEvent.start_datetime).date)} />
         </div>
 
         <div style={fieldStyle}>

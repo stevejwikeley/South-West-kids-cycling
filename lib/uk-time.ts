@@ -1,18 +1,3 @@
-// Converts a UK wall-clock date+time (as entered in a form) to a correct UTC
-// ISO string, accounting for BST/GMT — needed because event times are always
-// entered in UK local time regardless of the season.
-function ukOffsetMinutes(instant: Date): number {
-  const asUtc = new Date(instant.toLocaleString("en-US", { timeZone: "UTC" }));
-  const asUk = new Date(instant.toLocaleString("en-US", { timeZone: "Europe/London" }));
-  return (asUk.getTime() - asUtc.getTime()) / 60000;
-}
-
-export function ukLocalToUtcIso(dateStr: string, timeStr: string): string {
-  const naive = new Date(`${dateStr}T${timeStr}:00Z`);
-  const offsetMin = ukOffsetMinutes(naive);
-  return new Date(naive.getTime() - offsetMin * 60000).toISOString();
-}
-
 export function ukMidnightUtcIso(dateStr: string): string {
   return `${dateStr}T00:00:00.000Z`;
 }

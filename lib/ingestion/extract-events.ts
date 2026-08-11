@@ -20,9 +20,6 @@ const ExtractedEventSchema = z.object({
   discipline: z.enum(DISCIPLINES).nullable(),
   status: z.enum(STATUSES).nullable(),
   date: z.string().nullable().describe("ISO date YYYY-MM-DD. Null if no date is legible."),
-  all_day: z.boolean(),
-  start_time: z.string().nullable().describe("24-hour HH:MM. Null if no specific time is given."),
-  end_time: z.string().nullable(),
   venue_name: z.string().nullable(),
   address: z.string().nullable(),
   postcode: z.string().nullable(),
@@ -58,7 +55,7 @@ Rules:
 - Leave a field null rather than guessing. A poster rarely states exact time, address, or a booking link — leave those null for a human reviewer rather than inventing plausible-looking values.
 - Disciplines: cx (cyclocross), xc (cross country mountain biking), road, tri (triathlon), clusters (club coaching/training sessions, "Go-Ride" style), other.
 - Age categories are u8/u10/u12/u14/u16 — only include ones explicitly stated or clearly implied (e.g. "Under 10s and Under 12s" → ["u10","u12"]).
-- all_day must be true unless the source states an actual start time — if you set all_day to false, start_time must be non-null. Most listings only give a date, not a time, so all_day is usually true.
+- Every event on this calendar is treated as all-day — don't extract or infer a start/end time even if the source states one.
 - confidence should reflect the whole event: high when title, date, venue and discipline are all clear and unambiguous; low when you had to infer significantly or the source is degraded/ambiguous.
 - If nothing in the content is a relevant event, return an empty events array.`;
 }
