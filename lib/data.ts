@@ -37,9 +37,11 @@ function toClub(row: ClubRow): Club {
 
 export async function getEvents(): Promise<CalendarEvent[]> {
   const supabase = await createClient();
+  const today = new Date().toISOString().slice(0, 10);
   const { data, error } = await supabase
     .from("events")
     .select("*")
+    .gte("start_datetime", today)
     .order("start_datetime", { ascending: true });
 
   if (error) throw error;
