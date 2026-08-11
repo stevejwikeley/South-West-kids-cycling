@@ -67,10 +67,24 @@ export async function GET() {
     return new Response("Failed to generate calendar", { status: 500 });
   }
 
-  return new Response(value, {
+  // The `ics` package already emits X-PUBLISHED-TTL:PT1H by default (not
+  // configurable, but already the value we'd want). REFRESH-INTERVAL is the
+  // newer RFC 7986 equivalent it doesn't emit — added here since some
+  // clients (Google Calendar reliably; iOS Calendar largely ignores both and
+  // keeps its own schedule regardless) poll faster with it present. Neither
+  // can force an instant push to a subscribed feed — that's a fundamental
+  // limit of the pull-based subscription model, not something a server can
+  // override.
+  const withRefreshHint = value.replace(
+    "CALSCALE:GREGORIAN",
+    "CALSCALE:GREGORIAN\r\nREFRESH-INTERVAL;VALUE=DURATION:PT1H"
+  );
+
+  return new Response(withRefreshHint, {
     headers: {
       "Content-Type": "text/calendar; charset=utf-8",
       "Content-Disposition": 'inline; filename="calendar.ics"',
+      "Cache-Control": "no-store, max-age=0",
     },
   });
 }

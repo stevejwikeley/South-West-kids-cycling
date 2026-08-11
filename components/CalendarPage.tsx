@@ -142,11 +142,11 @@ export default function CalendarPage({ events }: { events: CalendarEvent[] }) {
                       {e.kidsOnly ? "KIDS ONLY" : "KIDS + ADULTS"}
                     </span>
                     {e.bookingStatus === "open" ? (
-                      <a href={e.booking ?? "#"} className="book-btn" style={{ flexShrink: 0, fontSize: 12, fontWeight: 700, color: "#111111", border: "1px solid #111111", padding: "8px 18px" }}>
+                      <a href={e.booking ?? "#"} target="_blank" rel="noreferrer" className="book-btn" style={{ flexShrink: 0, fontSize: 12, fontWeight: 700, color: "#111111", border: "1px solid #111111", padding: "8px 18px" }}>
                         Book
                       </a>
                     ) : (
-                      <a href={e.organiserUrl} style={{ flexShrink: 0, fontSize: 12, fontWeight: 700, color: "#6B6B66", border: "1px solid #D8D6D0", padding: "8px 18px" }}>
+                      <a href={e.organiserUrl} target="_blank" rel="noreferrer" style={{ flexShrink: 0, fontSize: 12, fontWeight: 700, color: "#6B6B66", border: "1px solid #D8D6D0", padding: "8px 18px" }}>
                         Club website
                       </a>
                     )}

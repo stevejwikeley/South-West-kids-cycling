@@ -58,7 +58,7 @@ button {
 }
 .row-hover:hover .book-btn {
   background: #111111;
-  color: #FAFAF8;
+  color: #FAFAF8 !important;
 }
 
 ::selection {
