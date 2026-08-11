@@ -52,10 +52,10 @@ export default function CalendarPage({ events }: { events: CalendarEvent[] }) {
         </p>
         <div style={{ display: "flex", gap: 28, alignItems: "flex-start", marginTop: 30, flexWrap: "wrap" }}>
           <div>
-            <a href="/calendar.ics" style={{ background: "#111111", color: "#FAFAF8", border: "none", padding: "13px 24px", fontWeight: 700, fontSize: 13.5, display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
+            <Link href="/subscribe" style={{ background: "#111111", color: "#FAFAF8", border: "none", padding: "13px 24px", fontWeight: 700, fontSize: 13.5, display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
               <Rss size={15} /> Subscribe to calendar
-            </a>
-            <div className="mono" style={{ fontSize: 10.5, color: "#9A9992", marginTop: 8 }}>Add the live calendar to your phone&apos;s calendar</div>
+            </Link>
+            <div className="mono" style={{ fontSize: 10.5, color: "#9A9992", marginTop: 8 }}>Works with Google Calendar, Apple Calendar, Outlook &amp; more</div>
           </div>
           <Link href="/getting-started" style={{ fontSize: 13.5, fontWeight: 700, display: "flex", alignItems: "center", gap: 5, borderBottom: "1px solid #111111", paddingBottom: 2, marginTop: 13 }}>
             New to racing? Start here <ArrowUpRight size={14} />
