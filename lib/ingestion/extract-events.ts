@@ -45,11 +45,15 @@ const ExtractionResultSchema = z.object({
 
 export type ExtractedEvent = z.infer<typeof ExtractedEventSchema>;
 
-const SYSTEM_PROMPT = `You extract youth cycling event listings for South West Kids Cycling, a calendar covering ages 5-16 in Devon & Cornwall, England.
+function buildSystemPrompt(): string {
+  const today = new Date().toISOString().slice(0, 10);
+
+  return `You extract youth cycling event listings for South West Kids Cycling, a calendar covering ages 5-16 in Devon & Cornwall, England. Today's date is ${today}.
 
 Extract every distinct event you find in the given content (a page, poster, or pasted text may list several rounds of a series — extract each as a separate entry).
 
 Rules:
+- Only extract events happening on or after ${today}. Skip anything dated in the past — this calendar only lists upcoming events, so a past listing (e.g. last year's round of a series, an old training session) is not useful even if it's otherwise a good match. If a date can't be determined at all, still extract the event (a human will confirm the date).
 - Only extract youth/junior cycling events, club coaching sessions, or events that clearly include age-group categories for under-16s. Skip adult-only road racing, enduro, and anything outside Devon/Cornwall.
 - Leave a field null rather than guessing. A poster rarely states exact time, address, or a booking link — leave those null for a human reviewer rather than inventing plausible-looking values.
 - Disciplines: cx (cyclocross), xc (cross country mountain biking), road, tri (triathlon), clusters (club coaching/training sessions, "Go-Ride" style), other.
@@ -57,6 +61,7 @@ Rules:
 - all_day must be true unless the source states an actual start time — if you set all_day to false, start_time must be non-null. Most listings only give a date, not a time, so all_day is usually true.
 - confidence should reflect the whole event: high when title, date, venue and discipline are all clear and unambiguous; low when you had to infer significantly or the source is degraded/ambiguous.
 - If nothing in the content is a relevant event, return an empty events array.`;
+}
 
 interface ExtractOptions {
   text?: string;
@@ -83,7 +88,7 @@ export async function extractEvents({ text, image }: ExtractOptions): Promise<Ex
   const response = await client.messages.parse({
     model: "claude-opus-5",
     max_tokens: 8000,
-    system: SYSTEM_PROMPT,
+    system: buildSystemPrompt(),
     output_config: { effort: "medium", format: zodOutputFormat(ExtractionResultSchema) },
     messages: [{ role: "user", content }],
   });
