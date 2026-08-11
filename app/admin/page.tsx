@@ -22,7 +22,7 @@ export default async function AdminPage() {
       </div>
 
       <p style={{ maxWidth: 480, fontSize: 14, lineHeight: 1.6, color: "#4A4A46", marginTop: 22 }}>
-        Signed in as {profile?.email}. Watched-source management lands in a later phase.
+        Signed in as {profile?.email}.
       </p>
 
       <div style={{ marginTop: 28, display: "flex", gap: 12, flexWrap: "wrap" }}>
@@ -34,6 +34,9 @@ export default async function AdminPage() {
         </Link>
         <Link href="/admin/ingest" style={{ display: "inline-flex", alignItems: "center", background: "transparent", color: "#111111", border: "1px solid #111111", padding: "11px 20px", fontWeight: 700, fontSize: 13 }}>
           Smart ingestion
+        </Link>
+        <Link href="/admin/sources" style={{ display: "inline-flex", alignItems: "center", background: "transparent", color: "#111111", border: "1px solid #111111", padding: "11px 20px", fontWeight: 700, fontSize: 13 }}>
+          Watched sources
         </Link>
       </div>
 

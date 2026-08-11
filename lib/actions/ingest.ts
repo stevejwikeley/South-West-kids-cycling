@@ -3,9 +3,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/auth";
 import { extractEvents, type ExtractedEvent } from "@/lib/ingestion/extract-events";
-import { findDuplicate } from "@/lib/ingestion/dedup";
+import { saveCandidates } from "@/lib/ingestion/save-candidates";
 import { htmlToText, isLikelyUrl } from "@/lib/ingestion/html-to-text";
-import type { EventRow } from "@/lib/supabase/types";
 
 export interface IngestState {
   error?: string;
@@ -38,50 +37,6 @@ async function requireAdmin() {
   const profile = await getCurrentProfile();
   if (!profile || profile.role !== "admin") throw new Error("Not authorised.");
   return profile;
-}
-
-async function saveCandidates(candidates: ExtractedEvent[], rawSourceRef: string, sourceUrl?: string) {
-  const supabase = await createClient();
-
-  const { data: liveEvents, error: liveError } = await supabase.from("events").select("*");
-  if (liveError) throw new Error(liveError.message);
-
-  let saved = 0;
-  for (const candidate of candidates) {
-    const duplicate = findDuplicate(candidate, (liveEvents as EventRow[]) ?? []);
-
-    const { error } = await supabase.from("events_pending").insert({
-      title: candidate.title,
-      discipline: candidate.discipline,
-      status: candidate.status ?? "confirmed",
-      start_datetime: candidate.date ? `${candidate.date}T00:00:00.000Z` : null,
-      all_day: candidate.all_day,
-      venue_name: candidate.venue_name,
-      address: candidate.address,
-      postcode: candidate.postcode,
-      region: candidate.region,
-      age_categories: candidate.age_categories,
-      kids_only: candidate.kids_only,
-      booking_status: candidate.booking_status,
-      booking_link: candidate.booking_link,
-      // organiser_url is required to publish (it's the CTA while a booking
-      // link isn't live yet) but posters/pasted text rarely state one. When
-      // the source itself was a URL, that page is a reasonable fallback —
-      // it's genuinely "the organiser's own site" for a scraped listing.
-      organiser_url: candidate.organiser_url ?? sourceUrl ?? null,
-      organiser_name: candidate.organiser_name,
-      organiser_contact: candidate.organiser_contact,
-      source_type: "smart_ingest",
-      source_detail: rawSourceRef,
-      raw_source_ref: rawSourceRef,
-      extraction_confidence: candidate.confidence,
-      duplicate_of: duplicate?.id ?? null,
-    });
-
-    if (!error) saved++;
-  }
-
-  return saved;
 }
 
 export async function ingestTextOrUrl(_prevState: IngestState, formData: FormData): Promise<IngestState> {
@@ -130,7 +85,8 @@ export async function ingestTextOrUrl(_prevState: IngestState, formData: FormDat
     return { error: "No youth cycling events found in that content." };
   }
 
-  const saved = await saveCandidates(candidates, sourceRef, isLikelyUrl(input) ? sourceRef : undefined);
+  const supabase = await createClient();
+  const saved = await saveCandidates(supabase, candidates, sourceRef, isLikelyUrl(input) ? sourceRef : undefined);
   return { success: `${saved} event${saved === 1 ? "" : "s"} sent to the pending queue for review.` };
 }
 
@@ -168,6 +124,7 @@ export async function ingestFile(_prevState: IngestState, formData: FormData): P
     return { error: "No youth cycling events found in that file." };
   }
 
-  const saved = await saveCandidates(candidates, `upload: ${file.name}`);
+  const supabase = await createClient();
+  const saved = await saveCandidates(supabase, candidates, `upload: ${file.name}`);
   return { success: `${saved} event${saved === 1 ? "" : "s"} sent to the pending queue for review.` };
 }
