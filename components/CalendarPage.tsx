@@ -109,12 +109,13 @@ export default function CalendarPage({ events }: { events: CalendarEvent[] }) {
                 const d = eventDisc(e.discipline);
                 const f = fmtDay(e.date);
                 return (
-                  <div key={e.id} className="row-hover" style={{ display: "flex", alignItems: "center", gap: 20, padding: "16px 6px", borderBottom: "1px solid #E4E2DD", flexWrap: "wrap" }}>
-                    <div className="mono" style={{ width: 88, flexShrink: 0, fontSize: 12.5, color: "#6B6B66" }}>{f.day}.{f.mon}</div>
-                    <span style={{ width: 8, height: 8, borderRadius: "50%", background: d.color, flexShrink: 0 }} />
+                  <div key={e.id} className="row-hover" style={{ display: "flex", alignItems: "center", gap: 16, padding: "14px 6px", borderBottom: "1px solid #E4E2DD", flexWrap: "wrap" }}>
                     <div style={{ flex: 1, minWidth: 220 }}>
-                      <div style={{ fontWeight: 700, fontSize: 15 }}>{e.title}</div>
-                      <div style={{ display: "flex", alignItems: "center", gap: 6, color: "#6B6B66", fontSize: 12.5, marginTop: 2, flexWrap: "wrap" }}>
+                      <div style={{ display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap" }}>
+                        <span className="mono" style={{ fontSize: 12.5, color: "#6B6B66", flexShrink: 0 }}>{f.day}.{f.mon}</span>
+                        <span style={{ fontWeight: 700, fontSize: 15 }}>{e.title}</span>
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, color: "#6B6B66", fontSize: 12.5, marginTop: 4, flexWrap: "wrap" }}>
                         <MapPin size={12} /> {e.venue}
                         <span className="mono" style={{ color: d.color, marginLeft: 6, fontSize: 10.5 }}>{d.label.toUpperCase()}</span>
                         <span className="mono" style={{ color: "#9A9992", fontSize: 10.5 }}>· {e.ages.map(ageLabel).join(", ")}</span>
@@ -123,17 +124,17 @@ export default function CalendarPage({ events }: { events: CalendarEvent[] }) {
                         <span className="mono" style={{ color: e.bookingStatus === "open" ? "#1F5D3A" : "#946A0E", fontSize: 10.5 }}>
                           · {e.bookingStatus === "open" ? "ENTRIES OPEN" : "ENTRIES TBC"}
                         </span>
+                        <span className="mono" style={{
+                          fontSize: 10, fontWeight: 700, padding: "3px 8px", letterSpacing: "0.03em",
+                          background: e.kidsOnly ? "#EAF3EC" : "#FDF3E4", color: e.kidsOnly ? "#1F5D3A" : "#946A0E",
+                        }}>
+                          {e.kidsOnly ? "KIDS ONLY" : "KIDS + ADULTS"}
+                        </span>
                         <Link href={`/events/${e.id}/suggest-change`} className="mono" style={{ color: "#9A9992", fontSize: 10.5, textDecoration: "underline" }}>
                           Suggest a change
                         </Link>
                       </div>
                     </div>
-                    <span className="mono" style={{
-                      fontSize: 10, fontWeight: 700, padding: "4px 9px", flexShrink: 0, letterSpacing: "0.03em",
-                      background: e.kidsOnly ? "#EAF3EC" : "#FDF3E4", color: e.kidsOnly ? "#1F5D3A" : "#946A0E",
-                    }}>
-                      {e.kidsOnly ? "KIDS ONLY" : "KIDS + ADULTS"}
-                    </span>
                     {e.bookingStatus === "open" ? (
                       <a href={e.booking ?? "#"} target="_blank" rel="noreferrer" className="book-btn" style={{ flexShrink: 0, fontSize: 12, fontWeight: 700, color: "#111111", border: "1px solid #111111", padding: "8px 18px" }}>
                         Book
