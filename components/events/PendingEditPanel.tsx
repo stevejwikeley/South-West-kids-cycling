@@ -87,6 +87,18 @@ function computeInitial(row: EventPendingRow, liveEvent: EventRow | null): FormV
   };
 }
 
+// Spec 4.2: a field can be populated but flagged "needs verification" —
+// distinct from the live-event hint, which is about disagreement between
+// two sources rather than the extraction's own uncertainty.
+function FlagNote({ note }: { note?: string }) {
+  if (!note) return null;
+  return (
+    <span className="mono" style={{ display: "block", marginTop: 4, fontSize: 10.5, color: "#9A6B00" }}>
+      ⚠ needs verification
+    </span>
+  );
+}
+
 function fmt(v: unknown): string {
   if (v === null || v === undefined || v === "") return "";
   if (Array.isArray(v)) return v.join(", ");
@@ -230,6 +242,7 @@ export default function PendingEditPanel({
         <div style={fieldStyle}>
           <label className="mono" style={labelStyle}>VENUE</label>
           <input style={inputStyle} value={values.venue_name} onChange={(e) => set("venue_name", e.target.value)} />
+          <FlagNote note={row.field_flags?.venue_name} />
           <LiveHint liveValue={liveFor("venue_name")} onUse={() => set("venue_name", liveFor("venue_name"))} />
         </div>
 
@@ -237,10 +250,12 @@ export default function PendingEditPanel({
           <div style={colStyle}>
             <label className="mono" style={labelStyle}>ADDRESS</label>
             <input style={inputStyle} value={values.address} onChange={(e) => set("address", e.target.value)} />
+            <FlagNote note={row.field_flags?.address} />
           </div>
           <div style={colStyle}>
             <label className="mono" style={labelStyle}>POSTCODE</label>
             <input style={inputStyle} value={values.postcode} onChange={(e) => set("postcode", e.target.value)} />
+            <FlagNote note={row.field_flags?.postcode} />
           </div>
         </div>
 
@@ -288,6 +303,7 @@ export default function PendingEditPanel({
           <div style={colStyle}>
             <label className="mono" style={labelStyle}>BOOKING LINK</label>
             <input style={inputStyle} type="url" value={values.booking_link} onChange={(e) => set("booking_link", e.target.value)} />
+            <FlagNote note={row.field_flags?.booking_link} />
             <LiveHint liveValue={liveFor("booking_link")} onUse={() => set("booking_link", liveFor("booking_link"))} />
           </div>
         </div>
@@ -295,6 +311,7 @@ export default function PendingEditPanel({
         <div style={fieldStyle}>
           <label className="mono" style={labelStyle}>ORGANISER URL</label>
           <input style={inputStyle} type="url" value={values.organiser_url} onChange={(e) => set("organiser_url", e.target.value)} />
+          <FlagNote note={row.field_flags?.organiser_url} />
           <LiveHint liveValue={liveFor("organiser_url")} onUse={() => set("organiser_url", liveFor("organiser_url"))} />
         </div>
 

@@ -52,7 +52,7 @@ export async function checkWatchedSource(
 
     const text = htmlToText(await res.text(), res.url).slice(0, 60000);
     const candidates = await extractEvents({ text });
-    const saved = await saveCandidates(supabase, candidates, source.label, source.url);
+    const saved = await saveCandidates(supabase, candidates, source.label, source.url, source.id);
 
     await supabase
       .from("watched_sources")

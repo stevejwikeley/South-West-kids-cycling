@@ -50,13 +50,17 @@ export default function EventList({
         const d = eventDisc(e.discipline as DisciplineId);
         const f = fmtDay(e.start_datetime.slice(0, 10));
         const isBusy = busyIds.has(e.id);
+        const flagCount = e.field_flags ? Object.keys(e.field_flags).length : 0;
         return (
           <div key={e.id} className="row-hover" style={{ display: "flex", alignItems: "center", gap: 20, padding: "14px 6px", borderBottom: "1px solid #E4E2DD", flexWrap: "wrap" }}>
             <div className="mono" style={{ width: 80, flexShrink: 0, fontSize: 12.5, color: "#6B6B66" }}>{f.day}.{f.mon}</div>
             <span style={{ width: 8, height: 8, borderRadius: "50%", background: d.color, flexShrink: 0 }} />
             <div style={{ flex: 1, minWidth: 200 }}>
               <div style={{ fontWeight: 700, fontSize: 14.5 }}>{e.title}</div>
-              <div className="mono" style={{ fontSize: 10.5, color: "#9A9992", marginTop: 2 }}>{e.venue_name} · {e.status.toUpperCase()}{!e.approved ? " · UNAPPROVED" : ""}</div>
+              <div className="mono" style={{ fontSize: 10.5, color: "#9A9992", marginTop: 2 }}>
+                {e.venue_name} · {e.status.toUpperCase()}{!e.approved ? " · UNAPPROVED" : ""}
+                {flagCount > 0 && <span style={{ color: "#9A6B00" }}> · {flagCount} NEEDS VERIFICATION</span>}
+              </div>
               {errors[e.id] && <div style={{ fontSize: 12, color: "#A13A2A", marginTop: 4 }}>{errors[e.id]}</div>}
             </div>
             <Link href={`${editBasePath}/${e.id}/edit`} className="mono" style={{ fontSize: 11.5, fontWeight: 700, color: "#111111", border: "1px solid #111111", padding: "7px 14px" }}>

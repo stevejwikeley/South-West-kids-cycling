@@ -79,6 +79,9 @@ export default function PendingQueue({ pending, liveEvents, redirectTo }: { pend
                     {p.extraction_confidence != null && ` · CONFIDENCE ${Math.round(p.extraction_confidence * 100)}%`}
                     {p.duplicate_of ? " · MATCHES AN EXISTING EVENT" : " · NEW EVENT"}
                     {p.raw_source_ref && ` · ${p.raw_source_ref}`}
+                    {p.field_flags && Object.keys(p.field_flags).length > 0 && (
+                      <span style={{ color: "#9A6B00" }}> · {Object.keys(p.field_flags).length} FIELD{Object.keys(p.field_flags).length === 1 ? "" : "S"} NEED VERIFICATION</span>
+                    )}
                   </div>
                 )}
               </div>
@@ -123,11 +126,17 @@ export default function PendingQueue({ pending, liveEvents, redirectTo }: { pend
                   {FIELD_ORDER.map((key) => {
                     const liveValue = matchedLive ? (matchedLive as unknown as Record<string, unknown>)[key] : undefined;
                     const differs = matchedLive && formatValue(liveValue) !== formatValue(p[key]);
+                    const flagged = p.field_flags?.[key];
                     return (
                       <tr key={key}>
                         <td style={{ color: "#9A9992", padding: "3px 12px 3px 0", verticalAlign: "top", whiteSpace: "nowrap" }}>{key}</td>
                         <td style={{ color: "#111111", padding: "3px 0", verticalAlign: "top" }}>
                           {formatValue(p[key])}
+                          {flagged && (
+                            <span className="mono" style={{ color: "#9A6B00", marginLeft: 8, fontSize: 10.5 }} title={flagged}>
+                              ⚠ needs verification
+                            </span>
+                          )}
                           {differs && (
                             <span className="mono" style={{ color: "#9A6B00", marginLeft: 8, fontSize: 10.5 }}>
                               (live: {formatValue(liveValue)})

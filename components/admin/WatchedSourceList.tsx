@@ -93,6 +93,10 @@ export default function WatchedSourceList({ sources }: { sources: WatchedSourceR
                 <div className="mono" style={{ fontSize: 10, color: "#9A9992", marginTop: 4 }}>
                   {s.check_frequency.toUpperCase()} · LAST CHECKED {formatChecked(s.last_checked_at).toUpperCase()}
                   {s.last_status === "ok" && s.last_result_count != null && ` · ${s.last_result_count} FOUND LAST RUN`}
+                  {" · "}
+                  {s.published_count > 0
+                    ? `${Math.round(s.correction_rate * 100)}% CORRECTION RATE (${s.published_count} PUBLISHED)`
+                    : "NO PUBLISH HISTORY YET"}
                 </div>
               </div>
               <div style={{ display: "flex", gap: 8 }}>

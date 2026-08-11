@@ -10,7 +10,8 @@ export async function saveCandidates(
   supabase: SupabaseClient<Database>,
   candidates: ExtractedEvent[],
   rawSourceRef: string,
-  sourceUrl?: string
+  sourceUrl?: string,
+  watchedSourceId?: string
 ): Promise<number> {
   const [{ data: liveEvents, error: liveError }, { data: pendingRows, error: pendingError }] = await Promise.all([
     supabase.from("events").select("*"),
@@ -38,6 +39,10 @@ export async function saveCandidates(
     // as duplicate_of (merge target on approval).
     if (duplicate && !liveIds.has(duplicate.id)) continue;
 
+    const fieldFlags = candidate.low_confidence_fields.length
+      ? Object.fromEntries(candidate.low_confidence_fields.map((f) => [f, "needs verification"]))
+      : null;
+
     const { error } = await supabase.from("events_pending").insert({
       title: candidate.title,
       discipline: candidate.discipline,
@@ -63,6 +68,8 @@ export async function saveCandidates(
       raw_source_ref: rawSourceRef,
       extraction_confidence: candidate.confidence,
       duplicate_of: duplicate?.id ?? null,
+      field_flags: fieldFlags,
+      watched_source_id: watchedSourceId ?? null,
     });
 
     if (!error) saved++;

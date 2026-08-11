@@ -34,6 +34,9 @@ const ExtractedEventSchema = z.object({
   confidence: z
     .number()
     .describe("0-1: overall confidence this is a real event and the extracted fields are accurate. Lower for ambiguous, partial, or hard-to-read source content."),
+  low_confidence_fields: z
+    .array(z.string())
+    .describe("Field names (matching the schema keys above) that ARE populated but you're not fully sure are correct — e.g. an address inferred from a venue name rather than stated outright. Don't list fields you left null; this is only for populated-but-uncertain values, so a human reviewer knows exactly what to double-check."),
 });
 
 const ExtractionResultSchema = z.object({
@@ -58,6 +61,7 @@ Rules:
 - Age categories are u8/u10/u12/u14/u16. If the source states or clearly implies specific ages, use those (e.g. "Under 10s and Under 12s" → ["u10","u12"]). If it's a kids/youth race with no age information at all, default to every category (["u8","u10","u12","u14","u16"]) — except gravel, which is usually unsuitable for the youngest riders given the distances involved, so default to ["u12","u14","u16"] instead.
 - Every event on this calendar is treated as all-day — don't extract or infer a start/end time even if the source states one.
 - confidence should reflect the whole event: high when title, date, venue and discipline are all clear and unambiguous; low when you had to infer significantly or the source is degraded/ambiguous.
+- low_confidence_fields flags individual populated fields you're unsure about (e.g. you inferred a postcode from a venue name rather than reading it directly) — this is separate from confidence and from leaving a field null; it's for values you filled in but aren't fully sure are right.
 - If nothing in the content is a relevant event, return an empty events array.`;
 }
 

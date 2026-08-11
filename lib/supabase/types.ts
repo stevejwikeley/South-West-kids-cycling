@@ -96,6 +96,9 @@ export interface EventPendingRow {
   raw_source_ref: string | null;
   diff_against: Record<string, unknown> | null;
   hold_reason: string | null;
+  field_flags: Record<string, string> | null;
+  watched_source_id: string | null;
+  was_edited: boolean;
   created_by: string | null;
   created_at: string;
   updated_at: string;
@@ -108,6 +111,8 @@ export interface WatchedSourceRow {
   check_frequency: string;
   confidence_weight: number;
   correction_rate: number;
+  published_count: number;
+  corrected_count: number;
   last_checked_at: string | null;
   last_result_count: number | null;
   last_seen_events: Record<string, unknown> | null;

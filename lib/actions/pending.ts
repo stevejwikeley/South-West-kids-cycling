@@ -166,6 +166,10 @@ export async function approveIngested(pendingId: string): Promise<PendingActionR
     // merge — same "don't overwrite with uncertainty" spirit as spec 4.2.
     if (v !== undefined && v !== null) values[key] = v;
   });
+  // field_flags carries forward regardless — it's admin-only metadata (spec
+  // 4.2: "needs verification" markers), not a public-facing field, so it's
+  // not part of ALLOWED_DIFF_KEYS but still belongs on the live row.
+  if (row.field_flags) values.field_flags = row.field_flags;
 
   const {
     data: { user },
@@ -195,8 +199,37 @@ export async function approveIngested(pendingId: string): Promise<PendingActionR
     if (error) return { error: error.message };
   }
 
+  if (row.watched_source_id) await recordPublishOutcome(supabase, row.watched_source_id, row.was_edited);
+
   await supabase.from("events_pending").delete().eq("id", pendingId);
   return {};
+}
+
+// Spec 4.3: "self-tuning trust" — correction_rate is the rolling ratio of
+// admin edits to total publishes for a watched source, recomputed from
+// cumulative counters each time one of its candidates is approved. Only
+// candidates actually traced to a watched_source count; manual/ad-hoc
+// ingestion (paste URL, upload) has no source to tune.
+async function recordPublishOutcome(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  watchedSourceId: string,
+  wasEdited: boolean
+): Promise<void> {
+  const { data } = await supabase
+    .from("watched_sources")
+    .select("published_count, corrected_count")
+    .eq("id", watchedSourceId)
+    .single();
+  if (!data) return;
+
+  const published_count = data.published_count + 1;
+  const corrected_count = data.corrected_count + (wasEdited ? 1 : 0);
+  const correction_rate = corrected_count / published_count;
+
+  await supabase
+    .from("watched_sources")
+    .update({ published_count, corrected_count, correction_rate })
+    .eq("id", watchedSourceId);
 }
 
 // Edits a pending row before approval — from the slide-out panel, not the
@@ -221,7 +254,10 @@ export async function updatePending(pendingId: string, formData: FormData): Prom
   const values = parsePendingForm(formData);
 
   if (row.source_type === "smart_ingest") {
-    const { error } = await supabase.from("events_pending").update({ ...values }).eq("id", pendingId);
+    // Marks this candidate as having needed a human correction before it was
+    // fit to publish — the input to the watched_source's correction_rate,
+    // computed at approval time (see approveIngested).
+    const { error } = await supabase.from("events_pending").update({ ...values, was_edited: true }).eq("id", pendingId);
     if (error) return { error: error.message };
     return {};
   }
