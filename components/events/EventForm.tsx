@@ -22,6 +22,11 @@ const STATUS_OPTIONS = [
 const label: React.CSSProperties = { fontSize: 10.5, color: "#6B6B66", display: "block", marginBottom: 6, letterSpacing: "0.03em" };
 const input: React.CSSProperties = { width: "100%", background: "#FFFFFF", border: "1px solid #D8D6D0", color: "#111111", padding: "9px 11px", fontSize: 13.5 };
 const field: React.CSSProperties = { marginBottom: 18 };
+// flexWrap + a flex-basis (rather than flex:1 with no basis) so columns wrap
+// onto their own line on narrow screens instead of being clipped by the
+// page's overflow-x:hidden — flex:1 alone doesn't shrink below content size.
+const row: React.CSSProperties = { display: "flex", gap: 14, flexWrap: "wrap", ...field };
+const col: React.CSSProperties = { flex: "1 1 140px" };
 
 export default function EventForm({ event, redirectTo }: { event?: EventRow; redirectTo: string }) {
   const boundSave = saveEvent.bind(null, redirectTo);
@@ -41,15 +46,15 @@ export default function EventForm({ event, redirectTo }: { event?: EventRow; red
         <input style={input} name="title" defaultValue={event?.title} required />
       </div>
 
-      <div style={{ display: "flex", gap: 14, ...field }}>
-        <div style={{ flex: 1 }}>
+      <div style={row}>
+        <div style={col}>
           <label className="mono" style={label}>DISCIPLINE</label>
           <select style={input} name="discipline" defaultValue={event?.discipline ?? ""} required>
             <option value="" disabled>Select…</option>
             {EVENT_DISCIPLINES.map((d) => <option key={d.id} value={d.id}>{d.label}</option>)}
           </select>
         </div>
-        <div style={{ flex: 1 }}>
+        <div style={col}>
           <label className="mono" style={label}>STATUS</label>
           <select style={input} name="status" defaultValue={event?.status ?? "confirmed"}>
             {STATUS_OPTIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
@@ -64,18 +69,18 @@ export default function EventForm({ event, redirectTo }: { event?: EventRow; red
         </label>
       </div>
 
-      <div style={{ display: "flex", gap: 14, ...field }}>
-        <div style={{ flex: 1 }}>
+      <div style={row}>
+        <div style={col}>
           <label className="mono" style={label}>DATE</label>
           <input style={input} type="date" name="date" defaultValue={startParts?.date} required />
         </div>
         {!allDay && (
           <>
-            <div style={{ flex: 1 }}>
+            <div style={col}>
               <label className="mono" style={label}>START TIME</label>
               <input style={input} type="time" name="start_time" defaultValue={startParts?.time} />
             </div>
-            <div style={{ flex: 1 }}>
+            <div style={col}>
               <label className="mono" style={label}>END TIME</label>
               <input style={input} type="time" name="end_time" defaultValue={endParts?.time} />
             </div>
@@ -88,12 +93,12 @@ export default function EventForm({ event, redirectTo }: { event?: EventRow; red
         <input style={input} name="venue_name" defaultValue={event?.venue_name} required />
       </div>
 
-      <div style={{ display: "flex", gap: 14, ...field }}>
-        <div style={{ flex: 1 }}>
+      <div style={row}>
+        <div style={col}>
           <label className="mono" style={label}>ADDRESS (OPTIONAL)</label>
           <input style={input} name="address" defaultValue={event?.address ?? ""} />
         </div>
-        <div style={{ flex: 1 }}>
+        <div style={col}>
           <label className="mono" style={label}>POSTCODE (OPTIONAL)</label>
           <input style={input} name="postcode" defaultValue={event?.postcode ?? ""} />
         </div>
@@ -126,15 +131,15 @@ export default function EventForm({ event, redirectTo }: { event?: EventRow; red
         </label>
       </div>
 
-      <div style={{ display: "flex", gap: 14, ...field }}>
-        <div style={{ flex: 1 }}>
+      <div style={row}>
+        <div style={col}>
           <label className="mono" style={label}>BOOKING STATUS</label>
           <select style={input} name="booking_status" value={bookingStatus} onChange={(e) => setBookingStatus(e.target.value as typeof bookingStatus)}>
             <option value="planned">Planned (no link yet)</option>
             <option value="open">Open</option>
           </select>
         </div>
-        <div style={{ flex: 1 }}>
+        <div style={col}>
           <label className="mono" style={label}>BOOKING LINK{bookingStatus === "open" ? "" : " (OPTIONAL)"}</label>
           <input style={input} type="url" name="booking_link" defaultValue={event?.booking_link ?? ""} required={bookingStatus === "open"} />
         </div>
@@ -145,12 +150,12 @@ export default function EventForm({ event, redirectTo }: { event?: EventRow; red
         <input style={input} type="url" name="organiser_url" defaultValue={event?.organiser_url} required />
       </div>
 
-      <div style={{ display: "flex", gap: 14, ...field }}>
-        <div style={{ flex: 1 }}>
+      <div style={row}>
+        <div style={col}>
           <label className="mono" style={label}>ORGANISER NAME (OPTIONAL)</label>
           <input style={input} name="organiser_name" defaultValue={event?.organiser_name ?? ""} />
         </div>
-        <div style={{ flex: 1 }}>
+        <div style={col}>
           <label className="mono" style={label}>ORGANISER CONTACT (OPTIONAL)</label>
           <input style={input} name="organiser_contact" defaultValue={event?.organiser_contact ?? ""} />
         </div>
