@@ -12,6 +12,32 @@ export interface SuggestChangeState {
 
 type Diff = Partial<Record<keyof EventFormValues | "_note", { from: unknown; to: unknown }>>;
 
+// events_pending accepts inserts from anyone, unauthenticated, so a diff
+// blob could in principle be crafted by hand (not just via submitChangeRequest)
+// to name columns the public form never exposes — approved, created_by,
+// source_type, etc. Applying only known EventFormValues keys on approval
+// means such a row can't touch anything beyond what the legitimate form
+// could have produced, regardless of what's actually stored in the diff.
+const ALLOWED_DIFF_KEYS = new Set<keyof EventFormValues>([
+  "title",
+  "discipline",
+  "status",
+  "all_day",
+  "start_datetime",
+  "end_datetime",
+  "venue_name",
+  "address",
+  "postcode",
+  "region",
+  "age_categories",
+  "kids_only",
+  "booking_status",
+  "booking_link",
+  "organiser_url",
+  "organiser_name",
+  "organiser_contact",
+]);
+
 function sameValue(a: unknown, b: unknown): boolean {
   if (Array.isArray(a) && Array.isArray(b)) {
     return JSON.stringify([...a].sort()) === JSON.stringify([...b].sort());
@@ -78,7 +104,7 @@ export async function approveChange(pendingId: string, redirectTo: string) {
   const diff = row.diff_against as Diff;
   const update: Partial<EventRow> = {};
   (Object.keys(diff) as (keyof Diff)[]).forEach((key) => {
-    if (key === "_note") return;
+    if (!ALLOWED_DIFF_KEYS.has(key as keyof EventFormValues)) return;
     const change = diff[key];
     if (change) (update as Record<string, unknown>)[key] = change.to;
   });
