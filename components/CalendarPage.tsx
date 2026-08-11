@@ -61,11 +61,6 @@ export default function CalendarPage({ events }: { events: CalendarEvent[] }) {
             New to racing? Start here <ArrowUpRight size={14} />
           </Link>
         </div>
-        <div className="mono" style={{ display: "flex", gap: 40, marginTop: 44, fontSize: 11.5, color: "#6B6B66" }}>
-          <div><span className="disp" style={{ fontSize: 26, color: "#111111", display: "block" }}>{events.length}</span>EVENTS TRACKED</div>
-          <div><span className="disp" style={{ fontSize: 26, color: "#111111", display: "block" }}>5–16</span>AGE RANGE</div>
-          <div><span className="disp" style={{ fontSize: 26, color: "#111111", display: "block" }}>2</span>COUNTIES</div>
-        </div>
       </header>
 
       <div style={{ position: "sticky", top: 0, zIndex: 20, background: "#FAFAF8", borderTop: "1px solid #E4E2DD", borderBottom: "1px solid #E4E2DD", padding: "16px 24px" }}>
