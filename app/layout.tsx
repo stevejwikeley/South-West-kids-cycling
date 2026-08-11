@@ -21,9 +21,28 @@ const jetbrainsMono = JetBrains_Mono({
   subsets: ["latin"],
 });
 
+const description = "One calendar for all youth cycling races and events across Devon & Cornwall — XC, cyclocross, road, triathlon and club sessions for ages 5–16.";
+
 export const metadata: Metadata = {
-  title: "South West Kids Cycling",
-  description: "One calendar for all youth cycling races and events across Devon & Cornwall.",
+  metadataBase: new URL("https://www.southwestkidscycling.uk"),
+  title: {
+    default: "South West Kids Cycling",
+    template: "%s — South West Kids Cycling",
+  },
+  description,
+  openGraph: {
+    title: "South West Kids Cycling",
+    description,
+    url: "/",
+    siteName: "South West Kids Cycling",
+    locale: "en_GB",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "South West Kids Cycling",
+    description,
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
