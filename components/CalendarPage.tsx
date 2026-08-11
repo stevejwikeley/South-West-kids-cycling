@@ -3,7 +3,6 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { MapPin, Search, X, Rss, ArrowUpRight } from "lucide-react";
-import RouteLine from "./RouteLine";
 import { EVENT_DISCIPLINES, eventDisc, ageLabel } from "@/lib/mock-data";
 import type { DisciplineId, CalendarEvent } from "@/lib/types";
 import { MONTHS, fmtDay } from "@/lib/format";
@@ -43,7 +42,7 @@ export default function CalendarPage({ events }: { events: CalendarEvent[] }) {
 
   return (
     <>
-      <header style={{ maxWidth: 1100, margin: "0 auto", padding: "56px 24px 0" }}>
+      <header style={{ maxWidth: 1100, margin: "0 auto", padding: "56px 24px 40px" }}>
         <div className="mono" style={{ fontSize: 11.5, letterSpacing: "0.12em", color: "#E0102A", marginBottom: 16, fontWeight: 700 }}>DEVON &amp; CORNWALL — AGES 5 TO 16</div>
         <h1 className="disp" style={{ fontSize: "clamp(32px, 5.2vw, 60px)", lineHeight: 1.02, margin: 0, letterSpacing: "-0.01em" }}>
           One calendar for all cycling races and events across the Southwest
@@ -67,7 +66,6 @@ export default function CalendarPage({ events }: { events: CalendarEvent[] }) {
           <div><span className="disp" style={{ fontSize: 26, color: "#111111", display: "block" }}>5–16</span>AGE RANGE</div>
           <div><span className="disp" style={{ fontSize: 26, color: "#111111", display: "block" }}>2</span>COUNTIES</div>
         </div>
-        <div style={{ marginTop: 40 }}><RouteLine /></div>
       </header>
 
       <div style={{ position: "sticky", top: 0, zIndex: 20, background: "#FAFAF8", borderTop: "1px solid #E4E2DD", borderBottom: "1px solid #E4E2DD", padding: "16px 24px" }}>
