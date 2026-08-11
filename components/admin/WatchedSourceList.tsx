@@ -32,7 +32,7 @@ function StatusBadge({ source }: { source: WatchedSourceRow }) {
   );
 }
 
-export default function WatchedSourceList({ sources, redirectTo }: { sources: WatchedSourceRow[]; redirectTo: string }) {
+export default function WatchedSourceList({ sources }: { sources: WatchedSourceRow[] }) {
   const router = useRouter();
   const [busyIds, setBusyIds] = useState<Set<string>>(new Set());
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -66,9 +66,13 @@ export default function WatchedSourceList({ sources, redirectTo }: { sources: Wa
     if (!confirm(`Stop watching "${label}"?`)) return;
     setBusy(id, true);
     setErrors((prev) => ({ ...prev, [id]: "" }));
-    const result = await deleteWatchedSource(id, redirectTo);
+    const result = await deleteWatchedSource(id);
     setBusy(id, false);
-    if (result?.error) setErrors((prev) => ({ ...prev, [id]: result.error! }));
+    if (result?.error) {
+      setErrors((prev) => ({ ...prev, [id]: result.error! }));
+      return;
+    }
+    router.refresh();
   }
 
   return (

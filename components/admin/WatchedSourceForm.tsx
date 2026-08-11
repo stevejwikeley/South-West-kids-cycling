@@ -1,15 +1,20 @@
 "use client";
 
 import { useActionState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { addWatchedSource, type SourceActionResult } from "@/lib/actions/sources";
 
 export default function WatchedSourceForm() {
   const [state, formAction, pending] = useActionState<SourceActionResult, FormData>(addWatchedSource, {});
   const formRef = useRef<HTMLFormElement>(null);
+  const router = useRouter();
 
   useEffect(() => {
-    if (state.success) formRef.current?.reset();
-  }, [state.success]);
+    if (state.success) {
+      formRef.current?.reset();
+      router.refresh();
+    }
+  }, [state.success, router]);
 
   return (
     <form ref={formRef} action={formAction} style={{ maxWidth: 420 }}>

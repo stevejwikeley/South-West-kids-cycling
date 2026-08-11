@@ -1,6 +1,5 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/auth";
 import { checkWatchedSource } from "@/lib/ingestion/check-source";
@@ -89,7 +88,7 @@ export async function checkWatchedSourceNow(id: string): Promise<CheckNowResult>
   return { status: result.status, detail: summarize(result) };
 }
 
-export async function deleteWatchedSource(id: string, redirectTo: string): Promise<SourceActionResult> {
+export async function deleteWatchedSource(id: string): Promise<SourceActionResult> {
   try {
     await requireAdmin();
   } catch {
@@ -100,5 +99,5 @@ export async function deleteWatchedSource(id: string, redirectTo: string): Promi
   const { error } = await supabase.from("watched_sources").delete().eq("id", id);
   if (error) return { error: error.message };
 
-  redirect(redirectTo);
+  return { success: "Removed." };
 }

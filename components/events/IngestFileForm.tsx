@@ -19,8 +19,26 @@ export default function IngestFileForm() {
         style={{ width: "100%", background: "#FFFFFF", border: "1px solid #D8D6D0", color: "#111111", padding: "10px 12px", fontSize: 13.5 }}
       />
       <p className="mono" style={{ fontSize: 10, color: "#9A9992", marginTop: 6 }}>
-        Images: PNG, JPEG, WebP, GIF. Spreadsheets: CSV only for now — one row per event.
+        Images: PNG, JPEG, WebP, GIF. Spreadsheets: CSV only for now — one row per event. Copy{" "}
+        <a href="https://docs.google.com/spreadsheets/d/1wKeGfS2rHbIFI6lDm_04WohVOGi7wkGd75zZhPMqZmM/edit?gid=845339520#gid=845339520" target="_blank" rel="noreferrer" style={{ color: "#111111", borderBottom: "1px solid #111111" }}>
+          this template
+        </a>{" "}
+        (File → Download → CSV) to get the expected columns.
       </p>
+
+      <label className="mono" style={{ fontSize: 10.5, color: "#6B6B66", display: "block", margin: "16px 0 6px" }}>
+        ORGANISER URL (OPTIONAL)
+      </label>
+      <input
+        type="url"
+        name="organiser_url"
+        placeholder="https://…"
+        style={{ width: "100%", background: "#FFFFFF", border: "1px solid #D8D6D0", color: "#111111", padding: "10px 12px", fontSize: 13.5 }}
+      />
+      <p className="mono" style={{ fontSize: 10, color: "#9A9992", marginTop: 6 }}>
+        Posters rarely show a website — applied to any extracted event that doesn&apos;t already have one.
+      </p>
+
       <button
         type="submit"
         disabled={pending}

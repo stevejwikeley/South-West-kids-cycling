@@ -40,9 +40,17 @@ export async function saveEvent(
   redirect(redirectTo);
 }
 
-export async function deleteEvent(id: string, redirectTo: string) {
+export interface DeleteEventResult {
+  error?: string;
+}
+
+// Returns { error } rather than throwing, and doesn't redirect server-side —
+// a thrown error from a directly-invoked (non-<form>) server action surfaces
+// as a raw failed POST, and the caller navigates itself so it isn't at the
+// mercy of the client router cache serving a stale list after redirect().
+export async function deleteEvent(id: string): Promise<DeleteEventResult> {
   const supabase = await createClient();
   const { error } = await supabase.from("events").delete().eq("id", id);
-  if (error) throw new Error(error.message);
-  redirect(redirectTo);
+  if (error) return { error: error.message };
+  return {};
 }

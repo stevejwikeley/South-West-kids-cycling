@@ -103,6 +103,18 @@ export async function ingestFile(_prevState: IngestState, formData: FormData): P
   const MAX_BYTES = 8 * 1024 * 1024;
   if (file.size > MAX_BYTES) return { error: "File is too large (8MB max)." };
 
+  const organiserUrl = String(formData.get("organiser_url") ?? "").trim() || undefined;
+  if (organiserUrl) {
+    try {
+      const parsed = new URL(organiserUrl);
+      if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+        return { error: "Organiser URL must be http/https." };
+      }
+    } catch {
+      return { error: "That doesn't look like a valid organiser URL." };
+    }
+  }
+
   let candidates: ExtractedEvent[];
   try {
     if (file.type.startsWith("image/")) {
@@ -125,6 +137,6 @@ export async function ingestFile(_prevState: IngestState, formData: FormData): P
   }
 
   const supabase = await createClient();
-  const saved = await saveCandidates(supabase, candidates, `upload: ${file.name}`);
+  const saved = await saveCandidates(supabase, candidates, `upload: ${file.name}`, organiserUrl);
   return { success: `${saved} event${saved === 1 ? "" : "s"} sent to the pending queue for review.` };
 }

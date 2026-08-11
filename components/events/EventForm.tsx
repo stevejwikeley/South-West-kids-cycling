@@ -1,7 +1,8 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { saveEvent, type EventFormState } from "@/lib/actions/events";
+import { useRouter } from "next/navigation";
+import { saveEvent, deleteEvent, type EventFormState } from "@/lib/actions/events";
 import { utcIsoToUkLocalParts } from "@/lib/uk-time";
 import { EVENT_DISCIPLINES } from "@/lib/mock-data";
 import type { EventRow } from "@/lib/supabase/types";
@@ -29,10 +30,28 @@ const row: React.CSSProperties = { display: "flex", gap: 14, flexWrap: "wrap", .
 const col: React.CSSProperties = { flex: "1 1 140px" };
 
 export default function EventForm({ event, redirectTo }: { event?: EventRow; redirectTo: string }) {
+  const router = useRouter();
   const boundSave = saveEvent.bind(null, redirectTo);
   const [state, formAction, pending] = useActionState<EventFormState, FormData>(boundSave, {});
   const [allDay, setAllDay] = useState(event?.all_day ?? true);
   const [bookingStatus, setBookingStatus] = useState(event?.booking_status ?? "planned");
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
+
+  async function handleDelete() {
+    if (!event) return;
+    if (!confirm(`Delete "${event.title}"? This can't be undone.`)) return;
+    setDeleting(true);
+    setDeleteError("");
+    const result = await deleteEvent(event.id);
+    if (result.error) {
+      setDeleting(false);
+      setDeleteError(result.error);
+      return;
+    }
+    router.push(redirectTo);
+    router.refresh();
+  }
 
   const startParts = event ? utcIsoToUkLocalParts(event.start_datetime) : null;
   const endParts = event?.end_datetime ? utcIsoToUkLocalParts(event.end_datetime) : null;
@@ -161,15 +180,29 @@ export default function EventForm({ event, redirectTo }: { event?: EventRow; red
         </div>
       </div>
 
-      <button
-        type="submit"
-        disabled={pending}
-        style={{ background: "#111111", color: "#FAFAF8", border: "none", padding: "12px 24px", fontWeight: 700, fontSize: 13.5, cursor: pending ? "default" : "pointer", opacity: pending ? 0.6 : 1 }}
-      >
-        {pending ? "Saving…" : event ? "Save changes" : "Publish event"}
-      </button>
+      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <button
+          type="submit"
+          disabled={pending}
+          style={{ background: "#111111", color: "#FAFAF8", border: "none", padding: "12px 24px", fontWeight: 700, fontSize: 13.5, cursor: pending ? "default" : "pointer", opacity: pending ? 0.6 : 1 }}
+        >
+          {pending ? "Saving…" : event ? "Save changes" : "Publish event"}
+        </button>
+        {event && (
+          <button
+            type="button"
+            disabled={deleting}
+            onClick={handleDelete}
+            className="mono"
+            style={{ fontSize: 12, fontWeight: 700, color: "#A13A2A", background: "none", border: "1px solid #D8D6D0", padding: "11px 20px", cursor: deleting ? "default" : "pointer", opacity: deleting ? 0.6 : 1 }}
+          >
+            {deleting ? "Deleting…" : "Delete event"}
+          </button>
+        )}
+      </div>
 
       {state.error && <p style={{ color: "#A13A2A", fontSize: 12.5, marginTop: 14 }}>{state.error}</p>}
+      {deleteError && <p style={{ color: "#A13A2A", fontSize: 12.5, marginTop: 14 }}>{deleteError}</p>}
     </form>
   );
 }

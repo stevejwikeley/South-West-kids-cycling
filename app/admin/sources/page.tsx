@@ -22,7 +22,7 @@ export default async function AdminSourcesPage() {
         </div>
         <div style={{ flex: "2 1 480px", minWidth: 0 }}>
           <h2 className="disp" style={{ fontSize: 18, marginBottom: 14 }}>Currently watching ({sources.length})</h2>
-          <WatchedSourceList sources={sources} redirectTo="/admin/sources" />
+          <WatchedSourceList sources={sources} />
         </div>
       </div>
     </header>
