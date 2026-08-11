@@ -9,7 +9,7 @@ import { z } from "zod";
 // before reaching this single function; there is no per-source parsing logic
 // beyond that normalization.
 
-const DISCIPLINES = ["cx", "xc", "road", "tri", "clusters", "other"] as const;
+const DISCIPLINES = ["cx", "xc", "road", "tri", "gravel", "duathlon", "clusters", "other"] as const;
 const STATUSES = ["confirmed", "provisional", "cancelled"] as const;
 const REGIONS = ["devon", "cornwall", "both"] as const;
 const AGE_CATEGORIES = ["u8", "u10", "u12", "u14", "u16"] as const;
@@ -54,7 +54,7 @@ Rules:
 - Only extract youth/junior cycling events, club coaching sessions, or events that clearly include age-group categories for under-16s. Skip adult-only road racing, enduro, and anything outside Devon/Cornwall.
 - Leave a field null rather than guessing. A poster rarely states exact time, address, or a booking link — leave those null for a human reviewer rather than inventing plausible-looking values.
 - Links extracted from a web page appear inline right after their link text, as "text (URL)" — e.g. a listing page with a "VIEW EVENT" button per row shows up as "…Woodbury Common VIEW EVENT (https://example.com/events/devon-grit/)". Match each link to the event it's positioned next to (by proximity/order in the text, not by the link text itself, which is often identical and generic across every row, like "VIEW EVENT" or "Book now"). Use it as booking_link if it goes to a registration/entry page, otherwise organiser_url.
-- Disciplines: cx (cyclocross), xc (cross country mountain biking), road, tri (triathlon), clusters (club coaching/training sessions, "Go-Ride" style), other.
+- Disciplines: cx (cyclocross), xc (cross country mountain biking), road, tri (triathlon), gravel (gravel racing), duathlon (run-bike-run), clusters (club coaching/training sessions, "Go-Ride" style), other. Skip events with no cycling leg at all (a pure running race, swim event, etc.) — this calendar only covers cycling and cycling-adjacent multisport.
 - Age categories are u8/u10/u12/u14/u16 — only include ones explicitly stated or clearly implied (e.g. "Under 10s and Under 12s" → ["u10","u12"]).
 - Every event on this calendar is treated as all-day — don't extract or infer a start/end time even if the source states one.
 - confidence should reflect the whole event: high when title, date, venue and discipline are all clear and unambiguous; low when you had to infer significantly or the source is degraded/ambiguous.

@@ -1,4 +1,4 @@
-export type DisciplineId = "cx" | "xc" | "road" | "tri" | "clusters" | "other";
+export type DisciplineId = "cx" | "xc" | "road" | "tri" | "gravel" | "duathlon" | "clusters" | "other";
 export type Region = "devon" | "cornwall" | "both";
 export type AgeCategory = "u8" | "u10" | "u12" | "u14" | "u16";
 export type BookingStatus = "open" | "planned";

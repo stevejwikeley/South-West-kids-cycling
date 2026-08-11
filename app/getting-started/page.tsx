@@ -27,8 +27,18 @@ const DISCIPLINE_GUIDE: Record<string, { blurb: string; format: string; goodFirs
     format: "Timed multi-discipline event, usually at a leisure centre or sports ground with all three legs close together. Needs a bit more kit (goggles, trainers) than a bike-only event.",
     goodFirstRace: false,
   },
+  gravel: {
+    blurb: "Longer off-road rides on unsurfaced tracks and lanes, on a gravel or cyclocross-style bike — more endurance-focused than technical, with distances scaled down for junior categories.",
+    format: "A marked route rather than closed laps, usually with multiple distance options. Needs a bike suited to loose surfaces — a mountain bike works fine even without a dedicated gravel bike.",
+    goodFirstRace: false,
+  },
+  duathlon: {
+    blurb: "Run, bike, run — no swim leg, so less kit than a triathlon. A good option if your child is a confident runner and cyclist but swimming isn't their thing.",
+    format: "Timed multi-discipline event, typically at a sports ground or closed circuit. Trainers and a bike (with helmet) are the only real kit needed.",
+    goodFirstRace: false,
+  },
   other: {
-    blurb: "Anything that doesn't fit neatly elsewhere — track sessions, duathlons, one-off taster days. Check the individual event listing for what to expect.",
+    blurb: "Anything that doesn't fit neatly elsewhere — track sessions, one-off taster days. Check the individual event listing for what to expect.",
     format: "Varies by event — see the listing for details.",
     goodFirstRace: false,
   },

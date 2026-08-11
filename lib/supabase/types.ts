@@ -2,7 +2,7 @@
 // CLI is linked to the project, this can be regenerated with:
 //   supabase gen types typescript --project-id mpbptzacxbxadvwnqdol > lib/supabase/types.ts
 
-export type DisciplineType = "cx" | "xc" | "road" | "tri" | "clusters" | "other";
+export type DisciplineType = "cx" | "xc" | "road" | "tri" | "gravel" | "duathlon" | "clusters" | "other";
 export type EventStatus = "confirmed" | "provisional" | "cancelled";
 export type BookingStatusType = "open" | "planned";
 export type RegionType = "devon" | "cornwall" | "both";
