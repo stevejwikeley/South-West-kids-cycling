@@ -116,7 +116,14 @@ export default function CalendarPage({ events }: { events: CalendarEvent[] }) {
                         <span style={{ fontWeight: 700, fontSize: 15 }}>{e.title}</span>
                       </div>
                       <div style={{ display: "flex", alignItems: "center", gap: 6, color: "#6B6B66", fontSize: 12.5, marginTop: 4, flexWrap: "wrap" }}>
-                        <MapPin size={12} /> {e.venue}
+                        <a
+                          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([e.venue, e.address, e.postcode].filter(Boolean).join(", "))}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={{ display: "inline-flex", alignItems: "center", gap: 6, color: "#6B6B66", textDecoration: "underline", textUnderlineOffset: 2 }}
+                        >
+                          <MapPin size={12} /> {e.venue}
+                        </a>
                         <span className="mono" style={{ color: d.color, marginLeft: 6, fontSize: 10.5 }}>{d.label.toUpperCase()}</span>
                         <span className="mono" style={{ color: "#9A9992", fontSize: 10.5 }}>· {e.ages.map(ageLabel).join(", ")}</span>
                         {e.status === "provisional" && <span className="mono" style={{ color: "#C77F17", fontSize: 10.5 }}>· PROVISIONAL</span>}

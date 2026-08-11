@@ -17,6 +17,8 @@ export interface CalendarEvent {
   discipline: DisciplineId;
   date: string;
   venue: string;
+  address: string | null;
+  postcode: string | null;
   region: Region;
   status: EventStatus;
   kidsOnly: boolean;

@@ -9,6 +9,8 @@ function toCalendarEvent(row: EventRow): CalendarEvent {
     discipline: row.discipline,
     date: row.start_datetime.slice(0, 10),
     venue: row.venue_name,
+    address: row.address,
+    postcode: row.postcode,
     region: row.region,
     status: row.status,
     kidsOnly: row.kids_only,
