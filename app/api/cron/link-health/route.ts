@@ -16,7 +16,19 @@ function isLinkHealthFlag(value: string | undefined): boolean {
   return !!value && value.startsWith(BROKEN_LINK_PREFIX);
 }
 
-async function checkLink(url: string): Promise<string | null> {
+type CheckOutcome = "healthy" | "broken" | "inconclusive";
+
+// Several real sources this project links to (British Cycling,
+// sportivaevents.co.uk) sit behind Cloudflare/WAF protection that 403s any
+// server-side request regardless of whether the link is actually valid —
+// confirmed directly against these exact domains earlier in this project.
+// A 403 (or 401/429/5xx — auth walls, rate limits, transient host issues)
+// is not reliable evidence of a dead link in this environment, so only
+// unambiguous signals (404, DNS/connection failure) are treated as broken.
+// Spoofing a browser UA to get a "real" answer past the WAF would be
+// bot-detection evasion; the honest fix is not drawing a conclusion from a
+// signal that isn't trustworthy here, not working around the protection.
+async function checkLink(url: string): Promise<{ outcome: CheckOutcome; detail?: string }> {
   try {
     const res = await fetch(url, {
       method: "GET",
@@ -24,11 +36,19 @@ async function checkLink(url: string): Promise<string | null> {
       headers: { "User-Agent": "Mozilla/5.0 (compatible; SWKidsCyclingBot/1.0)" },
       signal: AbortSignal.timeout(10000),
     });
-    if (!res.ok) return `${BROKEN_LINK_PREFIX}: HTTP ${res.status}`;
-    return null;
+    if (res.ok) return { outcome: "healthy" };
+    if (res.status === 404 || res.status === 410) {
+      return { outcome: "broken", detail: `${BROKEN_LINK_PREFIX}: HTTP ${res.status}` };
+    }
+    return { outcome: "inconclusive", detail: `HTTP ${res.status} — may be a bot block, not necessarily broken` };
   } catch (e) {
-    const detail = e instanceof Error ? e.message : "unreachable";
-    return `${BROKEN_LINK_PREFIX}: ${detail}`;
+    const message = e instanceof Error ? e.message : "";
+    // DNS/connection failures are a genuine dead-domain signal; timeouts are
+    // more often a slow or bot-guarded server than an actually dead link.
+    if (/ENOTFOUND|ECONNREFUSED|fetch failed/i.test(message)) {
+      return { outcome: "broken", detail: `${BROKEN_LINK_PREFIX}: ${message}` };
+    }
+    return { outcome: "inconclusive", detail: message || "request failed" };
   }
 }
 
@@ -51,23 +71,24 @@ export async function GET(request: NextRequest) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   const events = (data as EventRow[]) ?? [];
-  const results: { id: string; title: string; ok: boolean; detail?: string }[] = [];
+  const results: { id: string; title: string; outcome: CheckOutcome; detail?: string }[] = [];
 
   for (const event of events) {
     if (!event.booking_link) continue;
 
-    const failureReason = await checkLink(event.booking_link);
+    const { outcome, detail } = await checkLink(event.booking_link);
     const currentFlags = { ...(event.field_flags as Record<string, string> | null) };
     const hadLinkHealthFlag = isLinkHealthFlag(currentFlags.booking_link);
 
-    if (failureReason) {
-      currentFlags.booking_link = failureReason;
-      results.push({ id: event.id, title: event.title, ok: false, detail: failureReason });
+    results.push({ id: event.id, title: event.title, outcome, detail });
+
+    if (outcome === "broken") {
+      currentFlags.booking_link = detail!;
     } else if (hadLinkHealthFlag) {
-      // Only clear a flag this check itself set — an extraction-set
+      // Healthy, or inconclusive (we can't confirm it's actually broken) —
+      // either way, clear a flag this check itself set. An extraction-set
       // "needs verification" reason on the same field stays untouched.
       delete currentFlags.booking_link;
-      results.push({ id: event.id, title: event.title, ok: true, detail: "recovered" });
     } else {
       continue;
     }
@@ -78,5 +99,10 @@ export async function GET(request: NextRequest) {
       .eq("id", event.id);
   }
 
-  return NextResponse.json({ checked: events.length, flagged: results.filter((r) => !r.ok).length, results });
+  return NextResponse.json({
+    checked: events.length,
+    broken: results.filter((r) => r.outcome === "broken").length,
+    inconclusive: results.filter((r) => r.outcome === "inconclusive").length,
+    results,
+  });
 }
