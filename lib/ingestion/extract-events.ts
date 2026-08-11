@@ -44,6 +44,7 @@ const ExtractionResultSchema = z.object({
 });
 
 export type ExtractedEvent = z.infer<typeof ExtractedEventSchema>;
+export { ExtractedEventSchema };
 
 function buildSystemPrompt(): string {
   const today = new Date().toISOString().slice(0, 10);
