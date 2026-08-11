@@ -84,7 +84,7 @@ export async function ingestTextOrUrl(_prevState: IngestState, formData: FormDat
 
     if (!res || !res.ok) return { error: "Couldn't fetch that URL." };
     const html = await res.text();
-    text = htmlToText(html).slice(0, 60000);
+    text = htmlToText(html, res.url).slice(0, 60000);
     sourceRef = url.toString();
     organiserUrlFallback = sourceRef;
   } else {

@@ -50,7 +50,7 @@ export async function checkWatchedSource(
       throw new Error(`Site returned HTTP ${res.status} — it may be blocking automated requests. Try pasting the page text on the Smart Ingestion page instead.`);
     }
 
-    const text = htmlToText(await res.text()).slice(0, 60000);
+    const text = htmlToText(await res.text(), res.url).slice(0, 60000);
     const candidates = await extractEvents({ text });
     const saved = await saveCandidates(supabase, candidates, source.label, source.url);
 

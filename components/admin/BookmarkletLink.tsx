@@ -6,7 +6,11 @@ import { useEffect, useRef } from "react";
 // fetches, but a real signed-in browser gets through fine — this bookmarklet
 // just captures what's already visible on the page you're looking at and
 // hands it to the ingest form, same as copy/pasting by hand but one click.
-const BOOKMARKLET = `javascript:(function(){try{var m=document.querySelector('main')||document.body;var t=(document.title+'\\n\\n'+m.innerText).trim().slice(0,3000);var u='https://www.southwestkidscycling.uk/admin/ingest?prefill='+encodeURIComponent(t)+'&sourceUrl='+encodeURIComponent(location.href);location.href=u;}catch(e){alert('SWKC bookmarklet error: '+e.message);}})();`;
+// Walks the DOM (rather than just reading innerText) so each link's href is
+// inlined right after its visible text — "VIEW EVENT (https://…)" — since a
+// listing page's per-row CTA is otherwise indistinguishable from plain text
+// with no way to tell which link belongs to which row.
+const BOOKMARKLET = `javascript:(function(){try{function w(n){var o='';var k=n.childNodes;for(var i=0;i<k.length;i++){var c=k[i];if(c.nodeType===3){o+=c.textContent;}else if(c.nodeType===1){var t=c.tagName;if(t==='SCRIPT'||t==='STYLE'||t==='NOSCRIPT'||t==='NAV'||t==='HEADER'||t==='FOOTER')continue;if(t==='A'&&c.href){var lt=w(c).replace(/\\s+/g,' ').trim();if(lt)o+=lt+' ('+c.href+') ';}else{o+=w(c);if(/^(DIV|P|LI|TR|H1|H2|H3|H4|BR|SECTION|ARTICLE)$/.test(t))o+='\\n';}}}return o;}var m=document.querySelector('main')||document.body;var raw=w(m).replace(/[ \\t]+/g,' ').replace(/\\n{3,}/g,'\\n\\n').trim();var t=(document.title+'\\n\\n'+raw).slice(0,6000);var u='https://www.southwestkidscycling.uk/admin/ingest?prefill='+encodeURIComponent(t)+'&sourceUrl='+encodeURIComponent(location.href);location.href=u;}catch(e){alert('SWKC bookmarklet error: '+e.message);}})();`;
 
 export default function BookmarkletLink() {
   // React 19 sanitizes any href starting with "javascript:" set via JSX
@@ -26,7 +30,7 @@ export default function BookmarkletLink() {
         BROWSER BOOKMARKLET
       </h3>
       <p style={{ fontSize: 13, lineHeight: 1.6, color: "#4A4A46", marginBottom: 10 }}>
-        Some sites (British Cycling, etc.) block automated fetching, so pasting their URL above won&apos;t work. Drag this into your bookmarks bar — on any event page, click it to jump to this ingest form pre-filled with that page&apos;s text and its URL (used as the fallback organiser link). If you dragged an earlier version, delete it and drag this one again — editing this page doesn&apos;t update a bookmark you already saved.
+        Some sites (British Cycling, etc.) block automated fetching, so pasting their URL above won&apos;t work. Drag this into your bookmarks bar — on any event page (including a listing page with several events), click it to jump to this ingest form pre-filled with the page&apos;s text, each row&apos;s own link kept inline next to it, and the page&apos;s own URL as a fallback. If you dragged an earlier version, delete it and drag this one again — editing this page doesn&apos;t update a bookmark you already saved.
       </p>
       <a
         ref={linkRef}
