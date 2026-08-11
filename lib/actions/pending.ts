@@ -10,6 +10,10 @@ export interface SuggestChangeState {
   success?: boolean;
 }
 
+export interface PendingActionResult {
+  error?: string;
+}
+
 type Diff = Partial<Record<keyof EventFormValues | "_note", { from: unknown; to: unknown }>>;
 
 // events_pending accepts inserts from anyone, unauthenticated, so a diff
@@ -88,7 +92,14 @@ export async function submitChangeRequest(
   return { success: true };
 }
 
-export async function approveChange(pendingId: string, redirectTo: string) {
+// These action functions return { error } rather than throwing. A thrown
+// error from a directly-invoked (non-<form>) server action surfaces to the
+// browser as a raw failed POST — alarming and unstyled — instead of data the
+// UI can render inline. redirect() is still called (and still throws
+// internally), but only on the success path, which is Next.js's own
+// framework-handled control flow, not user code raising an exception.
+
+export async function approveChange(pendingId: string, redirectTo: string): Promise<PendingActionResult> {
   const supabase = await createClient();
 
   const { data: pending, error: fetchError } = await supabase
@@ -96,10 +107,10 @@ export async function approveChange(pendingId: string, redirectTo: string) {
     .select("*")
     .eq("id", pendingId)
     .single();
-  if (fetchError || !pending) throw new Error("Pending change not found.");
+  if (fetchError || !pending) return { error: "Pending change not found." };
 
   const row = pending as EventPendingRow;
-  if (!row.duplicate_of || !row.diff_against) throw new Error("This pending row isn't a change request.");
+  if (!row.duplicate_of || !row.diff_against) return { error: "This pending row isn't a change request." };
 
   const diff = row.diff_against as Diff;
   const update: Partial<EventRow> = {};
@@ -117,23 +128,23 @@ export async function approveChange(pendingId: string, redirectTo: string) {
     .from("events")
     .update({ ...update, updated_by: user?.id })
     .eq("id", row.duplicate_of);
-  if (updateError) throw new Error(updateError.message);
+  if (updateError) return { error: updateError.message };
 
   await supabase.from("events_pending").delete().eq("id", pendingId);
   redirect(redirectTo);
 }
 
-export async function rejectChange(pendingId: string, redirectTo: string) {
+export async function rejectChange(pendingId: string, redirectTo: string): Promise<PendingActionResult> {
   const supabase = await createClient();
   const { error } = await supabase.from("events_pending").delete().eq("id", pendingId);
-  if (error) throw new Error(error.message);
+  if (error) return { error: error.message };
   redirect(redirectTo);
 }
 
 // Smart-ingested candidates carry their event fields directly on the pending
 // row (not as a diff) — approving either merges them into the matched live
 // event (when the dedup check found one) or inserts a brand-new event.
-export async function approveIngested(pendingId: string, redirectTo: string) {
+export async function approveIngested(pendingId: string, redirectTo: string): Promise<PendingActionResult> {
   const supabase = await createClient();
 
   const { data: pending, error: fetchError } = await supabase
@@ -141,10 +152,10 @@ export async function approveIngested(pendingId: string, redirectTo: string) {
     .select("*")
     .eq("id", pendingId)
     .single();
-  if (fetchError || !pending) throw new Error("Pending item not found.");
+  if (fetchError || !pending) return { error: "Pending item not found." };
 
   const row = pending as EventPendingRow;
-  if (row.source_type !== "smart_ingest") throw new Error("This pending row isn't a smart-ingested candidate.");
+  if (row.source_type !== "smart_ingest") return { error: "This pending row isn't a smart-ingested candidate." };
 
   const values: Record<string, unknown> = {};
   ALLOWED_DIFF_KEYS.forEach((key) => {
@@ -164,12 +175,12 @@ export async function approveIngested(pendingId: string, redirectTo: string) {
       .from("events")
       .update({ ...values, updated_by: user?.id })
       .eq("id", row.duplicate_of);
-    if (error) throw new Error(error.message);
+    if (error) return { error: error.message };
   } else {
     const required: (keyof EventFormValues)[] = ["title", "discipline", "start_datetime", "venue_name", "region", "organiser_url"];
     const missing = required.filter((key) => values[key] === null || values[key] === undefined || values[key] === "");
     if (missing.length > 0) {
-      throw new Error(`Missing required field(s) before this can be approved as a new event: ${missing.join(", ")}. Reject it and re-add manually, or fill the source and re-ingest.`);
+      return { error: `Can't approve as a new event — missing: ${missing.join(", ")}. Reject and add it manually via the event form instead.` };
     }
 
     const { error } = await supabase.from("events").insert({
@@ -180,7 +191,7 @@ export async function approveIngested(pendingId: string, redirectTo: string) {
       created_by: user?.id ?? null,
       updated_by: user?.id ?? null,
     });
-    if (error) throw new Error(error.message);
+    if (error) return { error: error.message };
   }
 
   await supabase.from("events_pending").delete().eq("id", pendingId);

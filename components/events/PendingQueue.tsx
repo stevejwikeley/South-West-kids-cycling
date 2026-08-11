@@ -1,6 +1,7 @@
 "use client";
 
-import { approveChange, approveIngested, rejectChange } from "@/lib/actions/pending";
+import { useState } from "react";
+import { approveChange, approveIngested, rejectChange, type PendingActionResult } from "@/lib/actions/pending";
 import type { EventPendingRow } from "@/lib/supabase/types";
 
 function formatValue(v: unknown): string {
@@ -24,17 +25,26 @@ const FIELD_ORDER: (keyof EventPendingRow)[] = [
   "organiser_url",
 ];
 
-async function handleApprove(fn: () => Promise<void>) {
-  try {
-    await fn();
-  } catch (e) {
-    alert(e instanceof Error ? e.message : "Approve failed.");
-  }
-}
-
 export default function PendingQueue({ pending, redirectTo }: { pending: EventPendingRow[]; redirectTo: string }) {
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [pendingIds, setPendingIds] = useState<Set<string>>(new Set());
+
   if (pending.length === 0) {
     return <p style={{ color: "#9A9992", fontSize: 13.5 }}>No pending changes — you&apos;re all caught up.</p>;
+  }
+
+  async function run(id: string, fn: () => Promise<PendingActionResult>) {
+    setPendingIds((prev) => new Set(prev).add(id));
+    setErrors((prev) => ({ ...prev, [id]: "" }));
+    const result = await fn();
+    setPendingIds((prev) => {
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+    if (result?.error) {
+      setErrors((prev) => ({ ...prev, [id]: result.error! }));
+    }
   }
 
   return (
@@ -44,6 +54,7 @@ export default function PendingQueue({ pending, redirectTo }: { pending: EventPe
         const diff = (p.diff_against ?? {}) as Record<string, { from: unknown; to: unknown }>;
         const note = diff._note?.to as string | undefined;
         const diffFields = Object.entries(diff).filter(([key]) => key !== "_note");
+        const isBusy = pendingIds.has(p.id);
 
         return (
           <div key={p.id} style={{ padding: "20px 6px", borderBottom: "1px solid #E4E2DD" }}>
@@ -62,23 +73,23 @@ export default function PendingQueue({ pending, redirectTo }: { pending: EventPe
               <div style={{ display: "flex", gap: 8 }}>
                 <button
                   type="button"
+                  disabled={isBusy}
                   onClick={() =>
-                    handleApprove(() =>
-                      isIngested ? approveIngested(p.id, redirectTo) : approveChange(p.id, redirectTo)
-                    )
+                    run(p.id, () => (isIngested ? approveIngested(p.id, redirectTo) : approveChange(p.id, redirectTo)))
                   }
                   className="mono"
-                  style={{ fontSize: 11.5, fontWeight: 700, color: "#1F5D3A", background: "#EAF3EC", border: "1px solid #1F5D3A", padding: "7px 14px", cursor: "pointer" }}
+                  style={{ fontSize: 11.5, fontWeight: 700, color: "#1F5D3A", background: "#EAF3EC", border: "1px solid #1F5D3A", padding: "7px 14px", cursor: isBusy ? "default" : "pointer", opacity: isBusy ? 0.6 : 1 }}
                 >
-                  Approve
+                  {isBusy ? "Working…" : "Approve"}
                 </button>
                 <button
                   type="button"
+                  disabled={isBusy}
                   onClick={() => {
-                    if (confirm("Reject this pending item?")) rejectChange(p.id, redirectTo);
+                    if (confirm("Reject this pending item?")) run(p.id, () => rejectChange(p.id, redirectTo));
                   }}
                   className="mono"
-                  style={{ fontSize: 11.5, fontWeight: 700, color: "#A13A2A", background: "none", border: "1px solid #D8D6D0", padding: "7px 14px", cursor: "pointer" }}
+                  style={{ fontSize: 11.5, fontWeight: 700, color: "#A13A2A", background: "none", border: "1px solid #D8D6D0", padding: "7px 14px", cursor: isBusy ? "default" : "pointer", opacity: isBusy ? 0.6 : 1 }}
                 >
                   Reject
                 </button>
@@ -115,6 +126,10 @@ export default function PendingQueue({ pending, redirectTo }: { pending: EventPe
 
             {note && (
               <p style={{ fontSize: 12.5, color: "#4A4A46", marginTop: 10, fontStyle: "italic" }}>&ldquo;{note}&rdquo;</p>
+            )}
+
+            {errors[p.id] && (
+              <p style={{ fontSize: 12.5, color: "#A13A2A", marginTop: 10 }}>{errors[p.id]}</p>
             )}
           </div>
         );

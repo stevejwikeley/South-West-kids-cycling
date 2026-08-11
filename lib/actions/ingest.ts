@@ -40,7 +40,7 @@ async function requireAdmin() {
   return profile;
 }
 
-async function saveCandidates(candidates: ExtractedEvent[], rawSourceRef: string) {
+async function saveCandidates(candidates: ExtractedEvent[], rawSourceRef: string, sourceUrl?: string) {
   const supabase = await createClient();
 
   const { data: liveEvents, error: liveError } = await supabase.from("events").select("*");
@@ -64,7 +64,11 @@ async function saveCandidates(candidates: ExtractedEvent[], rawSourceRef: string
       kids_only: candidate.kids_only,
       booking_status: candidate.booking_status,
       booking_link: candidate.booking_link,
-      organiser_url: candidate.organiser_url,
+      // organiser_url is required to publish (it's the CTA while a booking
+      // link isn't live yet) but posters/pasted text rarely state one. When
+      // the source itself was a URL, that page is a reasonable fallback —
+      // it's genuinely "the organiser's own site" for a scraped listing.
+      organiser_url: candidate.organiser_url ?? sourceUrl ?? null,
       organiser_name: candidate.organiser_name,
       organiser_contact: candidate.organiser_contact,
       source_type: "smart_ingest",
@@ -126,7 +130,7 @@ export async function ingestTextOrUrl(_prevState: IngestState, formData: FormDat
     return { error: "No youth cycling events found in that content." };
   }
 
-  const saved = await saveCandidates(candidates, sourceRef);
+  const saved = await saveCandidates(candidates, sourceRef, isLikelyUrl(input) ? sourceRef : undefined);
   return { success: `${saved} event${saved === 1 ? "" : "s"} sent to the pending queue for review.` };
 }
 
