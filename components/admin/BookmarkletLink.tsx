@@ -1,3 +1,5 @@
+"use client";
+
 // Cloudflare-protected sites (British Cycling, etc.) block server-side
 // fetches, but a real signed-in browser gets through fine — this bookmarklet
 // just captures what's already visible on the page you're looking at and
