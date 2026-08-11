@@ -62,12 +62,43 @@ export interface ClubRow {
   updated_at: string;
 }
 
-export interface EventPendingRow extends Omit<EventRow, "approved" | "published_via" | "updated_by"> {
+// Not Omit<EventRow, ...> — events_pending's columns are almost all
+// nullable (extraction may not know a field yet), unlike the live events
+// table where most of the same columns are NOT NULL. Mirrors the actual
+// schema in supabase/migrations/0001_init.sql rather than borrowing
+// EventRow's stricter types.
+export interface EventPendingRow {
+  id: string;
+  title: string | null;
+  discipline: DisciplineType | null;
+  status: EventStatus | null;
+  start_datetime: string | null;
+  end_datetime: string | null;
+  all_day: boolean;
+  venue_name: string | null;
+  address: string | null;
+  postcode: string | null;
+  lat: number | null;
+  lng: number | null;
+  age_categories: AgeCategory[];
+  kids_only: boolean | null;
+  booking_status: BookingStatusType | null;
+  booking_link: string | null;
+  organiser_url: string | null;
+  organiser_name: string | null;
+  organiser_contact: string | null;
+  club_id: string | null;
+  region: RegionType | null;
+  source_type: SourceTypeEnum;
+  source_detail: string | null;
   extraction_confidence: number | null;
   duplicate_of: string | null;
   raw_source_ref: string | null;
   diff_against: Record<string, unknown> | null;
   hold_reason: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface WatchedSourceRow {

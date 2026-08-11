@@ -129,3 +129,60 @@ export async function rejectChange(pendingId: string, redirectTo: string) {
   if (error) throw new Error(error.message);
   redirect(redirectTo);
 }
+
+// Smart-ingested candidates carry their event fields directly on the pending
+// row (not as a diff) — approving either merges them into the matched live
+// event (when the dedup check found one) or inserts a brand-new event.
+export async function approveIngested(pendingId: string, redirectTo: string) {
+  const supabase = await createClient();
+
+  const { data: pending, error: fetchError } = await supabase
+    .from("events_pending")
+    .select("*")
+    .eq("id", pendingId)
+    .single();
+  if (fetchError || !pending) throw new Error("Pending item not found.");
+
+  const row = pending as EventPendingRow;
+  if (row.source_type !== "smart_ingest") throw new Error("This pending row isn't a smart-ingested candidate.");
+
+  const values: Record<string, unknown> = {};
+  ALLOWED_DIFF_KEYS.forEach((key) => {
+    const v = (row as unknown as Record<string, unknown>)[key];
+    // Skip null/undefined so DB defaults apply on insert, and so a field the
+    // extraction wasn't confident about doesn't clobber good live data on
+    // merge — same "don't overwrite with uncertainty" spirit as spec 4.2.
+    if (v !== undefined && v !== null) values[key] = v;
+  });
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (row.duplicate_of) {
+    const { error } = await supabase
+      .from("events")
+      .update({ ...values, updated_by: user?.id })
+      .eq("id", row.duplicate_of);
+    if (error) throw new Error(error.message);
+  } else {
+    const required: (keyof EventFormValues)[] = ["title", "discipline", "start_datetime", "venue_name", "region", "organiser_url"];
+    const missing = required.filter((key) => values[key] === null || values[key] === undefined || values[key] === "");
+    if (missing.length > 0) {
+      throw new Error(`Missing required field(s) before this can be approved as a new event: ${missing.join(", ")}. Reject it and re-add manually, or fill the source and re-ingest.`);
+    }
+
+    const { error } = await supabase.from("events").insert({
+      ...values,
+      approved: true,
+      source_type: "smart_ingest",
+      published_via: "reviewed",
+      created_by: user?.id ?? null,
+      updated_by: user?.id ?? null,
+    });
+    if (error) throw new Error(error.message);
+  }
+
+  await supabase.from("events_pending").delete().eq("id", pendingId);
+  redirect(redirectTo);
+}

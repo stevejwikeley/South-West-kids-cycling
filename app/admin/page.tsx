@@ -25,12 +25,15 @@ export default async function AdminPage() {
         Signed in as {profile?.email}. Watched-source management lands in a later phase.
       </p>
 
-      <div style={{ marginTop: 28 }}>
+      <div style={{ marginTop: 28, display: "flex", gap: 12, flexWrap: "wrap" }}>
         <Link href="/admin/pending" style={{ display: "inline-flex", alignItems: "center", gap: 10, background: pending.length > 0 ? "#111111" : "transparent", color: pending.length > 0 ? "#FAFAF8" : "#111111", border: "1px solid #111111", padding: "11px 20px", fontWeight: 700, fontSize: 13 }}>
           Pending queue
           {pending.length > 0 && (
             <span className="mono" style={{ background: "#E0102A", color: "#FAFAF8", borderRadius: 999, padding: "2px 8px", fontSize: 11 }}>{pending.length}</span>
           )}
+        </Link>
+        <Link href="/admin/ingest" style={{ display: "inline-flex", alignItems: "center", background: "transparent", color: "#111111", border: "1px solid #111111", padding: "11px 20px", fontWeight: 700, fontSize: 13 }}>
+          Smart ingestion
         </Link>
       </div>
 
