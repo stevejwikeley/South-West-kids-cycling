@@ -49,8 +49,25 @@ export async function ingestTextOrUrl(_prevState: IngestState, formData: FormDat
   const input = String(formData.get("input") ?? "").trim();
   if (!input) return { error: "Paste a URL or some text first." };
 
+  // Set by the ingest bookmarklet: the page's own URL, captured alongside
+  // its text since the text itself was pasted (not fetched), so there'd
+  // otherwise be no organiser_url fallback for a Cloudflare-blocked source
+  // the way there is for the plain "paste a URL" path below.
+  const suppliedSourceUrl = String(formData.get("source_url") ?? "").trim();
+  if (suppliedSourceUrl) {
+    try {
+      const parsed = new URL(suppliedSourceUrl);
+      if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+        return { error: "Source URL must be http/https." };
+      }
+    } catch {
+      return { error: "That source URL doesn't look valid." };
+    }
+  }
+
   let text: string;
   let sourceRef: string;
+  let organiserUrlFallback: string | undefined;
 
   if (isLikelyUrl(input)) {
     let url: URL;
@@ -69,9 +86,11 @@ export async function ingestTextOrUrl(_prevState: IngestState, formData: FormDat
     const html = await res.text();
     text = htmlToText(html).slice(0, 60000);
     sourceRef = url.toString();
+    organiserUrlFallback = sourceRef;
   } else {
     text = input.slice(0, 60000);
-    sourceRef = "pasted text";
+    sourceRef = suppliedSourceUrl || "pasted text";
+    organiserUrlFallback = suppliedSourceUrl || undefined;
   }
 
   let candidates: ExtractedEvent[];
@@ -86,7 +105,7 @@ export async function ingestTextOrUrl(_prevState: IngestState, formData: FormDat
   }
 
   const supabase = await createClient();
-  const saved = await saveCandidates(supabase, candidates, sourceRef, isLikelyUrl(input) ? sourceRef : undefined);
+  const saved = await saveCandidates(supabase, candidates, sourceRef, organiserUrlFallback);
   return { success: `${saved} event${saved === 1 ? "" : "s"} sent to the pending queue for review.` };
 }
 

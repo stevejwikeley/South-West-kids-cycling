@@ -6,9 +6,9 @@ import BookmarkletLink from "@/components/admin/BookmarkletLink";
 export default async function AdminIngestPage({
   searchParams,
 }: {
-  searchParams: Promise<{ prefill?: string }>;
+  searchParams: Promise<{ prefill?: string; sourceUrl?: string }>;
 }) {
-  const { prefill } = await searchParams;
+  const { prefill, sourceUrl } = await searchParams;
 
   return (
     <header style={{ maxWidth: 1100, margin: "0 auto", padding: "56px 24px 120px" }}>
@@ -24,7 +24,7 @@ export default async function AdminIngestPage({
       <div style={{ display: "flex", gap: 56, flexWrap: "wrap", marginTop: 40 }}>
         <div>
           <h2 className="disp" style={{ fontSize: 18, marginBottom: 14 }}>Paste a URL or text</h2>
-          <IngestTextForm initialInput={prefill} />
+          <IngestTextForm initialInput={prefill} initialSourceUrl={sourceUrl} />
         </div>
         <div>
           <h2 className="disp" style={{ fontSize: 18, marginBottom: 14 }}>Upload a file</h2>
