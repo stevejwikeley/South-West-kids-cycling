@@ -1,8 +1,9 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentProfile } from "@/lib/auth";
 import { parseEventForm, type EventFormValues } from "./parse-event-form";
+import { parsePendingForm, type PendingFormValues } from "./parse-pending-form";
 import type { EventPendingRow, EventRow } from "@/lib/supabase/types";
 
 export interface SuggestChangeState {
@@ -92,14 +93,14 @@ export async function submitChangeRequest(
   return { success: true };
 }
 
-// These action functions return { error } rather than throwing. A thrown
+// These action functions return { error } rather than throwing — a thrown
 // error from a directly-invoked (non-<form>) server action surfaces to the
-// browser as a raw failed POST — alarming and unstyled — instead of data the
-// UI can render inline. redirect() is still called (and still throws
-// internally), but only on the success path, which is Next.js's own
-// framework-handled control flow, not user code raising an exception.
+// browser as a raw failed POST. They also don't redirect() server-side on
+// success: that relied on the client router cache picking up the mutation,
+// which it didn't reliably do (see the watched-sources "Remove" fix) — the
+// caller navigates/refreshes itself after seeing a clean result instead.
 
-export async function approveChange(pendingId: string, redirectTo: string): Promise<PendingActionResult> {
+export async function approveChange(pendingId: string): Promise<PendingActionResult> {
   const supabase = await createClient();
 
   const { data: pending, error: fetchError } = await supabase
@@ -131,20 +132,20 @@ export async function approveChange(pendingId: string, redirectTo: string): Prom
   if (updateError) return { error: updateError.message };
 
   await supabase.from("events_pending").delete().eq("id", pendingId);
-  redirect(redirectTo);
+  return {};
 }
 
-export async function rejectChange(pendingId: string, redirectTo: string): Promise<PendingActionResult> {
+export async function rejectChange(pendingId: string): Promise<PendingActionResult> {
   const supabase = await createClient();
   const { error } = await supabase.from("events_pending").delete().eq("id", pendingId);
   if (error) return { error: error.message };
-  redirect(redirectTo);
+  return {};
 }
 
 // Smart-ingested candidates carry their event fields directly on the pending
 // row (not as a diff) — approving either merges them into the matched live
 // event (when the dedup check found one) or inserts a brand-new event.
-export async function approveIngested(pendingId: string, redirectTo: string): Promise<PendingActionResult> {
+export async function approveIngested(pendingId: string): Promise<PendingActionResult> {
   const supabase = await createClient();
 
   const { data: pending, error: fetchError } = await supabase
@@ -195,5 +196,58 @@ export async function approveIngested(pendingId: string, redirectTo: string): Pr
   }
 
   await supabase.from("events_pending").delete().eq("id", pendingId);
-  redirect(redirectTo);
+  return {};
+}
+
+// Edits a pending row before approval — from the slide-out panel, not the
+// public suggest-a-change form, so it's admin-gated rather than open. A
+// smart_ingest row is updated directly (its fields ARE the event data); a
+// change_request row has its diff rebuilt against the live event it targets,
+// same comparison submitChangeRequest itself uses, so only fields that
+// actually differ from the live event stay in the diff.
+export async function updatePending(pendingId: string, formData: FormData): Promise<PendingActionResult> {
+  const profile = await getCurrentProfile();
+  if (!profile || profile.role !== "admin") return { error: "Not authorised." };
+
+  const supabase = await createClient();
+  const { data: pending, error: fetchError } = await supabase
+    .from("events_pending")
+    .select("*")
+    .eq("id", pendingId)
+    .single();
+  if (fetchError || !pending) return { error: "Pending item not found." };
+
+  const row = pending as EventPendingRow;
+  const values = parsePendingForm(formData);
+
+  if (row.source_type === "smart_ingest") {
+    const { error } = await supabase.from("events_pending").update({ ...values }).eq("id", pendingId);
+    if (error) return { error: error.message };
+    return {};
+  }
+
+  if (!row.duplicate_of) return { error: "This pending row isn't editable." };
+
+  const { data: liveEvent, error: liveError } = await supabase
+    .from("events")
+    .select("*")
+    .eq("id", row.duplicate_of)
+    .single();
+  if (liveError || !liveEvent) return { error: "The event this change targets no longer exists." };
+
+  const currentRow = liveEvent as EventRow;
+  const diff: Diff = {};
+  (Object.keys(values) as (keyof PendingFormValues)[]).forEach((key) => {
+    if (!ALLOWED_DIFF_KEYS.has(key as keyof EventFormValues)) return;
+    const to = values[key];
+    const from = currentRow[key as keyof EventRow];
+    if (!sameValue(to, from)) diff[key as keyof EventFormValues] = { from, to };
+  });
+
+  const existingNote = (row.diff_against as Diff | null)?._note;
+  if (existingNote) diff._note = existingNote;
+
+  const { error } = await supabase.from("events_pending").update({ title: values.title, diff_against: diff }).eq("id", pendingId);
+  if (error) return { error: error.message };
+  return {};
 }
