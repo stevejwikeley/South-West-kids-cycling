@@ -131,7 +131,7 @@ export default function CalendarPage({ events }: { events: CalendarEvent[] }) {
                           · {e.bookingStatus === "open" ? "ENTRIES OPEN" : "ENTRIES TBC"}
                         </span>
                         <Link href={`/events/${e.id}/suggest-change`} className="mono" style={{ color: "#9A9992", fontSize: 10.5, textDecoration: "underline" }}>
-                          · Suggest a change
+                          Suggest a change
                         </Link>
                       </div>
                     </div>
@@ -147,7 +147,7 @@ export default function CalendarPage({ events }: { events: CalendarEvent[] }) {
                       </a>
                     ) : (
                       <a href={e.organiserUrl} target="_blank" rel="noreferrer" style={{ flexShrink: 0, fontSize: 12, fontWeight: 700, color: "#6B6B66", border: "1px solid #D8D6D0", padding: "8px 18px" }}>
-                        Club website
+                        Organisers website
                       </a>
                     )}
                   </div>
