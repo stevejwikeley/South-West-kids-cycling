@@ -1,8 +1,15 @@
 import Link from "next/link";
 import IngestTextForm from "@/components/events/IngestTextForm";
 import IngestFileForm from "@/components/events/IngestFileForm";
+import BookmarkletLink from "@/components/admin/BookmarkletLink";
 
-export default function AdminIngestPage() {
+export default async function AdminIngestPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ prefill?: string }>;
+}) {
+  const { prefill } = await searchParams;
+
   return (
     <header style={{ maxWidth: 1100, margin: "0 auto", padding: "56px 24px 120px" }}>
       <div className="mono" style={{ fontSize: 11.5, letterSpacing: "0.12em", color: "#E0102A", marginBottom: 16, fontWeight: 700 }}>ADMIN</div>
@@ -17,13 +24,15 @@ export default function AdminIngestPage() {
       <div style={{ display: "flex", gap: 56, flexWrap: "wrap", marginTop: 40 }}>
         <div>
           <h2 className="disp" style={{ fontSize: 18, marginBottom: 14 }}>Paste a URL or text</h2>
-          <IngestTextForm />
+          <IngestTextForm initialInput={prefill} />
         </div>
         <div>
           <h2 className="disp" style={{ fontSize: 18, marginBottom: 14 }}>Upload a file</h2>
           <IngestFileForm />
         </div>
       </div>
+
+      <BookmarkletLink />
     </header>
   );
 }

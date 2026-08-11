@@ -3,7 +3,7 @@
 import { useActionState } from "react";
 import { ingestTextOrUrl, type IngestState } from "@/lib/actions/ingest";
 
-export default function IngestTextForm() {
+export default function IngestTextForm({ initialInput }: { initialInput?: string }) {
   const [state, formAction, pending] = useActionState<IngestState, FormData>(ingestTextOrUrl, {});
 
   return (
@@ -14,6 +14,7 @@ export default function IngestTextForm() {
       <textarea
         name="input"
         required
+        defaultValue={initialInput}
         placeholder="Paste a British Cycling listing URL, a club page URL, or pasted event text/Facebook post…"
         style={{ width: "100%", minHeight: 120, background: "#FFFFFF", border: "1px solid #D8D6D0", color: "#111111", padding: "10px 12px", fontSize: 13.5, resize: "vertical" }}
       />
