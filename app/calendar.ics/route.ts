@@ -1,11 +1,26 @@
+import { NextRequest } from "next/server";
 import { createEvents, type DateArray, type EventAttributes } from "ics";
 import { createClient } from "@/lib/supabase/server";
-import type { EventRow } from "@/lib/supabase/types";
+import type { DisciplineType, EventRow, RegionType } from "@/lib/supabase/types";
 
 // Generated live on every request from the approved events table (spec
 // section 9), not a batch job — a new approval shows up on the subscriber's
 // next refresh with no separate publish step.
 export const dynamic = "force-dynamic";
+
+const DISCIPLINE_VALUES = new Set<DisciplineType>(["cx", "xc", "road", "tri", "gravel", "duathlon", "clusters", "other"]);
+const REGION_VALUES = new Set<RegionType>(["devon", "cornwall", "both"]);
+const DISCIPLINE_LABELS: Record<DisciplineType, string> = {
+  cx: "Cyclocross",
+  xc: "XC",
+  road: "Road",
+  tri: "Triathlon",
+  gravel: "Gravel",
+  duathlon: "Duathlon",
+  clusters: "Club Clusters",
+  other: "Other",
+};
+const REGION_LABELS: Record<RegionType, string> = { devon: "Devon", cornwall: "Cornwall", both: "Devon & Cornwall" };
 
 function dateOnly(iso: string): DateArray {
   const [y, m, d] = iso.slice(0, 10).split("-").map(Number);
@@ -38,21 +53,46 @@ function toIcsEvent(e: EventRow): EventAttributes {
   };
 }
 
-export async function GET() {
+// Filtered feeds (spec section 9): ?discipline=cx,xc and/or ?region=devon,
+// same generation path as the unfiltered feed — just a narrower query.
+// Invalid values in either param are dropped rather than erroring, so a
+// stale/mistyped filter degrades to "no filter on that dimension" instead
+// of a broken subscription.
+function parseFilters(searchParams: URLSearchParams) {
+  const disciplines = (searchParams.get("discipline") ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter((s): s is DisciplineType => DISCIPLINE_VALUES.has(s as DisciplineType));
+  const regions = (searchParams.get("region") ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter((s): s is RegionType => REGION_VALUES.has(s as RegionType));
+  return { disciplines, regions };
+}
+
+function feedName(disciplines: DisciplineType[], regions: RegionType[]): string {
+  const parts = [
+    disciplines.length ? disciplines.map((d) => DISCIPLINE_LABELS[d]).join("/") : null,
+    regions.length ? regions.map((r) => REGION_LABELS[r]).join("/") : null,
+  ].filter(Boolean);
+  return parts.length ? `South West Kids Cycling — ${parts.join(", ")}` : "South West Kids Cycling";
+}
+
+export async function GET(request: NextRequest) {
+  const { disciplines, regions } = parseFilters(request.nextUrl.searchParams);
+
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("events")
-    .select("*")
-    .eq("approved", true)
-    .neq("status", "cancelled")
-    .order("start_datetime", { ascending: true });
+  let query = supabase.from("events").select("*").eq("approved", true).neq("status", "cancelled");
+  if (disciplines.length) query = query.in("discipline", disciplines);
+  if (regions.length) query = query.in("region", regions);
+  const { data, error } = await query.order("start_datetime", { ascending: true });
 
   if (error) {
     return new Response("Failed to load events", { status: 500 });
   }
 
   const { error: icsError, value } = createEvents((data as EventRow[]).map(toIcsEvent), {
-    calName: "South West Kids Cycling",
+    calName: feedName(disciplines, regions),
     productId: "-//South West Kids Cycling//Calendar//EN",
   });
 
