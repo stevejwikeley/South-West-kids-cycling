@@ -111,6 +111,8 @@ export interface WatchedSourceRow {
   last_checked_at: string | null;
   last_result_count: number | null;
   last_seen_events: Record<string, unknown> | null;
+  last_status: "ok" | "error" | null;
+  last_error: string | null;
   created_at: string;
   updated_at: string;
 }

@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { deleteWatchedSource } from "@/lib/actions/sources";
+import { useRouter } from "next/navigation";
+import { checkWatchedSourceNow, deleteWatchedSource } from "@/lib/actions/sources";
 import type { WatchedSourceRow } from "@/lib/supabase/types";
 
 function formatChecked(iso: string | null): string {
@@ -9,24 +10,64 @@ function formatChecked(iso: string | null): string {
   return new Date(iso).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 }
 
+function StatusBadge({ source }: { source: WatchedSourceRow }) {
+  if (!source.last_status) {
+    return (
+      <span className="mono" style={{ fontSize: 10, fontWeight: 700, color: "#9A9992", border: "1px solid #D8D6D0", padding: "3px 8px" }}>
+        NOT CHECKED YET
+      </span>
+    );
+  }
+  if (source.last_status === "error") {
+    return (
+      <span className="mono" style={{ fontSize: 10, fontWeight: 700, color: "#A13A2A", background: "#F7EAE7", padding: "3px 8px" }}>
+        BLOCKED / FAILING
+      </span>
+    );
+  }
+  return (
+    <span className="mono" style={{ fontSize: 10, fontWeight: 700, color: "#1F5D3A", background: "#EAF3EC", padding: "3px 8px" }}>
+      OK
+    </span>
+  );
+}
+
 export default function WatchedSourceList({ sources, redirectTo }: { sources: WatchedSourceRow[]; redirectTo: string }) {
+  const router = useRouter();
   const [busyIds, setBusyIds] = useState<Set<string>>(new Set());
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [notes, setNotes] = useState<Record<string, string>>({});
 
   if (sources.length === 0) {
     return <p style={{ color: "#9A9992", fontSize: 13.5 }}>No watched sources yet — add one to start nightly scanning.</p>;
   }
 
-  async function handleDelete(id: string, label: string) {
-    if (!confirm(`Stop watching "${label}"?`)) return;
-    setBusyIds((prev) => new Set(prev).add(id));
-    setErrors((prev) => ({ ...prev, [id]: "" }));
-    const result = await deleteWatchedSource(id, redirectTo);
+  function setBusy(id: string, busy: boolean) {
     setBusyIds((prev) => {
       const next = new Set(prev);
-      next.delete(id);
+      if (busy) next.add(id);
+      else next.delete(id);
       return next;
     });
+  }
+
+  async function handleCheck(id: string) {
+    setBusy(id, true);
+    setErrors((prev) => ({ ...prev, [id]: "" }));
+    setNotes((prev) => ({ ...prev, [id]: "" }));
+    const result = await checkWatchedSourceNow(id);
+    setBusy(id, false);
+    if (result.error) setErrors((prev) => ({ ...prev, [id]: result.error! }));
+    else if (result.detail) setNotes((prev) => ({ ...prev, [id]: result.detail! }));
+    router.refresh();
+  }
+
+  async function handleDelete(id: string, label: string) {
+    if (!confirm(`Stop watching "${label}"?`)) return;
+    setBusy(id, true);
+    setErrors((prev) => ({ ...prev, [id]: "" }));
+    const result = await deleteWatchedSource(id, redirectTo);
+    setBusy(id, false);
     if (result?.error) setErrors((prev) => ({ ...prev, [id]: result.error! }));
   }
 
@@ -38,25 +79,43 @@ export default function WatchedSourceList({ sources, redirectTo }: { sources: Wa
           <div key={s.id} style={{ padding: "16px 6px", borderBottom: "1px solid #E4E2DD" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
               <div>
-                <div style={{ fontWeight: 700, fontSize: 14.5 }}>{s.label}</div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                  <span style={{ fontWeight: 700, fontSize: 14.5 }}>{s.label}</span>
+                  <StatusBadge source={s} />
+                </div>
                 <a href={s.url} target="_blank" rel="noreferrer" className="mono" style={{ fontSize: 11.5, color: "#4A4A46", wordBreak: "break-all" }}>
                   {s.url}
                 </a>
                 <div className="mono" style={{ fontSize: 10, color: "#9A9992", marginTop: 4 }}>
                   {s.check_frequency.toUpperCase()} · LAST CHECKED {formatChecked(s.last_checked_at).toUpperCase()}
-                  {s.last_result_count != null && ` · ${s.last_result_count} FOUND LAST RUN`}
+                  {s.last_status === "ok" && s.last_result_count != null && ` · ${s.last_result_count} FOUND LAST RUN`}
                 </div>
               </div>
-              <button
-                type="button"
-                disabled={isBusy}
-                onClick={() => handleDelete(s.id, s.label)}
-                className="mono"
-                style={{ fontSize: 11.5, fontWeight: 700, color: "#A13A2A", background: "none", border: "1px solid #D8D6D0", padding: "7px 14px", cursor: isBusy ? "default" : "pointer", opacity: isBusy ? 0.6 : 1 }}
-              >
-                {isBusy ? "Working…" : "Remove"}
-              </button>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button
+                  type="button"
+                  disabled={isBusy}
+                  onClick={() => handleCheck(s.id)}
+                  className="mono"
+                  style={{ fontSize: 11.5, fontWeight: 700, color: "#111111", background: "none", border: "1px solid #111111", padding: "7px 14px", cursor: isBusy ? "default" : "pointer", opacity: isBusy ? 0.6 : 1 }}
+                >
+                  {isBusy ? "Checking…" : "Check now"}
+                </button>
+                <button
+                  type="button"
+                  disabled={isBusy}
+                  onClick={() => handleDelete(s.id, s.label)}
+                  className="mono"
+                  style={{ fontSize: 11.5, fontWeight: 700, color: "#A13A2A", background: "none", border: "1px solid #D8D6D0", padding: "7px 14px", cursor: isBusy ? "default" : "pointer", opacity: isBusy ? 0.6 : 1 }}
+                >
+                  {isBusy ? "Working…" : "Remove"}
+                </button>
+              </div>
             </div>
+            {s.last_status === "error" && s.last_error && !notes[s.id] && !errors[s.id] && (
+              <p style={{ fontSize: 12.5, color: "#A13A2A", marginTop: 8 }}>{s.last_error}</p>
+            )}
+            {notes[s.id] && <p style={{ fontSize: 12.5, color: "#4A4A46", marginTop: 8 }}>{notes[s.id]}</p>}
             {errors[s.id] && <p style={{ fontSize: 12.5, color: "#A13A2A", marginTop: 8 }}>{errors[s.id]}</p>}
           </div>
         );
