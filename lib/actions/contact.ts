@@ -2,13 +2,14 @@
 
 import { sendEmail } from "@/lib/email/resend";
 import { buildContactEmailHtml } from "@/lib/email/contact";
+import { submitEventText } from "./public-submit";
 
 export interface ContactFormState {
   error?: string;
   success?: boolean;
 }
 
-const REASONS = new Set(["general", "organiser"]);
+const REASONS = new Set(["general", "organiser", "add_event"]);
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export async function submitContactForm(_prevState: ContactFormState, formData: FormData): Promise<ContactFormState> {
@@ -25,6 +26,16 @@ export async function submitContactForm(_prevState: ContactFormState, formData: 
   }
   if (!REASONS.has(reason)) {
     return { error: "Invalid reason." };
+  }
+
+  // "Add event" skips the admin-email path entirely and goes straight
+  // through the same extraction/dedup/pending-queue pipeline as the public
+  // /submit-event page — the message is the event text or a link to it, not
+  // a note for a human to read first.
+  if (reason === "add_event") {
+    const result = await submitEventText(message, `contact form (${name} <${email}>)`);
+    if (result.error) return { error: result.error };
+    return { success: true };
   }
 
   const adminEmail = process.env.ADMIN_NOTIFICATION_EMAIL;

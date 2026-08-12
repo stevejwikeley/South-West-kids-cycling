@@ -16,9 +16,11 @@ export interface PublicSubmitState {
 // Public counterpart to ingestTextOrUrl (lib/actions/ingest.ts) — same
 // fetch/extract/dedup/save pipeline, no admin check, and tagged
 // source_type: "public_submission" rather than "smart_ingest" purely so the
-// pending queue can show admins where a candidate came from.
-export async function submitPublicUrlOrText(_prevState: PublicSubmitState, formData: FormData): Promise<PublicSubmitState> {
-  const input = String(formData.get("input") ?? "").trim();
+// pending queue can show admins where a candidate came from. Shared by the
+// /submit-event page and the contact form's "Add event" reason — channel
+// only affects how the pending row's source is labeled for admins.
+export async function submitEventText(input: string, channel = "public submission"): Promise<PublicSubmitState> {
+  input = input.trim();
   if (!input) return { error: "Paste a URL or some text first." };
 
   let text: string;
@@ -41,21 +43,21 @@ export async function submitPublicUrlOrText(_prevState: PublicSubmitState, formD
     if (!res || !res.ok) return { error: "Couldn't fetch that URL." };
     const html = await res.text();
     text = htmlToText(html, res.url).slice(0, 60000);
-    sourceRef = url.toString();
-    organiserUrlFallback = sourceRef;
+    sourceRef = `${channel}: ${url.toString()}`;
+    organiserUrlFallback = url.toString();
   } else {
     text = input.slice(0, 60000);
-    sourceRef = "public submission (pasted text)";
+    sourceRef = `${channel} (pasted text)`;
   }
 
   let candidates: ExtractedEvent[];
   try {
     candidates = await Sentry.startSpan(
-      { name: `submitPublicUrlOrText: ${sourceRef}`, op: "ingestion.public_submission", attributes: { "source.ref": sourceRef } },
+      { name: `submitEventText: ${sourceRef}`, op: "ingestion.public_submission", attributes: { "source.ref": sourceRef } },
       () => extractEvents({ text })
     );
   } catch (e) {
-    Sentry.captureException(e, { tags: { operation: "public_submit_url_or_text" } });
+    Sentry.captureException(e, { tags: { operation: "submit_event_text" } });
     return { error: e instanceof Error ? e.message : "Extraction failed." };
   }
 
@@ -69,6 +71,10 @@ export async function submitPublicUrlOrText(_prevState: PublicSubmitState, formD
     return { error: "That looks like it's already in the calendar or pending review." };
   }
   return { success: `Thanks — sent for review. ${saved === 1 ? "It'll" : "They'll"} appear on the calendar once an admin checks ${saved === 1 ? "it" : "them"} over.` };
+}
+
+export async function submitPublicUrlOrText(_prevState: PublicSubmitState, formData: FormData): Promise<PublicSubmitState> {
+  return submitEventText(String(formData.get("input") ?? ""));
 }
 
 // Structured-form counterpart — same pending-queue destination and approval

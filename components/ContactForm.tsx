@@ -19,7 +19,9 @@ export default function ContactForm({ defaultReason = "general" }: { defaultReas
   if (state.success) {
     return (
       <p style={{ maxWidth: 420, fontSize: 15, lineHeight: 1.6, color: "#4A4A46" }}>
-        Thanks — your message has been sent. We&apos;ll get back to you as soon as we can.
+        {reason === "add_event"
+          ? "Thanks — sent for review. It'll appear on the calendar once an admin checks it over."
+          : "Thanks — your message has been sent. We'll get back to you as soon as we can."}
       </p>
     );
   }
@@ -41,11 +43,18 @@ export default function ContactForm({ defaultReason = "general" }: { defaultReas
         <select style={input} name="reason" value={reason} onChange={(e) => setReason(e.target.value)}>
           <option value="general">General enquiry</option>
           <option value="organiser">Request organiser account</option>
+          <option value="add_event">Add event</option>
         </select>
       </div>
 
+      {reason === "add_event" && (
+        <p style={{ fontSize: 12.5, lineHeight: 1.6, color: "#6B6B66", marginTop: -8, marginBottom: 18 }}>
+          Paste the event details as text, or a link to the event page, in the message below — we&apos;ll pull out the details automatically and send it for review.
+        </p>
+      )}
+
       <div style={field}>
-        <label className="mono" style={label}>MESSAGE</label>
+        <label className="mono" style={label}>{reason === "add_event" ? "EVENT DETAILS OR LINK" : "MESSAGE"}</label>
         <textarea style={{ ...input, minHeight: 120, resize: "vertical" }} name="message" required />
       </div>
 
