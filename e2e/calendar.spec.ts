@@ -16,6 +16,7 @@ test.describe("Calendar page", () => {
 
   test("discipline filter narrows the list and CLEAR resets it", async ({ page }) => {
     await page.goto("/");
+    await page.getByRole("button", { name: /toggle filters/i }).click();
     const disciplineButtons = page.locator('div:has(> span:text("DISCIPLINE")) button');
     const firstDiscipline = disciplineButtons.first();
     await expect(firstDiscipline).toBeVisible();
@@ -34,6 +35,7 @@ test.describe("Calendar page", () => {
 
   test("region filter and search narrow the list", async ({ page }) => {
     await page.goto("/");
+    await page.getByRole("button", { name: /toggle filters/i }).click();
     await page.getByRole("button", { name: "DEVON", exact: true }).click();
     await expect(page.getByRole("button", { name: "DEVON", exact: true })).toHaveCSS("color", "rgb(250, 250, 248)");
 
@@ -43,6 +45,7 @@ test.describe("Calendar page", () => {
 
   test("only disciplines present in the data are shown as filters", async ({ page }) => {
     await page.goto("/");
+    await page.getByRole("button", { name: /toggle filters/i }).click();
     const disciplineRow = page.locator('div:has(> span:text("DISCIPLINE"))').first();
     const shownLabels = await disciplineRow.locator("button").allTextContents();
     expect(shownLabels.length).toBeGreaterThan(0);
@@ -63,7 +66,7 @@ test.describe("Calendar page", () => {
 test.describe("Subscribe page", () => {
   test("loads from the calendar CTA and shows platform options", async ({ page }) => {
     await page.goto("/");
-    await page.getByRole("link", { name: /subscribe to calendar/i }).click();
+    await page.getByRole("link", { name: /^subscribe$/i }).click();
     await expect(page).toHaveURL(/\/subscribe$/);
     await expect(page.getByRole("button", { name: /google calendar/i })).toBeVisible();
     await expect(page.getByRole("button", { name: /apple calendar/i })).toBeVisible();

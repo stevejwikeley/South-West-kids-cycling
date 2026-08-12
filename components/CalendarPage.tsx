@@ -2,11 +2,12 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { MapPin, Search, X, Rss, ArrowUpRight } from "lucide-react";
+import { MapPin, Search, X, Rss, ArrowUpRight, Filter, Download } from "lucide-react";
 import { EVENT_DISCIPLINES, eventDisc, ageLabel } from "@/lib/mock-data";
 import type { DisciplineId, CalendarEvent, Region } from "@/lib/types";
 import { MONTHS, fmtDay } from "@/lib/format";
 import { trackEvent } from "@/lib/analytics";
+import { eventsToCsv, downloadCsv } from "@/lib/csv";
 
 const REGION_HINT: Record<Region, string | undefined> = {
   devon: "Devon",
@@ -18,6 +19,7 @@ export default function CalendarPage({ events }: { events: CalendarEvent[] }) {
   const [activeDisc, setActiveDisc] = useState<Set<DisciplineId>>(new Set());
   const [region, setRegion] = useState("all");
   const [search, setSearch] = useState("");
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   const visibleDisciplines = useMemo(() => {
     const present = new Set(events.map((e) => e.discipline));
@@ -32,6 +34,8 @@ export default function CalendarPage({ events }: { events: CalendarEvent[] }) {
       trackEvent("filter_discipline", { discipline: id, active: nowActive });
       return n;
     });
+
+  const activeFilterCount = (region !== "all" ? 1 : 0) + (search ? 1 : 0) + activeDisc.size;
 
   const filtered = useMemo(
     () =>
@@ -64,51 +68,76 @@ export default function CalendarPage({ events }: { events: CalendarEvent[] }) {
         <p style={{ maxWidth: 480, fontSize: 16, lineHeight: 1.6, color: "#4A4A46", marginTop: 22 }}>
           Every Under 8s–16s race and club cluster session across Devon and Cornwall — Cross Country mountain biking, cyclocross, road, triathlon in one calendar.
         </p>
-        <div style={{ display: "flex", gap: 28, alignItems: "flex-start", marginTop: 30, flexWrap: "wrap" }}>
-          <div>
-            <Link href="/subscribe" onClick={() => trackEvent("subscribe_click", { source: "calendar_hero" })} style={{ background: "#111111", color: "#FAFAF8", border: "none", padding: "13px 24px", fontWeight: 700, fontSize: 13.5, display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
-              <Rss size={15} /> Subscribe to calendar
-            </Link>
-            <div className="mono" style={{ fontSize: 10.5, color: "#9A9992", marginTop: 8 }}>Works with Google Calendar, Apple Calendar, Outlook &amp; more</div>
-          </div>
-          <Link href="/getting-started" onClick={() => trackEvent("getting_started_click", { source: "calendar_hero" })} style={{ fontSize: 13.5, fontWeight: 700, display: "flex", alignItems: "center", gap: 5, borderBottom: "1px solid #111111", paddingBottom: 2, marginTop: 13 }}>
-            New to racing? Start here <ArrowUpRight size={14} />
+        <Link href="/getting-started" onClick={() => trackEvent("getting_started_click", { source: "calendar_hero" })} style={{ fontSize: 13.5, fontWeight: 700, display: "flex", alignItems: "center", gap: 5, borderBottom: "1px solid #111111", paddingBottom: 2, marginTop: 18, width: "fit-content" }}>
+          New to racing? Start here <ArrowUpRight size={14} />
+        </Link>
+        <div style={{ marginTop: 26 }}>
+          <Link href="/subscribe" onClick={() => trackEvent("subscribe_click", { source: "calendar_hero" })} style={{ background: "#111111", color: "#FAFAF8", border: "none", padding: "13px 24px", fontWeight: 700, fontSize: 13.5, display: "flex", alignItems: "center", gap: 8, cursor: "pointer", width: "fit-content" }}>
+            <Rss size={15} /> Subscribe
           </Link>
         </div>
       </header>
 
       <div style={{ position: "sticky", top: 0, zIndex: 20, background: "#FAFAF8", borderTop: "1px solid #E4E2DD", borderBottom: "1px solid #E4E2DD" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto", padding: "16px 24px", display: "flex", flexDirection: "column", gap: 12 }}>
-          <div className="filter-controls-row">
-            <div className="filter-region-toggle">
-              {[["all", "ALL"], ["devon", "DEVON"], ["cornwall", "CORNWALL"]].map(([val, label]) => (
-                <button key={val} onClick={() => { setRegion(val); trackEvent("filter_region", { region: val }); }} className="mono" style={{ padding: "8px 15px", fontSize: 11, fontWeight: 700, letterSpacing: "0.03em", background: region === val ? "#111111" : "transparent", color: region === val ? "#FAFAF8" : "#6B6B66", border: "none", cursor: "pointer" }}>{label}</button>
-              ))}
-            </div>
-            <div className="filter-search">
-              <Search size={14} style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", color: "#9A9992" }} />
-              <input value={search} onChange={(e) => setSearch(e.target.value)} onBlur={() => search && trackEvent("search", { query: search })} placeholder="Search events or venues"
-                style={{ background: "#FFFFFF", border: "1px solid #D8D6D0", color: "#111111", padding: "8px 12px 8px 32px", fontSize: 12.5, width: "100%" }} />
-              {search && <X size={13} onClick={() => setSearch("")} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", color: "#9A9992", cursor: "pointer" }} />}
-            </div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+            <button
+              type="button"
+              aria-label="Toggle filters"
+              onClick={() => { setFiltersOpen((o) => !o); trackEvent("filters_toggle", { open: !filtersOpen }); }}
+              className="mono"
+              style={{ display: "flex", alignItems: "center", gap: 6, background: filtersOpen ? "#111111" : "none", color: filtersOpen ? "#FAFAF8" : "#111111", border: "1px solid #111111", padding: "8px 12px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}
+            >
+              <Filter size={13} />
+              <span className="filter-toggle-label">Filters</span>
+              {activeFilterCount > 0 && (
+                <span className="mono" style={{ background: "#E0102A", color: "#FAFAF8", fontSize: 9, fontWeight: 700, padding: "1px 5px", borderRadius: 999 }}>{activeFilterCount}</span>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() => { downloadCsv("south-west-kids-cycling-events.csv", eventsToCsv(filtered)); trackEvent("download_csv", { count: filtered.length }); }}
+              className="mono"
+              style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "1px solid #D8D6D0", padding: "8px 12px", fontSize: 11, fontWeight: 700, color: "#111111", cursor: "pointer" }}
+            >
+              <Download size={13} /> Download CSV
+            </button>
           </div>
 
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-            <span className="mono" style={{ fontSize: 10.5, color: "#9A9992", marginRight: 2 }}>DISCIPLINE</span>
-            {visibleDisciplines.map((d) => {
-              const active = activeDisc.has(d.id);
-              return (
-                <button key={d.id} onClick={() => toggleDisc(d.id)}
-                  style={{ display: "flex", alignItems: "center", gap: 7, padding: "6px 13px", borderRadius: 999, border: `1px solid ${active ? d.color : "#D8D6D0"}`, background: active ? d.color : "transparent", color: active ? "#FAFAF8" : "#4A4A46", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
-                  <span style={{ width: 6, height: 6, borderRadius: "50%", background: active ? "#FAFAF8" : d.color }} />
-                  {d.label}
-                </button>
-              );
-            })}
-            {activeDisc.size > 0 && (
-              <button onClick={() => setActiveDisc(new Set())} className="mono" style={{ fontSize: 11, color: "#6B6B66", background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}>CLEAR</button>
-            )}
-          </div>
+          {filtersOpen && (
+            <>
+              <div className="filter-controls-row">
+                <div className="filter-region-toggle">
+                  {[["all", "ALL"], ["devon", "DEVON"], ["cornwall", "CORNWALL"]].map(([val, label]) => (
+                    <button key={val} onClick={() => { setRegion(val); trackEvent("filter_region", { region: val }); }} className="mono" style={{ padding: "8px 15px", fontSize: 11, fontWeight: 700, letterSpacing: "0.03em", background: region === val ? "#111111" : "transparent", color: region === val ? "#FAFAF8" : "#6B6B66", border: "none", cursor: "pointer" }}>{label}</button>
+                  ))}
+                </div>
+                <div className="filter-search">
+                  <Search size={14} style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", color: "#9A9992" }} />
+                  <input value={search} onChange={(e) => setSearch(e.target.value)} onBlur={() => search && trackEvent("search", { query: search })} placeholder="Search events or venues"
+                    style={{ background: "#FFFFFF", border: "1px solid #D8D6D0", color: "#111111", padding: "8px 12px 8px 32px", fontSize: 12.5, width: "100%" }} />
+                  {search && <X size={13} onClick={() => setSearch("")} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", color: "#9A9992", cursor: "pointer" }} />}
+                </div>
+              </div>
+
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                <span className="mono" style={{ fontSize: 10.5, color: "#9A9992", marginRight: 2 }}>DISCIPLINE</span>
+                {visibleDisciplines.map((d) => {
+                  const active = activeDisc.has(d.id);
+                  return (
+                    <button key={d.id} onClick={() => toggleDisc(d.id)}
+                      style={{ display: "flex", alignItems: "center", gap: 7, padding: "6px 13px", borderRadius: 999, border: `1px solid ${active ? d.color : "#D8D6D0"}`, background: active ? d.color : "transparent", color: active ? "#FAFAF8" : "#4A4A46", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+                      <span style={{ width: 6, height: 6, borderRadius: "50%", background: active ? "#FAFAF8" : d.color }} />
+                      {d.label}
+                    </button>
+                  );
+                })}
+                {activeDisc.size > 0 && (
+                  <button onClick={() => setActiveDisc(new Set())} className="mono" style={{ fontSize: 11, color: "#6B6B66", background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}>CLEAR</button>
+                )}
+              </div>
+            </>
+          )}
         </div>
       </div>
 
