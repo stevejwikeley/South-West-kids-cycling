@@ -1,36 +1,132 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# South West Kids Cycling
 
-## Getting Started
+A public calendar of youth cycling races and events (cyclocross, XC, road, triathlon, gravel, duathlon) across Devon & Cornwall, England, for ages 5–16. Built with Next.js and Supabase, deployed on Vercel.
 
-First, run the development server:
+Live at [southwestkidscycling.uk](https://www.southwestkidscycling.uk).
+
+## Stack
+
+- **Next.js 16** (App Router, React 19, Server Actions) — see `AGENTS.md` before writing Next.js code, this app tracks a fast-moving pre-release Next.js and the framework docs are vendored into `node_modules/next/dist/docs/`.
+- **Supabase** (Postgres + Auth + RLS) for data, `@supabase/ssr` for the client.
+- **Anthropic API** (`@anthropic-ai/sdk`) for the smart-ingestion event extraction pipeline — see [`lib/ingestion/README.md`](lib/ingestion/README.md).
+- **Resend** for transactional email (contact form, pending-approval digest).
+- **Sentry** for error tracking and performance tracing.
+- **Google Analytics** (gtag) for usage analytics.
+- **Playwright** for end-to-end tests.
+- **Vercel** for hosting, cron jobs, and deployment.
+
+## Getting started
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000). You'll need a `.env.local` — copy `.env.example` and fill in the values (see below for where each one comes from).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Environment variables
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Variable | Required | Purpose |
+|---|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | Yes | Supabase project URL. |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes | Supabase anon/public key — used by the browser and by server-side reads that respect RLS. |
+| `SUPABASE_SERVICE_ROLE_KEY` | Yes | Bypasses RLS — used only in trusted server contexts (cron jobs, admin actions). Never expose to the client. |
+| `NEXT_PUBLIC_SITE_URL` | Yes | Canonical site URL, used for absolute links (ICS feed, emails, OG tags). |
+| `ANTHROPIC_API_KEY` | Yes | Powers the smart-ingestion event extraction (`lib/ingestion/extract-events.ts`). |
+| `RESEND_API_KEY` | Yes | Sends transactional email via Resend. |
+| `RESEND_FROM_EMAIL` | Yes | From-address for outgoing email. |
+| `ADMIN_NOTIFICATION_EMAIL` | Yes | Where contact-form submissions and the pending-approval digest are sent. |
+| `CRON_SECRET` | Yes | Shared secret Vercel Cron sends as a bearer token to authorize `/api/cron/*` routes. |
+| `MCP_SECRET` | Yes | Bearer/OAuth secret for the `/api/mcp` server (weekly event-discovery connector — see below). |
+| `NEXT_PUBLIC_GA_MEASUREMENT_ID` | No | Google Analytics measurement ID (`G-XXXXXXX`). Analytics no-ops if unset. |
+| `NEXT_PUBLIC_SENTRY_DSN` | No | Sentry DSN. Sentry no-ops if unset. |
+| `SENTRY_ORG` / `SENTRY_PROJECT` / `SENTRY_AUTH_TOKEN` | No | Only needed for source-map upload on build — not required for error tracking itself. |
 
-## Learn More
+## Scripts
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+npm run dev        # start the dev server
+npm run build       # production build
+npm run start        # run a production build locally
+npm run lint         # eslint
+npm run test:e2e     # Playwright end-to-end tests
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Project structure
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```
+app/                    Routes (App Router)
+  page.tsx                Public calendar (home page)
+  clubs/                   Public club directory
+  getting-started/         New-to-racing guide
+  contact/                 Contact form (general enquiry / organiser account request)
+  subscribe/               Calendar subscription instructions
+  calendar.ics/            Live ICS feed
+  events/[id]/suggest-change/   Public "suggest a change" form for any event
+  login/                   Auth (admin + organiser)
+  admin/                   Admin-only: events, pending queue, watched sources, smart ingestion
+  organiser/               Organiser-only: manage their own events
+  api/cron/                Vercel Cron endpoints (see below)
+  api/mcp/                 MCP server for weekly event discovery (see below)
 
-## Deploy on Vercel
+components/              Shared UI. components/admin and components/events hold
+                          role-specific pieces; everything else is public-facing.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+lib/
+  actions/                 Server Actions ("use server"), one file per feature
+  ingestion/                AI event-extraction pipeline — see its own README
+  email/                    Resend email templates + sender
+  supabase/                 Supabase client factories + hand-written DB types
+  auth.ts                   getCurrentProfile() — the one place role checks originate
+  data.ts                   Read helpers that map DB rows to the app's CalendarEvent/Club types
+  mock-data.ts              Discipline definitions (labels, colors) — not actually mock data,
+                             this is the canonical discipline list despite the filename
+  analytics.ts              trackEvent() wrapper around gtag
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+supabase/migrations/     Numbered SQL migrations — see its own README, applying them is manual
+e2e/                      Playwright tests
+```
+
+## Roles & auth
+
+Two roles, stored in `profiles.role`: `admin` and `organiser`. `getCurrentProfile()` (`lib/auth.ts`) is the single source of truth for "who is this and what can they do" — Server Actions and admin/organiser pages call it and reject early rather than relying on RLS alone for authorization decisions in the UI layer. RLS in the database is still the actual security boundary; see `supabase/migrations/0002_auth.sql` for the `is_admin()` helper and policy conventions, and follow the same pattern for any new table.
+
+- **Admins** manage all events, review the pending-change queue, run smart ingestion, and manage watched sources.
+- **Organisers** manage only their own events (`club_id` scoping), and can be invited by an admin.
+
+## Event publishing paths
+
+There are three ways an event reaches the `events_pending` review queue (or, for organisers, straight into `events`):
+
+1. **Manual** — an admin or organiser fills in the event form directly.
+2. **Change request** — anyone can submit a correction to an existing event via `/events/[id]/suggest-change`, no login required.
+3. **Smart ingestion** — an admin pastes a URL, pastes text, or uploads a file/image on `/admin/ingest`, or a **watched source** gets checked automatically overnight. Either way it goes through `lib/ingestion/extract-events.ts` (Claude does the extraction) before landing in the pending queue for a human to approve. See [`lib/ingestion/README.md`](lib/ingestion/README.md) for the full pipeline.
+
+Everything in `events_pending` needs an admin's approval before it becomes a real, published event — smart ingestion never auto-publishes.
+
+## Cron jobs (`vercel.json`)
+
+| Path | Schedule | Purpose |
+|---|---|---|
+| `/api/cron/check-sources` | 03:00 daily | Re-checks every watched source for new/changed events via smart ingestion. |
+| `/api/cron/pending-digest` | 15:50 daily | Emails the admin a digest if anything is sitting in the pending queue. |
+| `/api/cron/link-health` | 04:20 daily | Checks that published events' booking links still resolve, flags dead ones. |
+
+All three authenticate via `CRON_SECRET` as a bearer token (Vercel sends this automatically for configured crons).
+
+## MCP server (`/api/mcp`)
+
+A weekly scheduled Claude task (in the site owner's own claude.ai account, not part of this app's infrastructure) searches the web for new youth cycling events and submits candidates through this MCP server, using the same `mcp-handler` + Claude tool-call flow as any other MCP connector. Auth is a minimal OAuth 2.0 authorization-code+PKCE shim (`lib/mcp-oauth.ts`) purely because claude.ai's "Add custom connector" UI requires OAuth — the token it issues is the same static `MCP_SECRET` used everywhere else, so the actual security boundary hasn't changed shape, just its wire format.
+
+## Testing
+
+`npm run test:e2e` runs the Playwright suite (`e2e/`) against a local dev server — desktop Chromium plus a Pixel 7 mobile-emulation project. Covers the calendar, clubs page, contact form, suggest-change flow, and the admin/organiser auth gate.
+
+## Monitoring
+
+- **Errors & performance**: Sentry, wired into both client and server (`instrumentation*.ts`, `sentry.*.config.ts`). The smart-ingestion pipeline is traced end-to-end (`gen_ai.extract_events`, `ingestion.check_watched_source` spans) since it's the subsystem most likely to fail in an interesting way (bad extraction, blocked fetch, API error).
+- **Usage**: Google Analytics via `components/GoogleAnalytics.tsx`, with custom events fired through `lib/analytics.ts#trackEvent()` at the interaction points that matter (search, filters, booking-link clicks, form submissions, feedback popup).
+
+## Deployment
+
+Deploys to Vercel on push to `main` (the repo's `master` branch is stale and not what's deployed — check Vercel's project settings before assuming otherwise). Environment variables above must be set in the Vercel project settings — `.env.local` is git-ignored and never deployed. Database migrations are **not** applied automatically; see [`supabase/migrations/README.md`](supabase/migrations/README.md).
