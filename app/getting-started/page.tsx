@@ -4,7 +4,7 @@ import { EVENT_DISCIPLINES } from "@/lib/mock-data";
 const DISCIPLINE_GUIDE: Record<string, { blurb: string; format: string; goodFirstRace: boolean }> = {
   cx: {
     blurb: "Cyclocross: short, muddy off-road laps with obstacles to hop over and the odd steep bank to run up. Races are age-graded and short — often 10–20 minutes — so nobody's out there for hours.",
-    format: "Timed laps of a closed circuit, usually a field or park. Categories are split tightly by age, so your child races only other kids their age.",
+    format: "Timed laps of a closed circuit, usually a field or park. Categories are split tightly by age, so your child races only other kids their age. No need for a dedicated cyclocross bike — any off-road-capable bike works: cyclocross, hybrid, mountain bike, or even a road bike fitted with cyclocross tyres.",
     goodFirstRace: true,
   },
   xc: {
