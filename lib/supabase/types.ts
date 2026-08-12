@@ -129,6 +129,18 @@ export interface ProfileRow {
   created_at: string;
 }
 
+export type WillSubscribeType = "yes" | "no" | "already";
+
+export interface SiteFeedbackRow {
+  id: string;
+  raced_before: boolean | null;
+  usefulness: number | null;
+  will_subscribe: WillSubscribeType | null;
+  message: string | null;
+  page_url: string | null;
+  created_at: string;
+}
+
 // GenericTable (postgrest-js) requires Row/Insert/Update to structurally
 // satisfy Record<string, unknown> — a plain interface without an index
 // signature doesn't, even though every field is one, so it silently
@@ -144,6 +156,7 @@ export interface Database {
       events_pending: { Row: AsRecord<EventPendingRow>; Insert: AsRecord<Partial<EventPendingRow>>; Update: AsRecord<Partial<EventPendingRow>>; Relationships: [] };
       watched_sources: { Row: AsRecord<WatchedSourceRow>; Insert: AsRecord<Partial<WatchedSourceRow>>; Update: AsRecord<Partial<WatchedSourceRow>>; Relationships: [] };
       profiles: { Row: AsRecord<ProfileRow>; Insert: AsRecord<Partial<ProfileRow>>; Update: AsRecord<Partial<ProfileRow>>; Relationships: [] };
+      site_feedback: { Row: AsRecord<SiteFeedbackRow>; Insert: AsRecord<Partial<SiteFeedbackRow>>; Update: AsRecord<Partial<SiteFeedbackRow>>; Relationships: [] };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;

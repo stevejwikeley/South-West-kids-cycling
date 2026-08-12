@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Archivo, Inter, JetBrains_Mono } from "next/font/google";
 import TopNav from "@/components/TopNav";
 import Footer from "@/components/Footer";
+import FeedbackPopup from "@/components/FeedbackPopup";
 import GoogleAnalytics from "@/components/GoogleAnalytics";
 import "./globals.css";
 
@@ -55,6 +56,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <TopNav />
         {children}
         <Footer />
+        <FeedbackPopup />
       </body>
     </html>
   );
