@@ -2,6 +2,7 @@ import "server-only";
 import Anthropic from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { z } from "zod";
+import * as Sentry from "@sentry/nextjs";
 
 // One shared extraction engine reused for every unstructured source —
 // spreadsheet, poster image, pasted URL/text — per spec section 3/7.2.
@@ -74,31 +75,64 @@ interface ExtractOptions {
 export async function extractEvents({ text, image }: ExtractOptions): Promise<ExtractedEvent[]> {
   if (!text && !image) throw new Error("extractEvents requires text or image content.");
 
-  const client = new Anthropic();
+  return Sentry.startSpan(
+    {
+      name: "extractEvents",
+      op: "gen_ai.extract_events",
+      attributes: {
+        "extract.input_type": image ? "image" : "text",
+        "extract.input_length": image ? image.base64.length : (text?.length ?? 0),
+        "extract.model": "claude-opus-5",
+      },
+    },
+    async (span) => {
+      const client = new Anthropic();
 
-  const content: Anthropic.Messages.ContentBlockParam[] = [];
-  if (image) {
-    content.push({
-      type: "image",
-      source: { type: "base64", media_type: image.mediaType, data: image.base64 },
-    });
-  }
-  content.push({
-    type: "text",
-    text: text ?? "Extract every youth cycling event visible in this image.",
-  });
+      const content: Anthropic.Messages.ContentBlockParam[] = [];
+      if (image) {
+        content.push({
+          type: "image",
+          source: { type: "base64", media_type: image.mediaType, data: image.base64 },
+        });
+      }
+      content.push({
+        type: "text",
+        text: text ?? "Extract every youth cycling event visible in this image.",
+      });
 
-  const response = await client.messages.parse({
-    model: "claude-opus-5",
-    max_tokens: 8000,
-    system: buildSystemPrompt(),
-    output_config: { effort: "medium", format: zodOutputFormat(ExtractionResultSchema) },
-    messages: [{ role: "user", content }],
-  });
+      let response;
+      try {
+        response = await client.messages.parse({
+          model: "claude-opus-5",
+          max_tokens: 8000,
+          system: buildSystemPrompt(),
+          output_config: { effort: "medium", format: zodOutputFormat(ExtractionResultSchema) },
+          messages: [{ role: "user", content }],
+        });
+      } catch (e) {
+        Sentry.captureException(e, { tags: { operation: "extract_events" } });
+        throw e;
+      }
 
-  if (!response.parsed_output) {
-    throw new Error("Extraction failed to produce valid output.");
-  }
+      if (response.usage) {
+        span.setAttribute("extract.input_tokens", response.usage.input_tokens);
+        span.setAttribute("extract.output_tokens", response.usage.output_tokens);
+      }
 
-  return response.parsed_output.events;
+      if (!response.parsed_output) {
+        const err = new Error("Extraction failed to produce valid output.");
+        Sentry.captureException(err, { tags: { operation: "extract_events" } });
+        throw err;
+      }
+
+      const events = response.parsed_output.events;
+      span.setAttribute("extract.event_count", events.length);
+      if (events.length > 0) {
+        span.setAttribute("extract.avg_confidence", events.reduce((sum, e) => sum + e.confidence, 0) / events.length);
+        span.setAttribute("extract.low_confidence_field_count", events.reduce((sum, e) => sum + e.low_confidence_fields.length, 0));
+      }
+
+      return events;
+    }
+  );
 }

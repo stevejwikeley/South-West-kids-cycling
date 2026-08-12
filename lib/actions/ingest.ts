@@ -1,5 +1,6 @@
 "use server";
 
+import * as Sentry from "@sentry/nextjs";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile } from "@/lib/auth";
 import { extractEvents, type ExtractedEvent } from "@/lib/ingestion/extract-events";
@@ -95,8 +96,12 @@ export async function ingestTextOrUrl(_prevState: IngestState, formData: FormDat
 
   let candidates: ExtractedEvent[];
   try {
-    candidates = await extractEvents({ text });
+    candidates = await Sentry.startSpan(
+      { name: `ingestTextOrUrl: ${sourceRef}`, op: "ingestion.manual", attributes: { "source.ref": sourceRef } },
+      () => extractEvents({ text })
+    );
   } catch (e) {
+    Sentry.captureException(e, { tags: { operation: "ingest_text_or_url" } });
     return { error: e instanceof Error ? e.message : "Extraction failed." };
   }
 
@@ -136,18 +141,23 @@ export async function ingestFile(_prevState: IngestState, formData: FormData): P
 
   let candidates: ExtractedEvent[];
   try {
-    if (file.type.startsWith("image/")) {
-      const mediaType = file.type as "image/png" | "image/jpeg" | "image/webp" | "image/gif";
-      if (!["image/png", "image/jpeg", "image/webp", "image/gif"].includes(mediaType)) {
-        return { error: "Unsupported image type — use PNG, JPEG, WebP, or GIF." };
+    candidates = await Sentry.startSpan(
+      { name: `ingestFile: ${file.name}`, op: "ingestion.manual", attributes: { "source.ref": `upload: ${file.name}`, "file.type": file.type, "file.size": file.size } },
+      async () => {
+        if (file.type.startsWith("image/")) {
+          const mediaType = file.type as "image/png" | "image/jpeg" | "image/webp" | "image/gif";
+          if (!["image/png", "image/jpeg", "image/webp", "image/gif"].includes(mediaType)) {
+            throw new Error("Unsupported image type — use PNG, JPEG, WebP, or GIF.");
+          }
+          const buffer = Buffer.from(await file.arrayBuffer());
+          return extractEvents({ image: { base64: buffer.toString("base64"), mediaType } });
+        }
+        const text = (await file.text()).slice(0, 60000);
+        return extractEvents({ text });
       }
-      const buffer = Buffer.from(await file.arrayBuffer());
-      candidates = await extractEvents({ image: { base64: buffer.toString("base64"), mediaType } });
-    } else {
-      const text = (await file.text()).slice(0, 60000);
-      candidates = await extractEvents({ text });
-    }
+    );
   } catch (e) {
+    Sentry.captureException(e, { tags: { operation: "ingest_file" } });
     return { error: e instanceof Error ? e.message : "Extraction failed." };
   }
 
