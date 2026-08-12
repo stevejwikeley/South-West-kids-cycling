@@ -18,7 +18,7 @@ export default function TopNav() {
         <Link href="/" className="disp" style={{ fontSize: 15, letterSpacing: "0.02em", color: "#111111" }}>
           SOUTH WEST KIDS CYCLING
         </Link>
-        <div className="mono" style={{ display: "flex", gap: 24, fontSize: 11.5, letterSpacing: "0.03em" }}>
+        <div className="mono" style={{ display: "flex", gap: 4, fontSize: 11.5, letterSpacing: "0.03em" }}>
           {ITEMS.map(([href, label]) => {
             const active = href === "/" ? pathname === "/" : pathname.startsWith(href);
             return (
@@ -26,12 +26,15 @@ export default function TopNav() {
                 key={href}
                 href={href}
                 style={{
-                  paddingBottom: 3,
                   fontFamily: "var(--font-jetbrains-mono), monospace",
                   fontSize: 11.5,
                   letterSpacing: "0.03em",
                   color: active ? "#111111" : "#9A9992",
-                  borderBottom: active ? "2px solid #E0102A" : "2px solid transparent",
+                  padding: "8px 14px",
+                  borderTop: `2px solid ${active ? "#E0102A" : "transparent"}`,
+                  borderLeft: `2px solid ${active ? "#E0102A" : "transparent"}`,
+                  borderRight: `2px solid ${active ? "#E0102A" : "transparent"}`,
+                  borderBottom: `4px solid ${active ? "#E0102A" : "transparent"}`,
                 }}
               >
                 {label}
