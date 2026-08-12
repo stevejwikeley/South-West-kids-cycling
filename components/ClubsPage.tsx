@@ -41,8 +41,8 @@ export default function ClubsPage({ clubs }: { clubs: Club[] }) {
         </p>
       </header>
 
-      <div style={{ position: "sticky", top: 0, zIndex: 20, background: "#FAFAF8", borderTop: "1px solid #E4E2DD", borderBottom: "1px solid #E4E2DD", padding: "16px 24px" }}>
-        <div style={{ maxWidth: 1100, margin: "0 auto", display: "flex", flexDirection: "column", gap: 12 }}>
+      <div style={{ position: "sticky", top: 0, zIndex: 20, background: "#FAFAF8", borderTop: "1px solid #E4E2DD", borderBottom: "1px solid #E4E2DD" }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto", padding: "16px 24px", display: "flex", flexDirection: "column", gap: 12 }}>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
             <span className="mono" style={{ fontSize: 10.5, color: "#9A9992", marginRight: 2 }}>DISCIPLINE</span>
             {CLUB_DISCIPLINES.map((d) => {
