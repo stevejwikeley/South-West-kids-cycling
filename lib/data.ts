@@ -81,7 +81,7 @@ export async function getAllEventRows(): Promise<EventRow[]> {
   const { data, error } = await supabase
     .from("events")
     .select("*")
-    .order("start_datetime", { ascending: false });
+    .order("start_datetime", { ascending: true });
 
   if (error) throw error;
   return data as EventRow[];
