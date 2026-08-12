@@ -15,6 +15,11 @@ function eventRow(e: CalendarEvent): string {
   const d = eventDisc(e.discipline);
   const f = fmtDay(e.date);
   const bookingLabel = e.bookingStatus === "open" ? "Entries open" : "Entries TBC";
+  // Same fallback logic as the calendar row itself (CalendarPage.tsx):
+  // link to the booking page once entries are open, otherwise the
+  // organiser's own site as a placeholder while booking isn't live yet.
+  const actionUrl = e.bookingStatus === "open" ? e.booking ?? e.organiserUrl : e.organiserUrl;
+  const actionLabel = e.bookingStatus === "open" ? "Book" : "Organisers website";
 
   return `<tr>
     <td style="padding:16px 0;border-top:1px solid #E4E2DD;">
@@ -30,8 +35,15 @@ function eventRow(e: CalendarEvent): string {
           </td>
         </tr>
         <tr>
-          <td style="font-family:-apple-system,Helvetica,Arial,sans-serif;font-size:13px;color:#6B6B66;">
+          <td style="font-family:-apple-system,Helvetica,Arial,sans-serif;font-size:13px;color:#6B6B66;padding-bottom:8px;">
             ${escapeHtml(e.venue)}
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <a href="${escapeHtml(actionUrl)}" style="font-family:-apple-system,Helvetica,Arial,sans-serif;font-size:12px;font-weight:bold;color:#111111;text-decoration:underline;">
+              ${actionLabel} &rarr;
+            </a>
           </td>
         </tr>
       </table>
