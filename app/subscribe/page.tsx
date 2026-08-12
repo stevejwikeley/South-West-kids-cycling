@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { Rss } from "lucide-react";
+import { Rss, Mail } from "lucide-react";
 import SubscribeSelector from "@/components/SubscribeSelector";
+import EmailSubscribeForm from "@/components/EmailSubscribeForm";
 
 export const metadata = {
   title: "Subscribe to the calendar",
@@ -25,6 +26,16 @@ export default function SubscribePage() {
 
       <div style={{ marginTop: 44 }}>
         <SubscribeSelector />
+      </div>
+
+      <div style={{ marginTop: 48, paddingTop: 32, borderTop: "1px solid #E4E2DD" }}>
+        <div className="mono" style={{ fontSize: 11.5, letterSpacing: "0.12em", color: "#E0102A", marginBottom: 12, fontWeight: 700, display: "flex", alignItems: "center", gap: 8 }}>
+          <Mail size={13} /> PREFER EMAIL?
+        </div>
+        <p style={{ maxWidth: 480, fontSize: 15, lineHeight: 1.6, color: "#4A4A46", marginBottom: 20 }}>
+          Get a monthly email instead — a short list of what&apos;s coming up in the next month, no calendar app required.
+        </p>
+        <EmailSubscribeForm />
       </div>
 
       <div style={{ marginTop: 48, paddingTop: 24, borderTop: "1px solid #E4E2DD" }}>

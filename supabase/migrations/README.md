@@ -36,3 +36,4 @@ Follow one of these for any new table rather than inventing a new access pattern
 | `0006_add_gravel_duathlon_disciplines.sql` | Adds `gravel` and `duathlon` to the discipline enum. |
 | `0007_phase4_confidence_tracking.sql` | Adds correction-rate tracking (`field_flags`, `was_edited`, `published_count`, `corrected_count`) — data collection only, doesn't change publishing behavior. |
 | `0008_site_feedback.sql` | Adds `site_feedback` for the dismissable feedback popup. |
+| `0009_email_subscribers.sql` | Adds `email_subscribers` for the monthly email digest (single opt-in, per-row unsubscribe token). |

@@ -111,6 +111,7 @@ Everything in `events_pending` needs an admin's approval before it becomes a rea
 | `/api/cron/check-sources` | 03:00 daily | Re-checks every watched source for new/changed events via smart ingestion. |
 | `/api/cron/pending-digest` | 15:50 daily | Emails the admin a digest if anything is sitting in the pending queue. |
 | `/api/cron/link-health` | 04:20 daily | Checks that published events' booking links still resolve, flags dead ones. |
+| `/api/cron/monthly-digest` | 08:00 on the 1st | Emails every active `email_subscribers` row a list of events in the next 31 days. Skips sending if there are none. |
 
 All three authenticate via `CRON_SECRET` as a bearer token (Vercel sends this automatically for configured crons).
 
