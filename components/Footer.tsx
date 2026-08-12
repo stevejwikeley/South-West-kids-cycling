@@ -9,7 +9,7 @@ export default function Footer() {
       <div style={{ maxWidth: 1100, margin: "0 auto", padding: "28px 24px", display: "flex", gap: 24, flexWrap: "wrap", justifyContent: "space-between", alignItems: "center" }}>
         <div className="mono" style={{ fontSize: 10.5, color: "#9A9992" }}>SOUTH WEST KIDS CYCLING — DEVON &amp; CORNWALL</div>
         <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
-          <Link href="/contact" onClick={() => trackEvent("footer_submit_event_click")} className="mono" style={{ fontSize: 11, color: "#6B6B66", textDecoration: "underline" }}>
+          <Link href="/submit-event" onClick={() => trackEvent("footer_submit_event_click")} className="mono" style={{ fontSize: 11, color: "#6B6B66", textDecoration: "underline" }}>
             Event missing? Submit an event
           </Link>
           <Link href="/contact?reason=organiser" onClick={() => trackEvent("footer_organiser_request_click")} className="mono" style={{ fontSize: 11, color: "#6B6B66", textDecoration: "underline" }}>

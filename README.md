@@ -96,11 +96,12 @@ Two roles, stored in `profiles.role`: `admin` and `organiser`. `getCurrentProfil
 
 ## Event publishing paths
 
-There are three ways an event reaches the `events_pending` review queue (or, for organisers, straight into `events`):
+There are four ways an event reaches the `events_pending` review queue (or, for organisers, straight into `events`):
 
 1. **Manual** — an admin or organiser fills in the event form directly.
 2. **Change request** — anyone can submit a correction to an existing event via `/events/[id]/suggest-change`, no login required.
 3. **Smart ingestion** — an admin pastes a URL, pastes text, or uploads a file/image on `/admin/ingest`, or a **watched source** gets checked automatically overnight. Either way it goes through `lib/ingestion/extract-events.ts` (Claude does the extraction) before landing in the pending queue for a human to approve. See [`lib/ingestion/README.md`](lib/ingestion/README.md) for the full pipeline.
+4. **Public submission** — anyone can submit a brand-new event via `/submit-event` (linked from the footer), either by pasting a link/text (same AI-extraction pipeline as smart ingestion) or filling in a structured form. Tagged `source_type: "public_submission"` rather than `"smart_ingest"` purely so admins can see where a candidate came from — otherwise it's the exact same pending-queue/approval path (`lib/actions/public-submit.ts`, `saveCandidates()`'s `sourceType` param).
 
 Everything in `events_pending` needs an admin's approval before it becomes a real, published event — smart ingestion never auto-publishes.
 

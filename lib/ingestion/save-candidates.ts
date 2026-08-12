@@ -2,20 +2,25 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { findDuplicate } from "./dedup";
 import type { ExtractedEvent } from "./extract-events";
-import type { Database, EventRow, EventPendingRow } from "@/lib/supabase/types";
+import type { Database, EventRow, EventPendingRow, SourceTypeEnum } from "@/lib/supabase/types";
 
-// Shared by both the manual "paste URL/text" admin flow and the nightly
-// watched-source cron — one save path so dedup behaves identically either way.
+// Shared by the admin "paste URL/text" flow, the nightly watched-source
+// cron, and the public submit-an-event page — one save path so dedup
+// behaves identically everywhere. sourceType only affects how the pending
+// row is labeled (and which rows count as "already queued, don't duplicate"
+// below) — the insert/dedup/approve mechanics are otherwise identical for
+// smart_ingest and public_submission.
 export async function saveCandidates(
   supabase: SupabaseClient<Database>,
   candidates: ExtractedEvent[],
   rawSourceRef: string,
   sourceUrl?: string,
-  watchedSourceId?: string
+  watchedSourceId?: string,
+  sourceType: SourceTypeEnum = "smart_ingest"
 ): Promise<number> {
   const [{ data: liveEvents, error: liveError }, { data: pendingRows, error: pendingError }] = await Promise.all([
     supabase.from("events").select("*"),
-    supabase.from("events_pending").select("*").eq("source_type", "smart_ingest"),
+    supabase.from("events_pending").select("*").in("source_type", ["smart_ingest", "public_submission"]),
   ]);
   if (liveError) throw new Error(liveError.message);
   if (pendingError) throw new Error(pendingError.message);
@@ -63,7 +68,7 @@ export async function saveCandidates(
       organiser_url: candidate.organiser_url ?? sourceUrl ?? null,
       organiser_name: candidate.organiser_name,
       organiser_contact: candidate.organiser_contact,
-      source_type: "smart_ingest",
+      source_type: sourceType,
       source_detail: rawSourceRef,
       raw_source_ref: rawSourceRef,
       extraction_confidence: candidate.confidence,

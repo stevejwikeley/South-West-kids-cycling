@@ -61,7 +61,7 @@ export default function PendingQueue({ pending, liveEvents, redirectTo }: { pend
   return (
     <div style={{ borderTop: "2px solid #111111" }}>
       {pending.map((p) => {
-        const isIngested = p.source_type === "smart_ingest";
+        const isIngested = p.source_type === "smart_ingest" || p.source_type === "public_submission";
         const diff = (p.diff_against ?? {}) as Record<string, { from: unknown; to: unknown }>;
         const note = diff._note?.to as string | undefined;
         const diffFields = Object.entries(diff).filter(([key]) => key !== "_note");
@@ -75,7 +75,7 @@ export default function PendingQueue({ pending, liveEvents, redirectTo }: { pend
                 <div style={{ fontWeight: 700, fontSize: 15 }}>{p.title ?? "Untitled event"}</div>
                 {isIngested && (
                   <div className="mono" style={{ fontSize: 10, color: "#9A9992", marginTop: 2 }}>
-                    SMART INGEST
+                    {p.source_type === "public_submission" ? "PUBLIC SUBMISSION" : "SMART INGEST"}
                     {p.extraction_confidence != null && ` · CONFIDENCE ${Math.round(p.extraction_confidence * 100)}%`}
                     {p.duplicate_of ? " · MATCHES AN EXISTING EVENT" : " · NEW EVENT"}
                     {p.raw_source_ref && ` · ${p.raw_source_ref}`}

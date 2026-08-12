@@ -156,7 +156,12 @@ export async function approveIngested(pendingId: string): Promise<PendingActionR
   if (fetchError || !pending) return { error: "Pending item not found." };
 
   const row = pending as EventPendingRow;
-  if (row.source_type !== "smart_ingest") return { error: "This pending row isn't a smart-ingested candidate." };
+  // public_submission rows (the public "submit an event" page) carry their
+  // fields directly too, same as smart_ingest — both go through
+  // saveCandidates, so they share this approval path.
+  if (row.source_type !== "smart_ingest" && row.source_type !== "public_submission") {
+    return { error: "This pending row isn't a smart-ingested or publicly-submitted candidate." };
+  }
 
   const values: Record<string, unknown> = {};
   ALLOWED_DIFF_KEYS.forEach((key) => {
@@ -191,7 +196,7 @@ export async function approveIngested(pendingId: string): Promise<PendingActionR
     const { error } = await supabase.from("events").insert({
       ...values,
       approved: true,
-      source_type: "smart_ingest",
+      source_type: row.source_type,
       published_via: "reviewed",
       created_by: user?.id ?? null,
       updated_by: user?.id ?? null,
@@ -253,10 +258,12 @@ export async function updatePending(pendingId: string, formData: FormData): Prom
   const row = pending as EventPendingRow;
   const values = parsePendingForm(formData);
 
-  if (row.source_type === "smart_ingest") {
+  if (row.source_type === "smart_ingest" || row.source_type === "public_submission") {
     // Marks this candidate as having needed a human correction before it was
     // fit to publish — the input to the watched_source's correction_rate,
-    // computed at approval time (see approveIngested).
+    // computed at approval time (see approveIngested). public_submission
+    // rows have no watched_source_id, so this is a no-op for them there,
+    // but the field itself is still meaningful admin-side metadata.
     const { error } = await supabase.from("events_pending").update({ ...values, was_edited: true }).eq("id", pendingId);
     if (error) return { error: error.message };
     return {};

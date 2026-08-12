@@ -4,10 +4,11 @@ This is the AI-assisted pipeline that turns unstructured input (a URL, pasted te
 
 ## Entry points
 
-There are two ways in, and they both end up calling the same shared functions below so dedup and save behavior is identical either way:
+There are three ways in, and they all end up calling the same shared functions below so dedup and save behavior is identical either way:
 
 - **Manual** — an admin uses `/admin/ingest` (paste a URL/text, or upload a file/image). Handled by `ingestTextOrUrl` / `ingestFile` in `lib/actions/ingest.ts`.
 - **Watched sources** — the nightly cron (`/api/cron/check-sources`) or an admin's "check now" button calls `checkWatchedSource()` (`check-source.ts`) for each row in `watched_sources`.
+- **Public submission** — anyone uses `/submit-event` (paste a URL/text). Handled by `submitPublicUrlOrText` in `lib/actions/public-submit.ts` — identical to the admin path minus the admin check, tagged `source_type: "public_submission"` instead of `"smart_ingest"` so the pending queue shows admins where it came from. The same page also offers a structured form (`submitPublicEventForm`) that skips extraction entirely and calls `saveCandidates()` with one manually-built candidate (`confidence: 1`, since a human typed it).
 
 ## Pipeline
 
