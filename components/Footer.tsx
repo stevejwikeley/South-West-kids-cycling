@@ -20,6 +20,9 @@ export default function Footer() {
           <Link href="/contact?reason=organiser" onClick={() => trackEvent("footer_organiser_request_click")} className="mono" style={{ fontSize: 11, color: "#6B6B66", textDecoration: "underline" }}>
             Are you an event organiser? Request an account
           </Link>
+          <Link href="/contact" onClick={() => trackEvent("footer_contact_click")} className="mono" style={{ fontSize: 11, color: "#6B6B66", textDecoration: "underline" }}>
+            Contact us
+          </Link>
         </div>
       </div>
     </footer>
