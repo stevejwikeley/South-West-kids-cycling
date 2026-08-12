@@ -48,7 +48,7 @@ export async function saveCandidates(
       ? Object.fromEntries(candidate.low_confidence_fields.map((f) => [f, "needs verification"]))
       : null;
 
-    const { error } = await supabase.from("events_pending").insert({
+    const values = {
       title: candidate.title,
       discipline: candidate.discipline,
       status: candidate.status ?? "confirmed",
@@ -68,6 +68,19 @@ export async function saveCandidates(
       organiser_url: candidate.organiser_url ?? sourceUrl ?? null,
       organiser_name: candidate.organiser_name,
       organiser_contact: candidate.organiser_contact,
+    };
+
+    // A re-scan that matches a live event and agrees with it on everything
+    // it has an opinion about isn't a change worth reviewing again — even
+    // when the extraction is uncertain about a field once more (field
+    // flags below), re-queuing something an admin already approved just
+    // makes them re-check the same answer twice.
+    if (duplicate && liveIds.has(duplicate.id) && !candidateDiffersFromLive(values, duplicate)) {
+      continue;
+    }
+
+    const { error } = await supabase.from("events_pending").insert({
+      ...values,
       source_type: sourceType,
       source_detail: rawSourceRef,
       raw_source_ref: rawSourceRef,
@@ -81,4 +94,31 @@ export async function saveCandidates(
   }
 
   return saved;
+}
+
+const COMPARISON_FIELDS = [
+  "title", "discipline", "status", "start_datetime", "venue_name",
+  "address", "postcode", "region", "age_categories", "kids_only",
+  "booking_status", "booking_link", "organiser_url", "organiser_name", "organiser_contact",
+] as const;
+
+function sameValue(a: unknown, b: unknown): boolean {
+  if (Array.isArray(a) && Array.isArray(b)) {
+    return JSON.stringify([...a].sort()) === JSON.stringify([...b].sort());
+  }
+  return a === b;
+}
+
+// A candidate field that's null/empty is "no opinion offered", not a
+// diff — extraction not finding an address doesn't mean the live address
+// changed. Only a populated field that actively disagrees with the live
+// value counts as something worth surfacing.
+function candidateDiffersFromLive(values: Record<string, unknown>, live: EventRow): boolean {
+  const liveRecord = live as unknown as Record<string, unknown>;
+  return COMPARISON_FIELDS.some((field) => {
+    const v = values[field];
+    if (v === null || v === undefined) return false;
+    if (Array.isArray(v) && v.length === 0) return false;
+    return !sameValue(v, liveRecord[field]);
+  });
 }

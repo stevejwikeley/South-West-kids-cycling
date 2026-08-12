@@ -36,7 +36,11 @@ save-candidates.ts — saveCandidates()
   "smart_ingest", the confidence score, field_flags (from
   low_confidence_fields, surfaced in the admin UI as "needs verification"),
   and duplicate_of set when it matched a live event (used as the merge
-  target on approval).
+  target on approval). When a candidate matches a live event AND agrees
+  with it on every field it has an opinion about, it's dropped rather than
+  queued — a watched source re-scanning the same unchanged page shouldn't
+  put the same already-approved event back in front of an admin, even if
+  the extraction is uncertain about a field again (candidateDiffersFromLive()).
 ```
 
 ## Extraction rules worth knowing
