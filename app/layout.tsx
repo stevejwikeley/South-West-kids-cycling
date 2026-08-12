@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Archivo, Inter, JetBrains_Mono } from "next/font/google";
 import TopNav from "@/components/TopNav";
+import Footer from "@/components/Footer";
+import GoogleAnalytics from "@/components/GoogleAnalytics";
 import "./globals.css";
 
 const archivo = Archivo({
@@ -49,8 +51,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${archivo.variable} ${inter.variable} ${jetbrainsMono.variable}`}>
       <body style={{ fontFamily: "var(--font-inter), sans-serif" }}>
+        <GoogleAnalytics />
         <TopNav />
         {children}
+        <Footer />
       </body>
     </html>
   );

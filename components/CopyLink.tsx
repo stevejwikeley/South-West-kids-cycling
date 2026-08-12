@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { trackEvent } from "@/lib/analytics";
 
 export default function CopyLink({ url }: { url: string }) {
   const [copied, setCopied] = useState(false);
@@ -9,6 +10,7 @@ export default function CopyLink({ url }: { url: string }) {
     try {
       await navigator.clipboard.writeText(url);
       setCopied(true);
+      trackEvent("calendar_link_copy");
       setTimeout(() => setCopied(false), 2000);
     } catch {
       // Clipboard API unavailable — the URL is still visible in the field

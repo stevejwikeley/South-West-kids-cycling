@@ -61,6 +61,33 @@ button {
   color: #FAFAF8 !important;
 }
 
+.filter-controls-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.filter-region-toggle {
+  display: flex;
+  border: 1px solid #D8D6D0;
+  flex: 0 1 auto;
+}
+.filter-search {
+  position: relative;
+  flex: 1 1 280px;
+  max-width: 380px;
+}
+@media (max-width: 640px) {
+  .filter-region-toggle,
+  .filter-search {
+    flex: 1 1 100%;
+    max-width: none;
+  }
+  .filter-region-toggle button {
+    flex: 1;
+  }
+}
+
 ::selection {
   background: #E0102A;
   color: #FAFAF8;

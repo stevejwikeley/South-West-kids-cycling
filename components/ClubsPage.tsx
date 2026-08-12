@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { MapPin, Search, X, ExternalLink } from "lucide-react";
 import { CLUB_DISCIPLINES, clubDisc } from "@/lib/mock-data";
 import type { Club } from "@/lib/types";
+import { trackEvent } from "@/lib/analytics";
 
 export default function ClubsPage({ clubs }: { clubs: Club[] }) {
   const [activeDisc, setActiveDisc] = useState<Set<string>>(new Set());
@@ -12,7 +13,9 @@ export default function ClubsPage({ clubs }: { clubs: Club[] }) {
   const toggleDisc = (id: string) =>
     setActiveDisc((prev) => {
       const n = new Set(prev);
+      const nowActive = !n.has(id);
       n.has(id) ? n.delete(id) : n.add(id);
+      trackEvent("filter_discipline", { discipline: id, active: nowActive, page: "clubs" });
       return n;
     });
 
@@ -60,7 +63,7 @@ export default function ClubsPage({ clubs }: { clubs: Club[] }) {
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center", justifyContent: "space-between" }}>
             <div style={{ position: "relative" }}>
               <Search size={14} style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", color: "#9A9992" }} />
-              <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search clubs or towns"
+              <input value={search} onChange={(e) => setSearch(e.target.value)} onBlur={() => search && trackEvent("search", { query: search, page: "clubs" })} placeholder="Search clubs or towns"
                 style={{ background: "#FFFFFF", border: "1px solid #D8D6D0", color: "#111111", padding: "8px 12px 8px 32px", fontSize: 12.5, width: 210 }} />
               {search && <X size={13} onClick={() => setSearch("")} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", color: "#9A9992", cursor: "pointer" }} />}
             </div>
@@ -101,7 +104,7 @@ export default function ClubsPage({ clubs }: { clubs: Club[] }) {
                     {c.kidsOnly ? "YOUTH ONLY" : "OPEN AGES"}
                   </span>
                 </div>
-                <a href={c.website ?? "#"} target="_blank" rel="noreferrer" style={{ flexShrink: 0, fontSize: 12, fontWeight: 700, color: "#111111", display: "flex", alignItems: "center", gap: 6, borderBottom: "1px solid #111111", paddingBottom: 2, marginLeft: "auto" }}>
+                <a href={c.website ?? "#"} target="_blank" rel="noreferrer" onClick={() => trackEvent("club_visit_site_click", { club_id: c.id, club_name: c.name })} style={{ flexShrink: 0, fontSize: 12, fontWeight: 700, color: "#111111", display: "flex", alignItems: "center", gap: 6, borderBottom: "1px solid #111111", paddingBottom: 2, marginLeft: "auto" }}>
                   Visit site <ExternalLink size={12} />
                 </a>
               </div>

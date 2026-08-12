@@ -2,11 +2,6 @@ import Link from "next/link";
 import { EVENT_DISCIPLINES } from "@/lib/mock-data";
 
 const DISCIPLINE_GUIDE: Record<string, { blurb: string; format: string; goodFirstRace: boolean }> = {
-  clusters: {
-    blurb: "Coached sessions at a club, not a race in the traditional sense — skills, drills and short sprints in a closed, traffic-free space. Turn up, borrow a bit of kit if you don't have it, and see if your child enjoys being on two wheels with other kids.",
-    format: "An hour or so of coached activity, usually weekly during term time. No entry fee beyond a small session cost, no results, no pressure.",
-    goodFirstRace: true,
-  },
   cx: {
     blurb: "Cyclocross: short, muddy off-road laps with obstacles to hop over and the odd steep bank to run up. Races are age-graded and short — often 10–20 minutes — so nobody's out there for hours.",
     format: "Timed laps of a closed circuit, usually a field or park. Categories are split tightly by age, so your child races only other kids their age.",
@@ -62,10 +57,10 @@ export default function Page() {
           <div className="disp" style={{ fontSize: 24, marginBottom: 18, letterSpacing: "-0.01em" }}>Where to start</div>
           <div style={{ borderTop: "2px solid #111111", paddingTop: 20, maxWidth: 720 }}>
             <p style={{ fontSize: 15, lineHeight: 1.7, color: "#4A4A46" }}>
-              If you&apos;re not sure where to begin, start with a <strong>Club Clusters</strong> session rather than a race. It&apos;s coached, low-pressure, and lets you and your child work out whether they enjoy a particular discipline before you commit to an actual event. Most clubs let you turn up to a session or two before joining — see the <Link href="/clubs" style={{ borderBottom: "1px solid #111111" }}>clubs directory</Link> for one near you.
+              Honestly, the best first step is just to turn up to a race. This calendar is full of clubs and organisers who go out of their way to make first-timers welcome — nobody expects you to know the etiquette, and marshals and other parents are usually happy to point you in the right direction on the day. <strong>Cyclocross</strong> is usually the friendliest place to start — short, age-graded, low-speed, and forgiving if your child comes off (it happens to everyone, on grass or mud, not tarmac).
             </p>
             <p style={{ fontSize: 15, lineHeight: 1.7, color: "#4A4A46", marginTop: 16 }}>
-              Once you&apos;re ready for an actual event, <strong>cyclocross</strong> is usually the friendliest first race — short, age-graded, low-speed, and forgiving if your child comes off (it happens to everyone, on grass or mud, not tarmac).
+              If you&apos;d rather ease in more gradually, finding a <Link href="/clubs" style={{ borderBottom: "1px solid #111111" }}>nearby club</Link> is the best way into the community — most run coached sessions for beginners and let you turn up to a couple before committing to anything, and it&apos;s a good way to meet other families who&apos;ll be at the same races.
             </p>
           </div>
         </section>
@@ -73,7 +68,7 @@ export default function Page() {
         <section style={{ marginBottom: 56 }}>
           <div className="disp" style={{ fontSize: 24, marginBottom: 18, letterSpacing: "-0.01em" }}>What each discipline involves</div>
           <div style={{ borderTop: "2px solid #111111" }}>
-            {EVENT_DISCIPLINES.map((d) => {
+            {EVENT_DISCIPLINES.filter((d) => d.id !== "clusters").map((d) => {
               const guide = DISCIPLINE_GUIDE[d.id];
               return (
                 <div key={d.id} style={{ padding: "22px 6px", borderBottom: "1px solid #E4E2DD", display: "flex", gap: 24, flexWrap: "wrap" }}>
@@ -106,8 +101,22 @@ export default function Page() {
               <li>A properly fitted cycling helmet — non-negotiable at every event on this calendar.</li>
               <li>Weather-appropriate layers. Cyclocross and XC especially mean standing around outdoors, often in mud — spare socks and a warm layer for afterwards are always worth it.</li>
               <li>Water and a snack — entry fees rarely include catering, and younger riders burn through energy fast.</li>
-              <li>British Cycling membership is sometimes required for entry (check the individual listing) — day licences are usually available on the gate if you&apos;re not a member.</li>
             </ul>
+          </div>
+        </section>
+
+        <section style={{ marginBottom: 56 }}>
+          <div className="disp" style={{ fontSize: 24, marginBottom: 18, letterSpacing: "-0.01em" }}>British Cycling membership</div>
+          <div style={{ borderTop: "2px solid #111111", paddingTop: 20, maxWidth: 720 }}>
+            <p style={{ fontSize: 15, lineHeight: 1.7, color: "#4A4A46" }}>
+              Cyclocross, XC and road races run under British Cycling rules need a <strong>race licence</strong> to enter, which requires a British Cycling membership (there are Under 12, Youth and Junior tiers priced below the adult rate). Entries for these races are booked through British Cycling&apos;s own event system, and it&apos;s also where your child&apos;s results and ranking points build up over a season.
+            </p>
+            <p style={{ fontSize: 15, lineHeight: 1.7, color: "#4A4A46", marginTop: 16 }}>
+              You don&apos;t need to sign up before trying racing, though — most events sell a <strong>day licence</strong> at registration, so you can pay a small one-off fee on the day rather than committing to membership before you know if it&apos;s for you. Only worth taking out membership once your child is racing regularly.
+            </p>
+            <p style={{ fontSize: 15, lineHeight: 1.7, color: "#4A4A46", marginTop: 16 }}>
+              <a href="https://www.britishcycling.org.uk/membership" target="_blank" rel="noreferrer" style={{ borderBottom: "1px solid #111111" }}>See British Cycling&apos;s membership options →</a>
+            </p>
           </div>
         </section>
 

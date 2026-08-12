@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import CopyLink from "./CopyLink";
+import { trackEvent } from "@/lib/analytics";
 
 const CALENDAR_URL = "https://www.southwestkidscycling.uk/calendar.ics";
 
@@ -40,7 +41,7 @@ export default function SubscribeSelector() {
             <button
               key={p.id}
               type="button"
-              onClick={() => setPlatform(p.id)}
+              onClick={() => { setPlatform(p.id); trackEvent("subscribe_platform_select", { platform: p.id }); }}
               style={{
                 textAlign: "left",
                 padding: "14px 18px",

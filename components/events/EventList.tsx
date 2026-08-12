@@ -74,16 +74,19 @@ export default function EventList({
           const isBusy = busyIds.has(e.id);
           const flagEntries = e.field_flags ? Object.entries(e.field_flags) : [];
           return (
-            <div key={e.id} className="row-hover" style={{ display: "flex", alignItems: "center", gap: 20, padding: "14px 6px", borderBottom: "1px solid #E4E2DD", flexWrap: "wrap" }}>
-              <div className="mono" style={{ width: 80, flexShrink: 0, fontSize: 12.5, color: "#6B6B66" }}>{f.day}.{f.mon}</div>
-              <span style={{ width: 8, height: 8, borderRadius: "50%", background: d.color, flexShrink: 0 }} />
+            <div key={e.id} className="row-hover" style={{ display: "flex", alignItems: "center", gap: 16, padding: "14px 6px", borderBottom: "1px solid #E4E2DD", flexWrap: "wrap" }}>
               <div style={{ flex: 1, minWidth: 200 }}>
-                <div style={{ fontWeight: 700, fontSize: 14.5 }}>{e.title}</div>
-                <div className="mono" style={{ fontSize: 10.5, color: "#9A9992", marginTop: 2 }}>
-                  {e.venue_name} · {e.status.toUpperCase()}{!e.approved ? " · UNAPPROVED" : ""}
+                <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                  <span style={{ fontWeight: 700, fontSize: 14.5 }}>{e.title}</span>
+                  <span className="mono" style={{ fontSize: 12.5, color: "#6B6B66", flexShrink: 0 }}>{f.day}.{f.mon}</span>
+                </div>
+                <div className="mono" style={{ fontSize: 10.5, color: "#9A9992", marginTop: 4, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                  <span>{e.venue_name}</span>
+                  <span style={{ fontSize: 9.5, fontWeight: 700, padding: "3px 8px", background: `${d.color}18`, color: d.color, letterSpacing: "0.02em" }}>{d.label.toUpperCase()}</span>
+                  <span>· {e.status.toUpperCase()}{!e.approved ? " · UNAPPROVED" : ""}</span>
                   {flagEntries.length > 0 && (
                     <span style={{ color: "#9A6B00" }} title={flagEntries.map(([k, v]) => `${k}: ${v}`).join("\n")}>
-                      {" "}· {flagEntries.length} NEEDS VERIFICATION ({flagEntries.map(([k]) => k).join(", ")})
+                      · {flagEntries.length} NEEDS VERIFICATION ({flagEntries.map(([k]) => k).join(", ")})
                     </span>
                   )}
                 </div>
