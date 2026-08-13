@@ -88,8 +88,27 @@ export function buildMonthlyDigestHtml(events: CalendarEvent[], siteUrl: string,
           </td>
         </tr>
         <tr>
-          <td style="font-family:-apple-system,Helvetica,Arial,sans-serif;font-size:12px;line-height:1.6;color:#9A9992;border-top:1px solid #E4E2DD;padding-top:28px;">
-            Sent once a month. <a href="${unsubscribeUrl}" style="color:#9A9992;">Unsubscribe</a>
+          <td style="padding-top:28px;border-top:1px solid #E4E2DD;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F3F2EE;">
+              <tr>
+                <td style="padding:18px 20px;">
+                  <div style="font-family:-apple-system,Helvetica,Arial,sans-serif;font-size:13px;font-weight:bold;color:#111111;padding-bottom:6px;">
+                    It's better to be in your calendar than in your inbox.
+                  </div>
+                  <div style="font-family:-apple-system,Helvetica,Arial,sans-serif;font-size:12.5px;line-height:1.6;color:#6B6B66;padding-bottom:12px;">
+                    Subscribe once and every new event appears automatically — no more waiting for this email.
+                  </div>
+                  <a href="${siteUrl}/subscribe" style="font-family:-apple-system,Helvetica,Arial,sans-serif;font-size:12.5px;font-weight:bold;color:#111111;text-decoration:underline;">
+                    Add to your calendar &rarr;
+                  </a>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+        <tr>
+          <td style="font-family:-apple-system,Helvetica,Arial,sans-serif;font-size:12px;line-height:1.6;color:#6B6B66;padding-top:20px;">
+            Sent once a month. <a href="${unsubscribeUrl}" style="color:#6B6B66;">Unsubscribe</a>
           </td>
         </tr>
       </table>
