@@ -2,12 +2,21 @@
 
 import { useActionState, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
+import { MessageCircle, ChevronDown } from "lucide-react";
 import { submitFeedback, type FeedbackFormState } from "@/lib/actions/feedback";
 import { trackEvent } from "@/lib/analytics";
 
-const STORAGE_KEY = "swkc_feedback_done";
-const SHOW_DELAY_MS = 6000;
+// DONE_KEY persists across sessions (localStorage) — once someone submits,
+// we never ask again. VISIT_COUNT_KEY also persists, incremented once per
+// browser session (guarded by the sessionStorage flag) so we can trigger on
+// a second visit even if it happens well within the 2-minute delay.
+const DONE_KEY = "swkc_feedback_done";
+const VISIT_COUNT_KEY = "swkc_visit_count";
+const SESSION_COUNTED_KEY = "swkc_session_counted";
+const SHOW_DELAY_MS = 2 * 60 * 1000;
 const HIDDEN_PREFIXES = ["/admin", "/organiser", "/login", "/auth", "/oauth"];
+
+type Stage = "hidden" | "collapsed" | "expanded";
 
 const pillBase: React.CSSProperties = {
   border: "1px solid #D8D6D0",
@@ -35,7 +44,7 @@ const questionLabel: React.CSSProperties = {
 
 export default function FeedbackPopup() {
   const pathname = usePathname();
-  const [visible, setVisible] = useState(false);
+  const [stage, setStage] = useState<Stage>("hidden");
   const [racedBefore, setRacedBefore] = useState<"yes" | "no" | null>(null);
   const [usefulness, setUsefulness] = useState<number | null>(null);
   const [willSubscribe, setWillSubscribe] = useState<"yes" | "no" | "already" | null>(null);
@@ -46,32 +55,66 @@ export default function FeedbackPopup() {
   useEffect(() => {
     if (hidden) return;
     if (typeof window === "undefined") return;
-    if (window.localStorage.getItem(STORAGE_KEY)) return;
+    if (window.localStorage.getItem(DONE_KEY)) return;
+
+    if (!window.sessionStorage.getItem(SESSION_COUNTED_KEY)) {
+      window.sessionStorage.setItem(SESSION_COUNTED_KEY, "1");
+      const nextCount = Number(window.localStorage.getItem(VISIT_COUNT_KEY) ?? "0") + 1;
+      window.localStorage.setItem(VISIT_COUNT_KEY, String(nextCount));
+    }
+    const visitCount = Number(window.localStorage.getItem(VISIT_COUNT_KEY) ?? "1");
+    const isSecondVisit = visitCount >= 2;
 
     const timer = setTimeout(() => {
-      setVisible(true);
-      trackEvent("feedback_popup_shown");
-    }, SHOW_DELAY_MS);
+      setStage("collapsed");
+      trackEvent("feedback_bubble_shown", { trigger: isSecondVisit ? "second_visit" : "time_delay" });
+    }, isSecondVisit ? 0 : SHOW_DELAY_MS);
     return () => clearTimeout(timer);
   }, [hidden]);
 
   useEffect(() => {
     if (state.success) {
-      window.localStorage.setItem(STORAGE_KEY, "1");
+      window.localStorage.setItem(DONE_KEY, "1");
       trackEvent("feedback_submit", { raced_before: racedBefore, usefulness, will_subscribe: willSubscribe });
-      const timer = setTimeout(() => setVisible(false), 2500);
+      const timer = setTimeout(() => setStage("hidden"), 2500);
       return () => clearTimeout(timer);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.success]);
 
-  function dismiss() {
-    window.localStorage.setItem(STORAGE_KEY, "1");
-    trackEvent("feedback_popup_dismissed");
-    setVisible(false);
-  }
+  if (hidden || stage === "hidden") return null;
 
-  if (hidden || !visible) return null;
+  if (stage === "collapsed") {
+    return (
+      <button
+        type="button"
+        onClick={() => { setStage("expanded"); trackEvent("feedback_bubble_expand"); }}
+        aria-label="Open feedback form"
+        className="mono"
+        style={{
+          position: "fixed",
+          bottom: 20,
+          right: 20,
+          zIndex: 1000,
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          background: "#111111",
+          color: "#FAFAF8",
+          border: "none",
+          borderRadius: 999,
+          padding: "12px 18px",
+          fontSize: 12.5,
+          fontWeight: 700,
+          letterSpacing: "0.02em",
+          cursor: "pointer",
+          boxShadow: "0 8px 28px rgba(17,17,17,0.22)",
+        }}
+      >
+        <MessageCircle size={16} /> FEEDBACK
+      </button>
+    );
+  }
 
   return (
     <div
@@ -90,8 +133,8 @@ export default function FeedbackPopup() {
     >
       <button
         type="button"
-        onClick={dismiss}
-        aria-label="Dismiss feedback"
+        onClick={() => setStage("collapsed")}
+        aria-label="Collapse feedback"
         style={{
           position: "absolute",
           top: 10,
@@ -99,13 +142,13 @@ export default function FeedbackPopup() {
           background: "none",
           border: "none",
           color: "#6B6B66",
-          fontSize: 16,
           cursor: "pointer",
           lineHeight: 1,
           padding: 4,
+          display: "flex",
         }}
       >
-        ×
+        <ChevronDown size={18} />
       </button>
 
       {state.success ? (
