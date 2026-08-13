@@ -3,6 +3,7 @@ import { getCurrentProfile } from "@/lib/auth";
 import { getMyEventRows } from "@/lib/data";
 import SignOutButton from "@/app/admin/SignOutButton";
 import EventList from "@/components/events/EventList";
+import EmbedSnippet from "@/components/EmbedSnippet";
 
 export default async function OrganiserPage() {
   const profile = await getCurrentProfile();
@@ -33,6 +34,8 @@ export default async function OrganiserPage() {
       <div style={{ marginTop: 36 }}>
         <EventList events={events} editBasePath="/organiser/events" redirectTo="/organiser" />
       </div>
+
+      <EmbedSnippet />
     </header>
   );
 }

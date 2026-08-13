@@ -5,6 +5,7 @@ import InviteOrganiserForm from "./InviteOrganiserForm";
 import SignOutButton from "./SignOutButton";
 import EventList from "@/components/events/EventList";
 import ManageAdmins from "@/components/admin/ManageAdmins";
+import EmbedSnippet from "@/components/EmbedSnippet";
 
 export default async function AdminPage() {
   const profile = await getCurrentProfile();
@@ -41,6 +42,8 @@ export default async function AdminPage() {
           <ManageAdmins admins={admins} />
         </div>
       )}
+
+      <EmbedSnippet />
 
       <div style={{ marginTop: 48 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
