@@ -15,7 +15,7 @@ const REGION_HINT: Record<Region, string | undefined> = {
   both: undefined,
 };
 
-export default function CalendarPage({ events }: { events: CalendarEvent[] }) {
+export default function CalendarPage({ events, isAdmin = false }: { events: CalendarEvent[]; isAdmin?: boolean }) {
   const [activeDisc, setActiveDisc] = useState<Set<DisciplineId>>(new Set());
   const [region, setRegion] = useState("all");
   const [search, setSearch] = useState("");
@@ -180,9 +180,15 @@ export default function CalendarPage({ events }: { events: CalendarEvent[] }) {
                         }}>
                           {e.kidsOnly ? "KIDS ONLY" : "KIDS + ADULTS"}
                         </span>
-                        <Link href={`/events/${e.id}/suggest-change`} onClick={() => trackEvent("suggest_change_click", { event_id: e.id, event_title: e.title })} className="mono" style={{ color: "#9A9992", fontSize: 10.5, textDecoration: "underline" }}>
-                          Suggest a change
-                        </Link>
+                        {isAdmin ? (
+                          <Link href={`/admin/events/${e.id}/edit`} onClick={() => trackEvent("admin_edit_click", { event_id: e.id, event_title: e.title })} className="mono" style={{ color: "#9A9992", fontSize: 10.5, textDecoration: "underline" }}>
+                            Edit
+                          </Link>
+                        ) : (
+                          <Link href={`/events/${e.id}/suggest-change`} onClick={() => trackEvent("suggest_change_click", { event_id: e.id, event_title: e.title })} className="mono" style={{ color: "#9A9992", fontSize: 10.5, textDecoration: "underline" }}>
+                            Suggest a change
+                          </Link>
+                        )}
                       </div>
                     </div>
                     {e.bookingStatus === "open" ? (

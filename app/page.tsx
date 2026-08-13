@@ -1,11 +1,12 @@
 import CalendarPage from "@/components/CalendarPage";
 import { getEvents } from "@/lib/data";
 import { eventsToJsonLd } from "@/lib/structured-data";
+import { getCurrentProfile } from "@/lib/auth";
 
 export const revalidate = 60;
 
 export default async function Page() {
-  const events = await getEvents();
+  const [events, profile] = await Promise.all([getEvents(), getCurrentProfile()]);
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -20,7 +21,7 @@ export default async function Page() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
       />
-      <CalendarPage events={events} />
+      <CalendarPage events={events} isAdmin={profile?.role === "admin"} />
     </>
   );
 }
