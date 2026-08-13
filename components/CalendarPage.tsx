@@ -9,6 +9,7 @@ import { MONTHS, fmtDay } from "@/lib/format";
 import { trackEvent } from "@/lib/analytics";
 import { eventsToCsv, downloadCsv } from "@/lib/csv";
 import EditEventPanel from "@/components/admin/EditEventPanel";
+import SuggestChangePanel from "@/components/events/SuggestChangePanel";
 
 const REGION_HINT: Record<Region, string | undefined> = {
   devon: "Devon",
@@ -22,6 +23,7 @@ export default function CalendarPage({ events, isAdmin = false }: { events: Cale
   const [search, setSearch] = useState("");
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [suggestingId, setSuggestingId] = useState<string | null>(null);
 
   const visibleDisciplines = useMemo(() => {
     const present = new Set(events.map((e) => e.discipline));
@@ -192,9 +194,14 @@ export default function CalendarPage({ events, isAdmin = false }: { events: Cale
                             Edit
                           </button>
                         ) : (
-                          <Link href={`/events/${e.id}/suggest-change`} onClick={() => trackEvent("suggest_change_click", { event_id: e.id, event_title: e.title })} className="mono" style={{ color: "#6B6B66", fontSize: 10.5, textDecoration: "underline" }}>
+                          <button
+                            type="button"
+                            onClick={() => { trackEvent("suggest_change_click", { event_id: e.id, event_title: e.title }); setSuggestingId(e.id); }}
+                            className="mono"
+                            style={{ color: "#6B6B66", fontSize: 10.5, textDecoration: "underline", background: "none", border: "none", padding: 0, cursor: "pointer", fontFamily: "inherit" }}
+                          >
                             Suggest a change
-                          </Link>
+                          </button>
                         )}
                       </div>
                     </div>
@@ -217,6 +224,7 @@ export default function CalendarPage({ events, isAdmin = false }: { events: Cale
       </main>
 
       {isAdmin && <EditEventPanel eventId={editingId} onClose={() => setEditingId(null)} />}
+      {!isAdmin && <SuggestChangePanel eventId={suggestingId} onClose={() => setSuggestingId(null)} />}
     </>
   );
 }

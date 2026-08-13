@@ -93,6 +93,17 @@ export async function submitChangeRequest(
   return { success: true };
 }
 
+// No auth check — suggest-a-change is public (same as submitChangeRequest
+// above), and the calendar page's slide-out panel only has the
+// display-oriented CalendarEvent shape, so it needs the full EventRow to
+// populate SuggestChangeForm.
+export async function getEventForSuggestChange(id: string): Promise<EventRow | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("events").select("*").eq("id", id).single();
+  if (error) return null;
+  return data as EventRow;
+}
+
 // These action functions return { error } rather than throwing — a thrown
 // error from a directly-invoked (non-<form>) server action surfaces to the
 // browser as a raw failed POST. They also don't redirect() server-side on
