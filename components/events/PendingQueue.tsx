@@ -36,7 +36,7 @@ export default function PendingQueue({ pending, liveEvents, redirectTo }: { pend
   const liveById = new Map(liveEvents.map((e) => [e.id, e]));
 
   if (pending.length === 0) {
-    return <p style={{ color: "#9A9992", fontSize: 13.5 }}>No pending changes — you&apos;re all caught up.</p>;
+    return <p style={{ color: "#6B6B66", fontSize: 13.5 }}>No pending changes — you&apos;re all caught up.</p>;
   }
 
   async function run(id: string, fn: () => Promise<PendingActionResult>) {
@@ -74,7 +74,7 @@ export default function PendingQueue({ pending, liveEvents, redirectTo }: { pend
               <div>
                 <div style={{ fontWeight: 700, fontSize: 15 }}>{p.title ?? "Untitled event"}</div>
                 {isIngested && (
-                  <div className="mono" style={{ fontSize: 10, color: "#9A9992", marginTop: 2 }}>
+                  <div className="mono" style={{ fontSize: 10, color: "#6B6B66", marginTop: 2 }}>
                     {p.source_type === "public_submission" ? "PUBLIC SUBMISSION" : "SMART INGEST"}
                     {p.extraction_confidence != null && ` · CONFIDENCE ${Math.round(p.extraction_confidence * 100)}%`}
                     {p.duplicate_of ? " · MATCHES AN EXISTING EVENT" : " · NEW EVENT"}
@@ -129,7 +129,7 @@ export default function PendingQueue({ pending, liveEvents, redirectTo }: { pend
                     const flagged = p.field_flags?.[key];
                     return (
                       <tr key={key}>
-                        <td style={{ color: "#9A9992", padding: "3px 12px 3px 0", verticalAlign: "top", whiteSpace: "nowrap" }}>{key}</td>
+                        <td style={{ color: "#6B6B66", padding: "3px 12px 3px 0", verticalAlign: "top", whiteSpace: "nowrap" }}>{key}</td>
                         <td style={{ color: "#111111", padding: "3px 0", verticalAlign: "top" }}>
                           {formatValue(p[key])}
                           {flagged && (
@@ -154,7 +154,7 @@ export default function PendingQueue({ pending, liveEvents, redirectTo }: { pend
                   <tbody>
                     {diffFields.map(([key, change]) => (
                       <tr key={key}>
-                        <td style={{ color: "#9A9992", padding: "3px 12px 3px 0", verticalAlign: "top", whiteSpace: "nowrap" }}>{key}</td>
+                        <td style={{ color: "#6B6B66", padding: "3px 12px 3px 0", verticalAlign: "top", whiteSpace: "nowrap" }}>{key}</td>
                         <td style={{ color: "#A13A2A", padding: "3px 12px 3px 0", verticalAlign: "top" }}>{formatValue(change.from)}</td>
                         <td style={{ color: "#6B6B66", padding: "3px 6px 3px 0" }}>→</td>
                         <td style={{ color: "#1F5D3A", padding: "3px 0", verticalAlign: "top", fontWeight: 700 }}>{formatValue(change.to)}</td>

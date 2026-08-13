@@ -85,7 +85,13 @@ button {
 .filter-toggle-label {
   display: none;
 }
+.site-title {
+  font-size: 15px;
+}
 @media (max-width: 640px) {
+  .site-title {
+    font-size: clamp(16px, 5.6vw, 23px);
+  }
   .filter-region-toggle,
   .filter-search {
     flex: 1 1 100%;

@@ -98,7 +98,7 @@ export default function FeedbackPopup() {
           right: 10,
           background: "none",
           border: "none",
-          color: "#9A9992",
+          color: "#6B6B66",
           fontSize: 16,
           cursor: "pointer",
           lineHeight: 1,
@@ -114,7 +114,7 @@ export default function FeedbackPopup() {
         </p>
       ) : (
         <form action={formAction}>
-          <div className="mono" style={{ fontSize: 10.5, color: "#9A9992", marginBottom: 4 }}>QUICK FEEDBACK</div>
+          <div className="mono" style={{ fontSize: 10.5, color: "#6B6B66", marginBottom: 4 }}>QUICK FEEDBACK</div>
           <p style={{ fontSize: 13, color: "#4A4A46", margin: "0 0 16px", lineHeight: 1.5 }}>
             Got a moment? A couple of questions would really help.
           </p>
@@ -147,8 +147,8 @@ export default function FeedbackPopup() {
               ))}
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
-              <span style={{ fontSize: 10, color: "#9A9992" }}>Not very</span>
-              <span style={{ fontSize: 10, color: "#9A9992" }}>Very</span>
+              <span style={{ fontSize: 10, color: "#6B6B66" }}>Not very</span>
+              <span style={{ fontSize: 10, color: "#6B6B66" }}>Very</span>
             </div>
           </div>
 

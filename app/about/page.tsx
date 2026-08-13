@@ -23,7 +23,7 @@ export default function AboutPage() {
         <p style={{ marginBottom: 20 }}>
           It&apos;s personal beyond just convenience, too. I&apos;m a coach at Mid Devon CC and co-host the Wednesday evening Haldon MTB ride, and I want to see more kids get into cycling, find a club, and try their first race. If a straightforward calendar makes that half a step easier for one more family, it&apos;s done its job.
         </p>
-        <p style={{ color: "#9A9992" }}>
+        <p style={{ color: "#6B6B66" }}>
           — Steve Wikeley
         </p>
       </div>

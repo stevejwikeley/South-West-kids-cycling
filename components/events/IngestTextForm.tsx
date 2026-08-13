@@ -29,7 +29,7 @@ export default function IngestTextForm({ initialInput, initialSourceUrl }: { ini
         placeholder="https://… — the page this text came from"
         style={{ width: "100%", background: "#FFFFFF", border: "1px solid #D8D6D0", color: "#111111", padding: "9px 12px", fontSize: 13.5 }}
       />
-      <p className="mono" style={{ fontSize: 10, color: "#9A9992", marginTop: 6 }}>
+      <p className="mono" style={{ fontSize: 10, color: "#6B6B66", marginTop: 6 }}>
         Used as the fallback organiser link for anything extracted that doesn&apos;t already have one — filled in automatically by the bookmarklet below.
       </p>
 

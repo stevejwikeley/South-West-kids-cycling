@@ -40,7 +40,7 @@ export default function BookmarkletLink() {
       >
         Send to SWKC
       </a>
-      <p className="mono" style={{ fontSize: 10.5, color: "#9A9992", marginTop: 8 }}>
+      <p className="mono" style={{ fontSize: 10.5, color: "#6B6B66", marginTop: 8 }}>
         Drag, don&apos;t click — clicking here does nothing since it needs to run on the page you want to capture.
       </p>
     </div>

@@ -13,7 +13,7 @@ function formatChecked(iso: string | null): string {
 function StatusBadge({ source }: { source: WatchedSourceRow }) {
   if (!source.last_status) {
     return (
-      <span className="mono" style={{ fontSize: 10, fontWeight: 700, color: "#9A9992", border: "1px solid #D8D6D0", padding: "3px 8px" }}>
+      <span className="mono" style={{ fontSize: 10, fontWeight: 700, color: "#6B6B66", border: "1px solid #D8D6D0", padding: "3px 8px" }}>
         NOT CHECKED YET
       </span>
     );
@@ -39,7 +39,7 @@ export default function WatchedSourceList({ sources }: { sources: WatchedSourceR
   const [notes, setNotes] = useState<Record<string, string>>({});
 
   if (sources.length === 0) {
-    return <p style={{ color: "#9A9992", fontSize: 13.5 }}>No watched sources yet — add one to start nightly scanning.</p>;
+    return <p style={{ color: "#6B6B66", fontSize: 13.5 }}>No watched sources yet — add one to start nightly scanning.</p>;
   }
 
   function setBusy(id: string, busy: boolean) {
@@ -90,7 +90,7 @@ export default function WatchedSourceList({ sources }: { sources: WatchedSourceR
                 <a href={s.url} target="_blank" rel="noreferrer" className="mono" style={{ fontSize: 11.5, color: "#4A4A46", wordBreak: "break-all" }}>
                   {s.url}
                 </a>
-                <div className="mono" style={{ fontSize: 10, color: "#9A9992", marginTop: 4 }}>
+                <div className="mono" style={{ fontSize: 10, color: "#6B6B66", marginTop: 4 }}>
                   {s.check_frequency.toUpperCase()} · LAST CHECKED {formatChecked(s.last_checked_at).toUpperCase()}
                   {s.last_status === "ok" && s.last_result_count != null && ` · ${s.last_result_count} FOUND LAST RUN`}
                   {" · "}

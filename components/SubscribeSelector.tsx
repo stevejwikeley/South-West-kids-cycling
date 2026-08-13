@@ -53,7 +53,7 @@ export default function SubscribeSelector() {
               }}
             >
               <div style={{ fontWeight: 700, fontSize: 15 }}>{p.label}</div>
-              <div className="mono" style={{ fontSize: 10.5, color: active ? "#D8D6D0" : "#9A9992", marginTop: 3 }}>{p.sub}</div>
+              <div className="mono" style={{ fontSize: 10.5, color: active ? "#D8D6D0" : "#6B6B66", marginTop: 3 }}>{p.sub}</div>
             </button>
           );
         })}
@@ -99,7 +99,7 @@ export default function SubscribeSelector() {
           <CopyLink url={CALENDAR_URL} />
           <p style={{ ...stepStyle, marginTop: 14 }}><span style={stepNumStyle}>2.</span> Open <strong>Settings → Calendar → Accounts → Add Account → Other → Add Subscribed Calendar</strong>.</p>
           <p style={stepStyle}><span style={stepNumStyle}>3.</span> Paste the link into the &ldquo;Server&rdquo; field, then tap <strong>Next</strong> → <strong>Save</strong>.</p>
-          <p style={{ fontSize: 12, color: "#9A9992" }}>The exact menu wording moves around slightly between iOS versions — look for &ldquo;Add Subscribed Calendar&rdquo; under Calendar accounts if this doesn&apos;t match exactly.</p>
+          <p style={{ fontSize: 12, color: "#6B6B66" }}>The exact menu wording moves around slightly between iOS versions — look for &ldquo;Add Subscribed Calendar&rdquo; under Calendar accounts if this doesn&apos;t match exactly.</p>
         </div>
       )}
 

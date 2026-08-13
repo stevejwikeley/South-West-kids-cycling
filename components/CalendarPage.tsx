@@ -110,15 +110,15 @@ export default function CalendarPage({ events, isAdmin = false }: { events: Cale
                   ))}
                 </div>
                 <div className="filter-search">
-                  <Search size={14} style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", color: "#9A9992" }} />
+                  <Search size={14} style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", color: "#6B6B66" }} />
                   <input value={search} onChange={(e) => setSearch(e.target.value)} onBlur={() => search && trackEvent("search", { query: search })} placeholder="Search events or venues"
                     style={{ background: "#FFFFFF", border: "1px solid #D8D6D0", color: "#111111", padding: "8px 12px 8px 32px", fontSize: 12.5, width: "100%" }} />
-                  {search && <X size={13} onClick={() => setSearch("")} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", color: "#9A9992", cursor: "pointer" }} />}
+                  {search && <X size={13} onClick={() => setSearch("")} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", color: "#6B6B66", cursor: "pointer" }} />}
                 </div>
               </div>
 
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-                <span className="mono" style={{ fontSize: 10.5, color: "#9A9992", marginRight: 2 }}>DISCIPLINE</span>
+                <span className="mono" style={{ fontSize: 10.5, color: "#6B6B66", marginRight: 2 }}>DISCIPLINE</span>
                 {visibleDisciplines.map((d) => {
                   const active = activeDisc.has(d.id);
                   return (
@@ -139,7 +139,7 @@ export default function CalendarPage({ events, isAdmin = false }: { events: Cale
       </div>
 
       <main style={{ maxWidth: 1100, margin: "0 auto", padding: "36px 24px 100px" }}>
-        {filtered.length === 0 && <div style={{ textAlign: "center", padding: "80px 0", color: "#9A9992" }}>No events match those filters.</div>}
+        {filtered.length === 0 && <div style={{ textAlign: "center", padding: "80px 0", color: "#6B6B66" }}>No events match those filters.</div>}
 
         {Object.entries(grouped).map(([month, evts]) => (
           <div key={month} style={{ marginBottom: 40 }}>
@@ -173,7 +173,7 @@ export default function CalendarPage({ events, isAdmin = false }: { events: Cale
                           <MapPin size={12} /> {e.venue}
                         </a>
                         <span className="mono" style={{ fontSize: 9.5, fontWeight: 700, padding: "3px 8px", background: `${d.color}18`, color: d.color, letterSpacing: "0.02em" }}>{d.label.toUpperCase()}</span>
-                        <span className="mono" style={{ color: "#9A9992", fontSize: 10.5 }}>· {e.ages.map(ageLabel).join(", ")}</span>
+                        <span className="mono" style={{ color: "#6B6B66", fontSize: 10.5 }}>· {e.ages.map(ageLabel).join(", ")}</span>
                         {e.status === "provisional" && <span className="mono" style={{ color: "#C77F17", fontSize: 10.5 }}>· PROVISIONAL</span>}
                         {e.status === "cancelled" && <span className="mono" style={{ color: "#A13A2A", fontSize: 10.5 }}>· CANCELLED</span>}
                         <span className="mono" style={{
@@ -187,12 +187,12 @@ export default function CalendarPage({ events, isAdmin = false }: { events: Cale
                             type="button"
                             onClick={() => { trackEvent("admin_edit_click", { event_id: e.id, event_title: e.title }); setEditingId(e.id); }}
                             className="mono"
-                            style={{ color: "#9A9992", fontSize: 10.5, textDecoration: "underline", background: "none", border: "none", padding: 0, cursor: "pointer", fontFamily: "inherit" }}
+                            style={{ color: "#6B6B66", fontSize: 10.5, textDecoration: "underline", background: "none", border: "none", padding: 0, cursor: "pointer", fontFamily: "inherit" }}
                           >
                             Edit
                           </button>
                         ) : (
-                          <Link href={`/events/${e.id}/suggest-change`} onClick={() => trackEvent("suggest_change_click", { event_id: e.id, event_title: e.title })} className="mono" style={{ color: "#9A9992", fontSize: 10.5, textDecoration: "underline" }}>
+                          <Link href={`/events/${e.id}/suggest-change`} onClick={() => trackEvent("suggest_change_click", { event_id: e.id, event_title: e.title })} className="mono" style={{ color: "#6B6B66", fontSize: 10.5, textDecoration: "underline" }}>
                             Suggest a change
                           </Link>
                         )}

@@ -44,7 +44,7 @@ export default function ClubsPage({ clubs }: { clubs: Club[] }) {
       <div style={{ position: "sticky", top: 0, zIndex: 20, background: "#FAFAF8", borderTop: "1px solid #E4E2DD", borderBottom: "1px solid #E4E2DD" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto", padding: "16px 24px", display: "flex", flexDirection: "column", gap: 12 }}>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-            <span className="mono" style={{ fontSize: 10.5, color: "#9A9992", marginRight: 2 }}>DISCIPLINE</span>
+            <span className="mono" style={{ fontSize: 10.5, color: "#6B6B66", marginRight: 2 }}>DISCIPLINE</span>
             {CLUB_DISCIPLINES.map((d) => {
               const active = activeDisc.has(d.id);
               return (
@@ -62,17 +62,17 @@ export default function ClubsPage({ clubs }: { clubs: Club[] }) {
 
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center", justifyContent: "space-between" }}>
             <div style={{ position: "relative" }}>
-              <Search size={14} style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", color: "#9A9992" }} />
+              <Search size={14} style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", color: "#6B6B66" }} />
               <input value={search} onChange={(e) => setSearch(e.target.value)} onBlur={() => search && trackEvent("search", { query: search, page: "clubs" })} placeholder="Search clubs or towns"
                 style={{ background: "#FFFFFF", border: "1px solid #D8D6D0", color: "#111111", padding: "8px 12px 8px 32px", fontSize: 12.5, width: 210 }} />
-              {search && <X size={13} onClick={() => setSearch("")} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", color: "#9A9992", cursor: "pointer" }} />}
+              {search && <X size={13} onClick={() => setSearch("")} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", color: "#6B6B66", cursor: "pointer" }} />}
             </div>
           </div>
         </div>
       </div>
 
       <main style={{ maxWidth: 1100, margin: "0 auto", padding: "36px 24px 100px" }}>
-        {filtered.length === 0 && <div style={{ textAlign: "center", padding: "80px 0", color: "#9A9992" }}>No clubs match those filters.</div>}
+        {filtered.length === 0 && <div style={{ textAlign: "center", padding: "80px 0", color: "#6B6B66" }}>No clubs match those filters.</div>}
 
         {filtered.length > 0 && (
           <div style={{ borderTop: "2px solid #111111" }}>
@@ -82,7 +82,7 @@ export default function ClubsPage({ clubs }: { clubs: Club[] }) {
                   <div style={{ fontWeight: 700, fontSize: 15.5 }}>{c.name}</div>
                   <div style={{ display: "flex", alignItems: "center", gap: 6, color: "#6B6B66", fontSize: 12.5, marginTop: 3 }}>
                     <MapPin size={12} /> {c.location}
-                    {c.founded && <span className="mono" style={{ color: "#9A9992", fontSize: 10.5, marginLeft: 4 }}>· EST. {c.founded}</span>}
+                    {c.founded && <span className="mono" style={{ color: "#6B6B66", fontSize: 10.5, marginLeft: 4 }}>· EST. {c.founded}</span>}
                   </div>
                   <p style={{ fontSize: 12.5, lineHeight: 1.6, color: "#4A4A46", marginTop: 8, maxWidth: 480 }}>{c.summary}</p>
                 </div>

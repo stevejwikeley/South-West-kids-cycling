@@ -24,7 +24,7 @@ export default function EventList({
   const [showPast, setShowPast] = useState(false);
 
   if (events.length === 0) {
-    return <p style={{ color: "#9A9992", fontSize: 13.5 }}>No events yet.</p>;
+    return <p style={{ color: "#6B6B66", fontSize: 13.5 }}>No events yet.</p>;
   }
 
   const today = new Date().toISOString().slice(0, 10);
@@ -82,7 +82,7 @@ export default function EventList({
       )}
       <div style={{ borderTop: "2px solid #111111" }}>
         {visibleEvents.length === 0 && (
-          <p style={{ color: "#9A9992", fontSize: 13.5, padding: "16px 6px" }}>No upcoming events.</p>
+          <p style={{ color: "#6B6B66", fontSize: 13.5, padding: "16px 6px" }}>No upcoming events.</p>
         )}
         {visibleEvents.map((e) => {
           const d = eventDisc(e.discipline as DisciplineId);
@@ -96,7 +96,7 @@ export default function EventList({
                   <span style={{ fontWeight: 700, fontSize: 14.5 }}>{e.title}</span>
                   <span className="mono" style={{ fontSize: 12.5, color: "#6B6B66", flexShrink: 0 }}>{f.day}.{f.mon}</span>
                 </div>
-                <div className="mono" style={{ fontSize: 10.5, color: "#9A9992", marginTop: 4, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                <div className="mono" style={{ fontSize: 10.5, color: "#6B6B66", marginTop: 4, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
                   <span>{e.venue_name}</span>
                   <span style={{ fontSize: 9.5, fontWeight: 700, padding: "3px 8px", background: `${d.color}18`, color: d.color, letterSpacing: "0.02em" }}>{d.label.toUpperCase()}</span>
                   <span>· {e.status.toUpperCase()}{!e.approved ? " · UNAPPROVED" : ""}</span>

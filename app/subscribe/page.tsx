@@ -20,7 +20,7 @@ export default function SubscribePage() {
       <p style={{ maxWidth: 520, fontSize: 16, lineHeight: 1.65, color: "#4A4A46", marginTop: 22 }}>
         Subscribe once and every event lands in the calendar you already use — on your phone, your computer, wherever. When a booking link goes live, a date changes, or a new race gets added, it updates itself. No app to check, nothing to remember.
       </p>
-      <p style={{ maxWidth: 520, fontSize: 14, lineHeight: 1.6, color: "#9A9992", marginTop: 12 }}>
+      <p style={{ maxWidth: 520, fontSize: 14, lineHeight: 1.6, color: "#6B6B66", marginTop: 12 }}>
         The setup below takes a couple of minutes and only needs doing once — most calendar apps then check for updates automatically, roughly once a day.
       </p>
 

@@ -38,7 +38,7 @@ export function buildPendingDigestHtml(count: number, pendingUrl: string): strin
           </td>
         </tr>
         <tr>
-          <td style="font-family:-apple-system,Helvetica,Arial,sans-serif;font-size:12px;line-height:1.6;color:#9A9992;border-top:1px solid #E4E2DD;padding-top:20px;">
+          <td style="font-family:-apple-system,Helvetica,Arial,sans-serif;font-size:12px;line-height:1.6;color:#6B6B66;border-top:1px solid #E4E2DD;padding-top:20px;">
             Sent once daily only when something's waiting — an empty queue means no email.
           </td>
         </tr>
