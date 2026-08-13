@@ -60,24 +60,33 @@ app/                    Routes (App Router)
   clubs/                   Public club directory
   getting-started/         New-to-racing guide
   contact/                 Contact form (general enquiry / organiser account request)
-  subscribe/               Calendar subscription instructions
-  calendar.ics/            Live ICS feed
-  events/[id]/suggest-change/   Public "suggest a change" form for any event
+  subscribe/               Calendar subscription instructions (email digest + ICS feed)
+  calendar.ics/            Live ICS feed — supports ?discipline= and ?region= filters
+  embed/                   Chrome-free events widget meant for <iframe> on other sites
+  events/[id]/suggest-change/   Public "suggest a change" form's standalone fallback route —
+                             the calendar page normally opens this in a slide-out panel instead
+                             (SuggestChangePanel), this route still works for direct links
   login/                   Auth (admin + organiser)
-  admin/                   Admin-only: events, pending queue, watched sources, smart ingestion
+  admin/                   Admin-only: events, pending queue, watched sources, add events
+                             (formerly "smart ingestion" — paste/upload/manual are all here now)
   organiser/               Organiser-only: manage their own events
   api/cron/                Vercel Cron endpoints (see below)
   api/mcp/                 MCP server for weekly event discovery (see below)
 
 components/              Shared UI. components/admin and components/events hold
                           role-specific pieces; everything else is public-facing.
+                          EditEventPanel / SuggestChangePanel are the slide-out-panel
+                          equivalents of the admin/public event-edit full pages — both
+                          fetch the full EventRow client-side since the calendar page only
+                          has the display-oriented CalendarEvent shape to start from.
 
 lib/
   actions/                 Server Actions ("use server"), one file per feature
   ingestion/                AI event-extraction pipeline — see its own README
   email/                    Resend email templates + sender
   supabase/                 Supabase client factories + hand-written DB types
-  auth.ts                   getCurrentProfile() — the one place role checks originate
+  auth.ts                   getCurrentProfile() / isAdminRole() — the one place role checks
+                             originate
   data.ts                   Read helpers that map DB rows to the app's CalendarEvent/Club types
   mock-data.ts              Discipline definitions (labels, colors) — not actually mock data,
                              this is the canonical discipline list despite the filename
@@ -85,6 +94,8 @@ lib/
 
 supabase/migrations/     Numbered SQL migrations — see its own README, applying them is manual
 e2e/                      Playwright tests
+docs/                     Planning docs — specs and reviews written before/instead of
+                          immediately shipping the underlying feature; see each file for status
 ```
 
 ## Roles & auth
@@ -101,10 +112,16 @@ There are four ways an event reaches the `events_pending` review queue (or, for 
 
 1. **Manual** — an admin or organiser fills in the event form directly.
 2. **Change request** — anyone can submit a correction to an existing event via `/events/[id]/suggest-change`, no login required.
-3. **Smart ingestion** — an admin pastes a URL, pastes text, or uploads a file/image on `/admin/ingest`, or a **watched source** gets checked automatically overnight. Either way it goes through `lib/ingestion/extract-events.ts` (Claude does the extraction) before landing in the pending queue for a human to approve. See [`lib/ingestion/README.md`](lib/ingestion/README.md) for the full pipeline.
+3. **Smart ingestion** — an admin pastes a URL, pastes text, or uploads a file/image on `/admin/ingest` ("Add events" in the nav — the page also has a manual-entry option that skips extraction entirely and publishes straight away, see item 1), or a **watched source** gets checked automatically overnight. Either way, extraction goes through `lib/ingestion/extract-events.ts` (Claude does the extraction) before landing in the pending queue for a human to approve. See [`lib/ingestion/README.md`](lib/ingestion/README.md) for the full pipeline.
 4. **Public submission** — anyone can submit a brand-new event via `/submit-event` (linked from the footer), either by pasting a link/text (same AI-extraction pipeline as smart ingestion) or filling in a structured form. Tagged `source_type: "public_submission"` rather than `"smart_ingest"` purely so admins can see where a candidate came from — otherwise it's the exact same pending-queue/approval path (`lib/actions/public-submit.ts`, `saveCandidates()`'s `sourceType` param).
 
 Everything in `events_pending` needs an admin's approval before it becomes a real, published event — smart ingestion never auto-publishes.
+
+Smart-ingestion candidates can carry `field_flags` — fields the extraction pipeline wasn't fully confident about (e.g. `kids_only`, `age_categories`). These survive into the live `events` row on approval and show as a "NEEDS VERIFICATION" badge on the admin event list and in the edit form/panel; a **Verify** button (`verifyEventFields()`, `lib/actions/events.ts`) clears the flag once an admin has reviewed the event — it's an all-or-nothing clear, not per-field.
+
+## Embeddable widget
+
+`/embed` renders a compact, nav/footer/feedback-bubble-free events list meant for `<iframe>`-ing into a club's own site (`TopNav`/`Footer`/`FeedbackPopup` all check the pathname and render nothing under `/embed`). Supports `?region=`, `?discipline=`, `?limit=` to scope what's shown, and always links back to `/subscribe`. The Clubs page has a copyable `<iframe>` snippet (`components/EmbedSnippet.tsx`) so club admins can find and use it without needing to ask.
 
 ## Cron jobs (`vercel.json`)
 
@@ -121,6 +138,10 @@ All three authenticate via `CRON_SECRET` as a bearer token (Vercel sends this au
 
 A weekly scheduled Claude task (in the site owner's own claude.ai account, not part of this app's infrastructure) searches the web for new youth cycling events and submits candidates through this MCP server, using the same `mcp-handler` + Claude tool-call flow as any other MCP connector. Auth is a minimal OAuth 2.0 authorization-code+PKCE shim (`lib/mcp-oauth.ts`) purely because claude.ai's "Add custom connector" UI requires OAuth — the token it issues is the same static `MCP_SECRET` used everywhere else, so the actual security boundary hasn't changed shape, just its wire format.
 
+## Planning docs
+
+[`docs/`](docs/) holds specs and reviews written before (or instead of) shipping the underlying work — currently [discipline/location-based subscriptions](docs/discipline-location-subscriptions-spec.md) (not yet built — the calendar feed already supports the filtering, the email digest doesn't yet) and an [SEO/LLM-discoverability review](docs/seo-llm-discoverability-review.md) (partially actioned — see the doc for what's still open, starting with basic search-engine indexation).
+
 ## Testing
 
 `npm run test:e2e` runs the Playwright suite (`e2e/`) against a local dev server — desktop Chromium plus a Pixel 7 mobile-emulation project. Covers the calendar, clubs page, contact form, suggest-change flow, and the admin/organiser auth gate.
@@ -132,4 +153,8 @@ A weekly scheduled Claude task (in the site owner's own claude.ai account, not p
 
 ## Deployment
 
-Deploys to Vercel on push to `main` (the repo's `master` branch is stale and not what's deployed — check Vercel's project settings before assuming otherwise). Environment variables above must be set in the Vercel project settings — `.env.local` is git-ignored and never deployed. Database migrations are **not** applied automatically; see [`supabase/migrations/README.md`](supabase/migrations/README.md).
+Deploys to Vercel on push to `main` (the repo's `master` branch is stale, tens of commits behind, and not what's deployed — check Vercel's project settings before assuming otherwise). Environment variables above must be set in the Vercel project settings — `.env.local` is git-ignored and never deployed. Database migrations are **not** applied automatically; see [`supabase/migrations/README.md`](supabase/migrations/README.md).
+
+### Preview environment
+
+`sw-calendar-alpha.vercel.app` is a Vercel domain bound (Project → Domains → Edit → "Connect to an environment: Preview") to a dedicated `preview` branch — push there (not `main`) to verify a change before it goes live. This exists because Supabase Auth's magic-link sign-in silently falls back to the production Site URL whenever the requesting origin isn't on its redirect allow-list, which made `localhost` sign-in untestable; Supabase's Authentication → URL Configuration → Redirect URLs now includes `https://*.vercel.app/**` alongside the production domain, so signing in on the preview URL works the same as production. It shares the same Supabase project/database as production — there's no sandboxed copy — so anything done while testing there (saving, deleting, sending real emails) is real, not staged.
