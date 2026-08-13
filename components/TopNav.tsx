@@ -2,8 +2,6 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Rss } from "lucide-react";
-import { trackEvent } from "@/lib/analytics";
 import type { UserRole } from "@/lib/supabase/types";
 
 const ITEMS: [string, string][] = [
@@ -45,25 +43,6 @@ export default function TopNav({ role }: { role?: UserRole | null }) {
               </Link>
             );
           })}
-          <Link
-            href="/subscribe"
-            onClick={() => trackEvent("subscribe_click", { source: "nav" })}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              fontFamily: "var(--font-jetbrains-mono), monospace",
-              fontSize: 11.5,
-              fontWeight: 700,
-              letterSpacing: "0.03em",
-              background: "#111111",
-              color: "#FAFAF8",
-              padding: "8px 14px",
-              marginLeft: 4,
-            }}
-          >
-            <Rss size={13} /> SUBSCRIBE
-          </Link>
         </div>
       </div>
     </div>

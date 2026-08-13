@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { MapPin, Search, X, ArrowUpRight, Filter, Download } from "lucide-react";
+import { MapPin, Search, X, Rss, ArrowUpRight, Filter, Download } from "lucide-react";
 import { EVENT_DISCIPLINES, eventDisc, ageLabel } from "@/lib/mock-data";
 import type { DisciplineId, CalendarEvent, Region } from "@/lib/types";
 import { MONTHS, fmtDay } from "@/lib/format";
@@ -75,6 +75,14 @@ export default function CalendarPage({ events, isAdmin = false }: { events: Cale
         <Link href="/getting-started" onClick={() => trackEvent("getting_started_click", { source: "calendar_hero" })} style={{ fontSize: 13.5, fontWeight: 700, display: "flex", alignItems: "center", gap: 5, borderBottom: "1px solid #111111", paddingBottom: 2, marginTop: 18, width: "fit-content" }}>
           New to racing? Start here <ArrowUpRight size={14} />
         </Link>
+        <div style={{ marginTop: 26, maxWidth: 420 }}>
+          <p style={{ fontSize: 13.5, color: "#4A4A46", marginBottom: 10, lineHeight: 1.5 }}>
+            Get new events the moment they&apos;re added — subscribe once by email or calendar and never miss a race.
+          </p>
+          <Link href="/subscribe" onClick={() => trackEvent("subscribe_click", { source: "calendar_hero" })} style={{ background: "#111111", color: "#FAFAF8", border: "none", padding: "13px 24px", fontWeight: 700, fontSize: 13.5, display: "flex", alignItems: "center", gap: 8, cursor: "pointer", width: "fit-content" }}>
+            <Rss size={15} /> Subscribe
+          </Link>
+        </div>
       </header>
 
       <div style={{ position: "sticky", top: 0, zIndex: 20, background: "#FAFAF8", borderTop: "1px solid #E4E2DD", borderBottom: "1px solid #E4E2DD" }}>
@@ -93,14 +101,24 @@ export default function CalendarPage({ events, isAdmin = false }: { events: Cale
                 <span className="mono" style={{ background: "#E0102A", color: "#FAFAF8", fontSize: 9, fontWeight: 700, padding: "1px 5px", borderRadius: 999 }}>{activeFilterCount}</span>
               )}
             </button>
-            <button
-              type="button"
-              onClick={() => { downloadCsv("south-west-kids-cycling-events.csv", eventsToCsv(filtered)); trackEvent("download_csv", { count: filtered.length }); }}
-              className="mono"
-              style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "1px solid #D8D6D0", padding: "8px 12px", fontSize: 11, fontWeight: 700, color: "#111111", cursor: "pointer" }}
-            >
-              <Download size={13} /> Download CSV
-            </button>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <button
+                type="button"
+                onClick={() => { downloadCsv("south-west-kids-cycling-events.csv", eventsToCsv(filtered)); trackEvent("download_csv", { count: filtered.length }); }}
+                className="mono"
+                style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "1px solid #D8D6D0", padding: "8px 12px", fontSize: 11, fontWeight: 700, color: "#111111", cursor: "pointer" }}
+              >
+                <Download size={13} /> Download CSV
+              </button>
+              <Link
+                href="/subscribe"
+                onClick={() => trackEvent("subscribe_click", { source: "filter_bar" })}
+                className="mono"
+                style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "1px solid #D8D6D0", padding: "8px 12px", fontSize: 11, fontWeight: 700, color: "#111111" }}
+              >
+                <Rss size={13} /> Subscribe
+              </Link>
+            </div>
           </div>
 
           {filtersOpen && (
