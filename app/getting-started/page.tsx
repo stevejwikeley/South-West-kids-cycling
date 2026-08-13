@@ -85,7 +85,7 @@ export default function Page() {
                   </div>
                   <div style={{ flex: "1 1 420px", minWidth: 260 }}>
                     <p style={{ fontSize: 14, lineHeight: 1.65, color: "#4A4A46" }}>{guide.blurb}</p>
-                    <p className="mono" style={{ fontSize: 11, color: "#9A9992", marginTop: 8, lineHeight: 1.6 }}>{guide.format}</p>
+                    <p className="mono" style={{ fontSize: 11, color: "#6B6B66", marginTop: 8, lineHeight: 1.6 }}>{guide.format}</p>
                   </div>
                 </div>
               );
@@ -101,6 +101,7 @@ export default function Page() {
               <li>A properly fitted cycling helmet — non-negotiable at every event on this calendar.</li>
               <li>Weather-appropriate layers. Cyclocross and XC especially mean standing around outdoors, often in mud — spare socks and a warm layer for afterwards are always worth it.</li>
               <li>Water and a snack — entry fees rarely include catering, and younger riders burn through energy fast.</li>
+              <li>A multi-tool, spare inner tube, tyre levers and a pump — punctures happen, and not every event has mechanical support on hand.</li>
             </ul>
           </div>
         </section>
@@ -134,6 +135,20 @@ export default function Page() {
             <p style={{ fontSize: 15, lineHeight: 1.7, color: "#4A4A46", marginTop: 16 }}>
               Every event also has a &quot;Suggest a change&quot; link — use it if anything on the calendar looks wrong or out of date.
             </p>
+          </div>
+        </section>
+
+        <section style={{ marginTop: 56 }}>
+          <div className="disp" style={{ fontSize: 24, marginBottom: 18, letterSpacing: "-0.01em" }}>When to arrive</div>
+          <div style={{ borderTop: "2px solid #111111", paddingTop: 20, maxWidth: 720 }}>
+            <p style={{ fontSize: 15, lineHeight: 1.7, color: "#4A4A46" }}>
+              It&apos;s worth getting there early enough for a practice lap — riding the course once before racing on it makes a big difference to a nervous first-timer.
+            </p>
+            <ul style={{ fontSize: 15, lineHeight: 1.9, color: "#4A4A46", paddingLeft: 20, marginTop: 12 }}>
+              <li>Check the organiser&apos;s website for when <strong>registration</strong> opens — it can take up to 15 minutes to get everyone signed in and numbered, so don&apos;t leave it to the last minute.</li>
+              <li>Check the timings for your child&apos;s <strong>age-group practice</strong> — most events run a short practice session before racing starts.</li>
+              <li>There&apos;s always a <strong>podium</strong> once the youth races have finished — worth sticking around for, even if you weren&apos;t planning to stay that long.</li>
+            </ul>
           </div>
         </section>
       </main>
