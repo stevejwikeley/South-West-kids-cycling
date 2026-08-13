@@ -13,6 +13,11 @@ const REGION_LABEL: Record<CalendarEvent["region"], string> = {
   both: "Devon & Cornwall",
 };
 
+// Google's Event rich-result guidance recommends image and a fully-formed
+// address where available — reusing the site's own branded OG image here
+// since individual events don't have their own.
+const SITE_IMAGE = "https://www.southwestkidscycling.uk/opengraph-image";
+
 export function eventsToJsonLd(events: CalendarEvent[]) {
   return events.map((e) => {
     const disc = eventDisc(e.discipline);
@@ -26,11 +31,14 @@ export function eventsToJsonLd(events: CalendarEvent[]) {
       eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
       sport: disc.label,
       description: `${disc.label} event for age categories ${ageText}, ${e.kidsOnly ? "kids only" : "kids racing alongside adults"}. ${REGION_LABEL[e.region]}, South West England.`,
+      image: [SITE_IMAGE],
       location: {
         "@type": "Place",
         name: e.venue,
         address: {
           "@type": "PostalAddress",
+          ...(e.address ? { streetAddress: e.address } : {}),
+          ...(e.postcode ? { postalCode: e.postcode } : {}),
           addressRegion: REGION_LABEL[e.region],
           addressCountry: "GB",
         },

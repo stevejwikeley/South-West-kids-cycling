@@ -3,7 +3,7 @@ import { test, expect } from "@playwright/test";
 test.describe("Clubs page", () => {
   test("loads and shows at least one club", async ({ page }) => {
     await page.goto("/clubs");
-    await expect(page.getByRole("heading", { name: /find a club/i })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /youth cycling clubs/i })).toBeVisible();
     await expect(page.locator("main .row-hover").first()).toBeVisible();
   });
 

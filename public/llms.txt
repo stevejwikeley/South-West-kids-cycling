@@ -8,10 +8,12 @@ Each event lists: discipline, date, venue, age categories (Under 8s / 10s / 12s 
 
 ## Pages
 
-- [Calendar](https://www.southwestkidscycling.uk/): every upcoming event, filterable by discipline (XC, cyclocross, road, triathlon, club clusters) and region (Devon / Cornwall)
+- [Calendar](https://www.southwestkidscycling.uk/): every upcoming event, filterable by discipline (XC, cyclocross, road, triathlon, club clusters) and region (Devon / Cornwall), covering the whole region including Exeter and Plymouth
 - [Clubs directory](https://www.southwestkidscycling.uk/clubs): Devon & Cornwall cycling clubs with youth sections
 - [Getting started](https://www.southwestkidscycling.uk/getting-started): a plain-English guide for parents new to youth racing
-- [Calendar feed](https://www.southwestkidscycling.uk/calendar.ics): live ICS feed, subscribable in any calendar app
+- [Subscribe](https://www.southwestkidscycling.uk/subscribe): subscribe to new events by email digest or live calendar feed
+- [Calendar feed](https://www.southwestkidscycling.uk/calendar.ics): live ICS feed, subscribable in any calendar app, supports `?discipline=` and `?region=` filters
+- [Embeddable widget](https://www.southwestkidscycling.uk/embed): a compact events list other sites (e.g. club websites) can embed via iframe
 
 ## Scope
 

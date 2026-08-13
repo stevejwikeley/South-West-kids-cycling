@@ -1,6 +1,11 @@
 import Link from "next/link";
 import { EVENT_DISCIPLINES } from "@/lib/mock-data";
 
+export const metadata = {
+  title: "New to Kids' Cycle Racing? A Parent's Guide",
+  description: "A plain-English guide for parents new to youth cycle racing in Devon & Cornwall — what each discipline involves, what to bring, British Cycling membership, and how to find your child's first race.",
+};
+
 const DISCIPLINE_GUIDE: Record<string, { blurb: string; format: string; goodFirstRace: boolean }> = {
   cx: {
     blurb: "Cyclocross: short, muddy off-road laps with obstacles to hop over and the odd steep bank to run up. Races are age-graded and short — often 10–20 minutes — so nobody's out there for hours.",
