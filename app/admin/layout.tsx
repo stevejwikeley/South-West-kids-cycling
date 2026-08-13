@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { getCurrentProfile } from "@/lib/auth";
+import { getCurrentProfile, isAdminRole } from "@/lib/auth";
 import { getPendingChangeRows } from "@/lib/data";
 import AdminNav from "@/components/admin/AdminNav";
 
@@ -7,7 +7,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const profile = await getCurrentProfile();
 
   if (!profile) redirect("/login?next=/admin");
-  if (profile.role !== "admin") redirect("/");
+  if (!isAdminRole(profile)) redirect("/");
 
   const pending = await getPendingChangeRows();
 

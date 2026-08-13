@@ -89,9 +89,10 @@ e2e/                      Playwright tests
 
 ## Roles & auth
 
-Two roles, stored in `profiles.role`: `admin` and `organiser`. `getCurrentProfile()` (`lib/auth.ts`) is the single source of truth for "who is this and what can they do" — Server Actions and admin/organiser pages call it and reject early rather than relying on RLS alone for authorization decisions in the UI layer. RLS in the database is still the actual security boundary; see `supabase/migrations/0002_auth.sql` for the `is_admin()` helper and policy conventions, and follow the same pattern for any new table.
+Three roles, stored in `profiles.role`: `super_admin`, `admin`, and `organiser`. `getCurrentProfile()` (`lib/auth.ts`) is the single source of truth for "who is this and what can they do" — Server Actions and admin/organiser pages call it and reject early rather than relying on RLS alone for authorization decisions in the UI layer. RLS in the database is still the actual security boundary; see `supabase/migrations/0002_auth.sql` for the `is_admin()` helper and policy conventions (broadened to cover `super_admin` in `0012_super_admin_grants.sql`), and follow the same pattern for any new table.
 
-- **Admins** manage all events, review the pending-change queue, run smart ingestion, and manage watched sources.
+- **Super admins** have every admin capability below, plus the exclusive ability to promote an organiser to admin or demote an admin back to organiser (`/admin`'s "Manage admins" section). This is the only functional difference from a regular admin — it exists so that granting admin access is deliberately a smaller, more trusted set of people than "everyone who can review events." `isAdminRole()` (`lib/auth.ts`) is `true` for both `admin` and `super_admin` and is what almost every admin-gated check should use; the literal `role === "super_admin"` check is reserved for the promote/demote actions themselves.
+- **Admins** manage all events, review the pending-change queue, run smart ingestion, manage watched sources, and can invite organisers.
 - **Organisers** manage only their own events (`club_id` scoping), and can be invited by an admin.
 
 ## Event publishing paths

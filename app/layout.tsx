@@ -56,7 +56,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     <html lang="en" className={`${archivo.variable} ${inter.variable} ${jetbrainsMono.variable}`}>
       <body style={{ fontFamily: "var(--font-inter), sans-serif" }}>
         <GoogleAnalytics />
-        <TopNav isAdmin={profile?.role === "admin"} />
+        <TopNav role={profile?.role} />
         {children}
         <Footer />
         <FeedbackPopup />

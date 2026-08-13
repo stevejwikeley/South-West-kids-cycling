@@ -16,3 +16,11 @@ export const getCurrentProfile = cache(async (): Promise<ProfileRow | null> => {
   const { data } = await supabase.from("profiles").select("*").eq("id", user.id).single();
   return data as ProfileRow | null;
 });
+
+// super_admin has every admin capability plus the ability to promote/demote
+// other admins, so any check that used to be `role === "admin"` should use
+// this instead — the one place that must stay super_admin-only is the
+// promote/demote actions themselves.
+export function isAdminRole(profile: ProfileRow | null): boolean {
+  return profile?.role === "admin" || profile?.role === "super_admin";
+}

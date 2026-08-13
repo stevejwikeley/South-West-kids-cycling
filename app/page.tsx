@@ -1,7 +1,7 @@
 import CalendarPage from "@/components/CalendarPage";
 import { getEvents } from "@/lib/data";
 import { eventsToJsonLd } from "@/lib/structured-data";
-import { getCurrentProfile } from "@/lib/auth";
+import { getCurrentProfile, isAdminRole } from "@/lib/auth";
 
 export const revalidate = 60;
 
@@ -21,7 +21,7 @@ export default async function Page() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
       />
-      <CalendarPage events={events} isAdmin={profile?.role === "admin"} />
+      <CalendarPage events={events} isAdmin={isAdminRole(profile)} />
     </>
   );
 }

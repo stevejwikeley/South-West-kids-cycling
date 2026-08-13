@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import type { CalendarEvent, Club } from "@/lib/types";
-import type { EventRow, ClubRow, EventPendingRow, WatchedSourceRow } from "@/lib/supabase/types";
+import type { EventRow, ClubRow, EventPendingRow, WatchedSourceRow, ProfileRow } from "@/lib/supabase/types";
 
 function toCalendarEvent(row: EventRow): CalendarEvent {
   return {
@@ -96,6 +96,17 @@ export async function getPendingChangeRows(): Promise<EventPendingRow[]> {
 
   if (error) throw error;
   return data as EventPendingRow[];
+}
+
+// super_admin's own row is deliberately excluded — this list is only for
+// the "demote back to organiser" management UI, which should never offer to
+// demote a super_admin.
+export async function getAdminProfiles(): Promise<ProfileRow[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("profiles").select("*").eq("role", "admin").order("email", { ascending: true });
+
+  if (error) throw error;
+  return data as ProfileRow[];
 }
 
 export async function getWatchedSources(): Promise<WatchedSourceRow[]> {

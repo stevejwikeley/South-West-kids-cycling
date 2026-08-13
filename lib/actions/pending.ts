@@ -1,7 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentProfile } from "@/lib/auth";
+import { getCurrentProfile, isAdminRole } from "@/lib/auth";
 import { parseEventForm, type EventFormValues } from "./parse-event-form";
 import { parsePendingForm, type PendingFormValues } from "./parse-pending-form";
 import type { EventPendingRow, EventRow } from "@/lib/supabase/types";
@@ -245,7 +245,7 @@ async function recordPublishOutcome(
 // actually differ from the live event stay in the diff.
 export async function updatePending(pendingId: string, formData: FormData): Promise<PendingActionResult> {
   const profile = await getCurrentProfile();
-  if (!profile || profile.role !== "admin") return { error: "Not authorised." };
+  if (!isAdminRole(profile)) return { error: "Not authorised." };
 
   const supabase = await createClient();
   const { data: pending, error: fetchError } = await supabase

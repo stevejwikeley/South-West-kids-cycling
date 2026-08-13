@@ -1,13 +1,19 @@
 import Link from "next/link";
 import { getCurrentProfile } from "@/lib/auth";
-import { getAllEventRows, getPendingChangeRows } from "@/lib/data";
+import { getAllEventRows, getPendingChangeRows, getAdminProfiles } from "@/lib/data";
 import InviteOrganiserForm from "./InviteOrganiserForm";
 import SignOutButton from "./SignOutButton";
 import EventList from "@/components/events/EventList";
+import ManageAdmins from "@/components/admin/ManageAdmins";
 
 export default async function AdminPage() {
   const profile = await getCurrentProfile();
-  const [events, pending] = await Promise.all([getAllEventRows(), getPendingChangeRows()]);
+  const isSuperAdmin = profile?.role === "super_admin";
+  const [events, pending, admins] = await Promise.all([
+    getAllEventRows(),
+    getPendingChangeRows(),
+    isSuperAdmin ? getAdminProfiles() : Promise.resolve([]),
+  ]);
 
   return (
     <header style={{ maxWidth: 1100, margin: "0 auto", padding: "56px 24px 120px" }}>
@@ -22,7 +28,7 @@ export default async function AdminPage() {
       </div>
 
       <p style={{ maxWidth: 480, fontSize: 14, lineHeight: 1.6, color: "#4A4A46", marginTop: 22 }}>
-        Signed in as {profile?.email}.
+        Signed in as {profile?.email} ({isSuperAdmin ? "super admin" : "admin"}).
       </p>
 
       <div style={{ marginTop: 28, display: "flex", gap: 12, flexWrap: "wrap" }}>
@@ -44,6 +50,13 @@ export default async function AdminPage() {
         <h2 className="disp" style={{ fontSize: 18, marginBottom: 14 }}>Invite an organiser</h2>
         <InviteOrganiserForm />
       </div>
+
+      {isSuperAdmin && (
+        <div style={{ marginTop: 40, maxWidth: 420 }}>
+          <h2 className="disp" style={{ fontSize: 18, marginBottom: 14 }}>Manage admins</h2>
+          <ManageAdmins admins={admins} />
+        </div>
+      )}
 
       <div style={{ marginTop: 48 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>

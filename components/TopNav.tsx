@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Rss } from "lucide-react";
 import { trackEvent } from "@/lib/analytics";
+import type { UserRole } from "@/lib/supabase/types";
 
 const ITEMS: [string, string][] = [
   ["/", "CALENDAR"],
@@ -11,9 +12,11 @@ const ITEMS: [string, string][] = [
   ["/getting-started", "GETTING STARTED"],
 ];
 
-export default function TopNav({ isAdmin = false }: { isAdmin?: boolean }) {
+export default function TopNav({ role }: { role?: UserRole | null }) {
   const pathname = usePathname();
-  const items = isAdmin ? [...ITEMS, ["/admin", "ADMIN"] as [string, string]] : ITEMS;
+  const roleItem: [string, string] | null =
+    role === "admin" || role === "super_admin" ? ["/admin", "ADMIN"] : role === "organiser" ? ["/organiser", "ORGANISER"] : null;
+  const items = roleItem ? [...ITEMS, roleItem] : ITEMS;
 
   return (
     <div style={{ borderBottom: "1px solid #E4E2DD" }}>

@@ -9,7 +9,7 @@ export type RegionType = "devon" | "cornwall" | "both";
 export type AgeCategory = "u8" | "u10" | "u12" | "u14" | "u16";
 export type SourceTypeEnum = "manual" | "change_request" | "smart_ingest" | "public_submission";
 export type PublishedViaType = "auto" | "reviewed";
-export type UserRole = "admin" | "organiser";
+export type UserRole = "admin" | "organiser" | "super_admin";
 export type ClubDiscipline = "road" | "xc" | "cx";
 
 export interface EventRow {

@@ -2,7 +2,7 @@
 
 import * as Sentry from "@sentry/nextjs";
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentProfile } from "@/lib/auth";
+import { getCurrentProfile, isAdminRole } from "@/lib/auth";
 import { extractEvents, type ExtractedEvent } from "@/lib/ingestion/extract-events";
 import { saveCandidates } from "@/lib/ingestion/save-candidates";
 import { htmlToText, isLikelyUrl } from "@/lib/ingestion/html-to-text";
@@ -15,7 +15,7 @@ export interface IngestState {
 
 async function requireAdmin() {
   const profile = await getCurrentProfile();
-  if (!profile || profile.role !== "admin") throw new Error("Not authorised.");
+  if (!isAdminRole(profile)) throw new Error("Not authorised.");
   return profile;
 }
 

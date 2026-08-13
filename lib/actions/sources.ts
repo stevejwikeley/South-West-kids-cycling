@@ -1,7 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentProfile } from "@/lib/auth";
+import { getCurrentProfile, isAdminRole } from "@/lib/auth";
 import { checkWatchedSource } from "@/lib/ingestion/check-source";
 import type { WatchedSourceRow } from "@/lib/supabase/types";
 
@@ -20,7 +20,7 @@ const CHECK_FREQUENCIES = new Set(["nightly", "weekly"]);
 
 async function requireAdmin() {
   const profile = await getCurrentProfile();
-  if (!profile || profile.role !== "admin") throw new Error("Not authorised.");
+  if (!isAdminRole(profile)) throw new Error("Not authorised.");
 }
 
 function summarize(result: Awaited<ReturnType<typeof checkWatchedSource>>): string {
