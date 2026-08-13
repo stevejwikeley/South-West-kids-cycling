@@ -191,15 +191,16 @@ export default function CalendarPage({ events, isAdmin = false }: { events: Cale
                         )}
                       </div>
                     </div>
-                    {e.bookingStatus === "open" ? (
-                      <a href={e.booking ?? "#"} target="_blank" rel="noreferrer" className="book-btn" onClick={() => trackEvent("book_click", { event_id: e.id, event_title: e.title, discipline: e.discipline })} style={{ flexShrink: 0, fontSize: 12, fontWeight: 700, color: "#111111", border: "1px solid #111111", padding: "8px 18px" }}>
-                        Book
-                      </a>
-                    ) : (
-                      <a href={e.organiserUrl} target="_blank" rel="noreferrer" onClick={() => trackEvent("organiser_website_click", { event_id: e.id, event_title: e.title })} style={{ flexShrink: 0, fontSize: 12, fontWeight: 700, color: "#6B6B66", border: "1px solid #D8D6D0", padding: "8px 18px" }}>
+                    <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+                      {e.bookingStatus === "open" && (
+                        <a href={e.booking ?? "#"} target="_blank" rel="noreferrer" className="book-btn" onClick={() => trackEvent("book_click", { event_id: e.id, event_title: e.title, discipline: e.discipline })} style={{ fontSize: 12, fontWeight: 700, color: "#111111", border: "1px solid #111111", padding: "8px 18px" }}>
+                          Book
+                        </a>
+                      )}
+                      <a href={e.organiserUrl} target="_blank" rel="noreferrer" onClick={() => trackEvent("organiser_website_click", { event_id: e.id, event_title: e.title })} style={{ fontSize: 12, fontWeight: 700, color: "#6B6B66", border: "1px solid #D8D6D0", padding: "8px 18px" }}>
                         Organisers website
                       </a>
-                    )}
+                    </div>
                   </div>
                 );
               })}
