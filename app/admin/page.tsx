@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getCurrentProfile } from "@/lib/auth";
-import { getAllEventRows, getPendingChangeRows, getAdminProfiles } from "@/lib/data";
+import { getAllEventRows, getAdminProfiles } from "@/lib/data";
 import InviteOrganiserForm from "./InviteOrganiserForm";
 import SignOutButton from "./SignOutButton";
 import EventList from "@/components/events/EventList";
@@ -9,9 +9,8 @@ import ManageAdmins from "@/components/admin/ManageAdmins";
 export default async function AdminPage() {
   const profile = await getCurrentProfile();
   const isSuperAdmin = profile?.role === "super_admin";
-  const [events, pending, admins] = await Promise.all([
+  const [events, admins] = await Promise.all([
     getAllEventRows(),
-    getPendingChangeRows(),
     isSuperAdmin ? getAdminProfiles() : Promise.resolve([]),
   ]);
 
@@ -31,22 +30,7 @@ export default async function AdminPage() {
         Signed in as {profile?.email} ({isSuperAdmin ? "super admin" : "admin"}).
       </p>
 
-      <div style={{ marginTop: 28, display: "flex", gap: 12, flexWrap: "wrap" }}>
-        <Link href="/admin/pending" style={{ display: "inline-flex", alignItems: "center", gap: 10, background: pending.length > 0 ? "#111111" : "transparent", color: pending.length > 0 ? "#FAFAF8" : "#111111", border: "1px solid #111111", padding: "11px 20px", fontWeight: 700, fontSize: 13 }}>
-          Pending queue
-          {pending.length > 0 && (
-            <span className="mono" style={{ background: "#E0102A", color: "#FAFAF8", borderRadius: 999, padding: "2px 8px", fontSize: 11 }}>{pending.length}</span>
-          )}
-        </Link>
-        <Link href="/admin/ingest" style={{ display: "inline-flex", alignItems: "center", background: "transparent", color: "#111111", border: "1px solid #111111", padding: "11px 20px", fontWeight: 700, fontSize: 13 }}>
-          Smart ingestion
-        </Link>
-        <Link href="/admin/sources" style={{ display: "inline-flex", alignItems: "center", background: "transparent", color: "#111111", border: "1px solid #111111", padding: "11px 20px", fontWeight: 700, fontSize: 13 }}>
-          Watched sources
-        </Link>
-      </div>
-
-      <div style={{ marginTop: 40, maxWidth: 360 }}>
+      <div style={{ marginTop: 28, maxWidth: 360 }}>
         <h2 className="disp" style={{ fontSize: 18, marginBottom: 14 }}>Invite an organiser</h2>
         <InviteOrganiserForm />
       </div>

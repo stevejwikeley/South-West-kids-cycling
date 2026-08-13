@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { deleteEvent } from "@/lib/actions/events";
+import { deleteEvent, verifyEventFields } from "@/lib/actions/events";
 import { fmtDay } from "@/lib/format";
 import { eventDisc } from "@/lib/mock-data";
 import type { EventRow } from "@/lib/supabase/types";
@@ -50,6 +50,22 @@ export default function EventList({
     router.refresh();
   }
 
+  async function handleVerify(id: string) {
+    setBusyIds((prev) => new Set(prev).add(id));
+    setErrors((prev) => ({ ...prev, [id]: "" }));
+    const result = await verifyEventFields(id);
+    setBusyIds((prev) => {
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+    if (result.error) {
+      setErrors((prev) => ({ ...prev, [id]: result.error! }));
+      return;
+    }
+    router.refresh();
+  }
+
   return (
     <div>
       {pastCount > 0 && (
@@ -92,6 +108,17 @@ export default function EventList({
                 </div>
                 {errors[e.id] && <div style={{ fontSize: 12, color: "#A13A2A", marginTop: 4 }}>{errors[e.id]}</div>}
               </div>
+              {flagEntries.length > 0 && (
+                <button
+                  type="button"
+                  disabled={isBusy}
+                  onClick={() => handleVerify(e.id)}
+                  className="mono"
+                  style={{ fontSize: 11.5, fontWeight: 700, color: "#1F5D3A", background: "none", border: "1px solid #1F5D3A", padding: "7px 14px", cursor: isBusy ? "default" : "pointer", opacity: isBusy ? 0.6 : 1 }}
+                >
+                  {isBusy ? "…" : "Verify"}
+                </button>
+              )}
               <Link href={`${editBasePath}/${e.id}/edit`} className="mono" style={{ fontSize: 11.5, fontWeight: 700, color: "#111111", border: "1px solid #111111", padding: "7px 14px" }}>
                 Edit
               </Link>

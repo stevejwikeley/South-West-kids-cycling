@@ -3,13 +3,19 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { parseEventForm } from "./parse-event-form";
+import { getCurrentProfile, isAdminRole } from "@/lib/auth";
+import { getEventRowById } from "@/lib/data";
+import type { EventRow } from "@/lib/supabase/types";
 
 export interface EventFormState {
   error?: string;
+  success?: boolean;
 }
 
+// redirectTo is null for the calendar page's inline edit panel, which stays
+// on the same page and closes itself via onSuccess rather than navigating.
 export async function saveEvent(
-  redirectTo: string,
+  redirectTo: string | null,
   _prevState: EventFormState,
   formData: FormData
 ): Promise<EventFormState> {
@@ -37,7 +43,33 @@ export async function saveEvent(
     if (error) return { error: error.message };
   }
 
-  redirect(redirectTo);
+  if (redirectTo) redirect(redirectTo);
+  return { success: true };
+}
+
+// Used by the calendar page's inline edit panel, which only has the
+// display-oriented CalendarEvent shape and needs the full EventRow to
+// populate EventForm.
+export async function getEventForEdit(id: string): Promise<EventRow | null> {
+  const profile = await getCurrentProfile();
+  if (!isAdminRole(profile)) return null;
+  return getEventRowById(id);
+}
+
+export interface VerifyEventResult {
+  error?: string;
+}
+
+// Clears field_flags entirely — an admin reviewing the event is vouching for
+// all of it, not field-by-field, so there's no partial-clear here.
+export async function verifyEventFields(id: string): Promise<VerifyEventResult> {
+  const profile = await getCurrentProfile();
+  if (!isAdminRole(profile)) return { error: "Not authorised." };
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("events").update({ field_flags: null }).eq("id", id);
+  if (error) return { error: error.message };
+  return {};
 }
 
 export interface DeleteEventResult {

@@ -8,6 +8,7 @@ import type { DisciplineId, CalendarEvent, Region } from "@/lib/types";
 import { MONTHS, fmtDay } from "@/lib/format";
 import { trackEvent } from "@/lib/analytics";
 import { eventsToCsv, downloadCsv } from "@/lib/csv";
+import EditEventPanel from "@/components/admin/EditEventPanel";
 
 const REGION_HINT: Record<Region, string | undefined> = {
   devon: "Devon",
@@ -20,6 +21,7 @@ export default function CalendarPage({ events, isAdmin = false }: { events: Cale
   const [region, setRegion] = useState("all");
   const [search, setSearch] = useState("");
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   const visibleDisciplines = useMemo(() => {
     const present = new Set(events.map((e) => e.discipline));
@@ -181,9 +183,14 @@ export default function CalendarPage({ events, isAdmin = false }: { events: Cale
                           {e.kidsOnly ? "KIDS ONLY" : "KIDS + ADULTS"}
                         </span>
                         {isAdmin ? (
-                          <Link href={`/admin/events/${e.id}/edit`} onClick={() => trackEvent("admin_edit_click", { event_id: e.id, event_title: e.title })} className="mono" style={{ color: "#9A9992", fontSize: 10.5, textDecoration: "underline" }}>
+                          <button
+                            type="button"
+                            onClick={() => { trackEvent("admin_edit_click", { event_id: e.id, event_title: e.title }); setEditingId(e.id); }}
+                            className="mono"
+                            style={{ color: "#9A9992", fontSize: 10.5, textDecoration: "underline", background: "none", border: "none", padding: 0, cursor: "pointer", fontFamily: "inherit" }}
+                          >
                             Edit
-                          </Link>
+                          </button>
                         ) : (
                           <Link href={`/events/${e.id}/suggest-change`} onClick={() => trackEvent("suggest_change_click", { event_id: e.id, event_title: e.title })} className="mono" style={{ color: "#9A9992", fontSize: 10.5, textDecoration: "underline" }}>
                             Suggest a change
@@ -208,6 +215,8 @@ export default function CalendarPage({ events, isAdmin = false }: { events: Cale
           </div>
         ))}
       </main>
+
+      {isAdmin && <EditEventPanel eventId={editingId} onClose={() => setEditingId(null)} />}
     </>
   );
 }

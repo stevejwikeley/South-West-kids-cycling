@@ -9,7 +9,7 @@ export default function AdminNav({ pendingCount }: { pendingCount: number }) {
   const items: [string, string][] = [
     ["/admin", "DASHBOARD"],
     ["/admin/pending", `PENDING QUEUE${pendingCount > 0 ? ` (${pendingCount})` : ""}`],
-    ["/admin/ingest", "SMART INGESTION"],
+    ["/admin/ingest", "ADD EVENTS"],
     ["/admin/sources", "WATCHED SOURCES"],
   ];
 

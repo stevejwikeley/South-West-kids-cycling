@@ -1,8 +1,8 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { saveEvent, deleteEvent, type EventFormState } from "@/lib/actions/events";
+import { saveEvent, deleteEvent, verifyEventFields, type EventFormState } from "@/lib/actions/events";
 import { utcIsoToUkLocalParts } from "@/lib/uk-time";
 import { EVENT_DISCIPLINES } from "@/lib/mock-data";
 import type { EventRow } from "@/lib/supabase/types";
@@ -29,13 +29,44 @@ const field: React.CSSProperties = { marginBottom: 18 };
 const row: React.CSSProperties = { display: "flex", gap: 14, flexWrap: "wrap", ...field };
 const col: React.CSSProperties = { flex: "1 1 140px" };
 
-export default function EventForm({ event, redirectTo }: { event?: EventRow; redirectTo: string }) {
+export default function EventForm({
+  event,
+  redirectTo,
+  onSuccess,
+}: {
+  event?: EventRow;
+  redirectTo: string | null;
+  onSuccess?: () => void;
+}) {
   const router = useRouter();
   const boundSave = saveEvent.bind(null, redirectTo);
   const [state, formAction, pending] = useActionState<EventFormState, FormData>(boundSave, {});
   const [bookingStatus, setBookingStatus] = useState(event?.booking_status ?? "planned");
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState("");
+  const [fieldFlags, setFieldFlags] = useState(event?.field_flags ?? null);
+  const [verifying, setVerifying] = useState(false);
+  const [verifyError, setVerifyError] = useState("");
+
+  // saveEvent redirects server-side when redirectTo is set, so this only
+  // fires in panel mode (redirectTo null) where it returns { success } instead.
+  useEffect(() => {
+    if (state.success) onSuccess?.();
+  }, [state.success, onSuccess]);
+
+  async function handleVerify() {
+    if (!event) return;
+    setVerifying(true);
+    setVerifyError("");
+    const result = await verifyEventFields(event.id);
+    setVerifying(false);
+    if (result.error) {
+      setVerifyError(result.error);
+      return;
+    }
+    setFieldFlags(null);
+    router.refresh();
+  }
 
   async function handleDelete() {
     if (!event) return;
@@ -48,7 +79,11 @@ export default function EventForm({ event, redirectTo }: { event?: EventRow; red
       setDeleteError(result.error);
       return;
     }
-    router.push(redirectTo);
+    if (redirectTo) {
+      router.push(redirectTo);
+    } else {
+      onSuccess?.();
+    }
     router.refresh();
   }
 
@@ -57,6 +92,24 @@ export default function EventForm({ event, redirectTo }: { event?: EventRow; red
   return (
     <form action={formAction} style={{ maxWidth: 480 }}>
       {event && <input type="hidden" name="id" value={event.id} />}
+
+      {fieldFlags && Object.keys(fieldFlags).length > 0 && (
+        <div style={{ background: "#FDF3E4", border: "1px solid #F0DDB0", padding: "12px 14px", marginBottom: 20, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+          <span className="mono" style={{ fontSize: 11.5, color: "#946A0E" }}>
+            NEEDS VERIFICATION: {Object.keys(fieldFlags).join(", ")}
+          </span>
+          <button
+            type="button"
+            disabled={verifying}
+            onClick={handleVerify}
+            className="mono"
+            style={{ fontSize: 11.5, fontWeight: 700, color: "#1F5D3A", background: "none", border: "1px solid #1F5D3A", padding: "7px 14px", cursor: verifying ? "default" : "pointer", opacity: verifying ? 0.6 : 1 }}
+          >
+            {verifying ? "Verifying…" : "Verify"}
+          </button>
+        </div>
+      )}
+      {verifyError && <p style={{ color: "#A13A2A", fontSize: 12.5, marginTop: -12, marginBottom: 20 }}>{verifyError}</p>}
 
       <div style={field}>
         <label className="mono" style={label}>TITLE</label>
