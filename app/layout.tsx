@@ -4,6 +4,7 @@ import TopNav from "@/components/TopNav";
 import Footer from "@/components/Footer";
 import FeedbackPopup from "@/components/FeedbackPopup";
 import GoogleAnalytics from "@/components/GoogleAnalytics";
+import { getCurrentProfile } from "@/lib/auth";
 import "./globals.css";
 
 const archivo = Archivo({
@@ -48,12 +49,14 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  const profile = await getCurrentProfile();
+
   return (
     <html lang="en" className={`${archivo.variable} ${inter.variable} ${jetbrainsMono.variable}`}>
       <body style={{ fontFamily: "var(--font-inter), sans-serif" }}>
         <GoogleAnalytics />
-        <TopNav />
+        <TopNav isAdmin={profile?.role === "admin"} />
         {children}
         <Footer />
         <FeedbackPopup />

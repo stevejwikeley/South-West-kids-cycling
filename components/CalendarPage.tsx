@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { MapPin, Search, X, Rss, ArrowUpRight, Filter, Download } from "lucide-react";
+import { MapPin, Search, X, ArrowUpRight, Filter, Download } from "lucide-react";
 import { EVENT_DISCIPLINES, eventDisc, ageLabel } from "@/lib/mock-data";
 import type { DisciplineId, CalendarEvent, Region } from "@/lib/types";
 import { MONTHS, fmtDay } from "@/lib/format";
@@ -71,11 +71,6 @@ export default function CalendarPage({ events }: { events: CalendarEvent[] }) {
         <Link href="/getting-started" onClick={() => trackEvent("getting_started_click", { source: "calendar_hero" })} style={{ fontSize: 13.5, fontWeight: 700, display: "flex", alignItems: "center", gap: 5, borderBottom: "1px solid #111111", paddingBottom: 2, marginTop: 18, width: "fit-content" }}>
           New to racing? Start here <ArrowUpRight size={14} />
         </Link>
-        <div style={{ marginTop: 26 }}>
-          <Link href="/subscribe" onClick={() => trackEvent("subscribe_click", { source: "calendar_hero" })} style={{ background: "#111111", color: "#FAFAF8", border: "none", padding: "13px 24px", fontWeight: 700, fontSize: 13.5, display: "flex", alignItems: "center", gap: 8, cursor: "pointer", width: "fit-content" }}>
-            <Rss size={15} /> Subscribe
-          </Link>
-        </div>
       </header>
 
       <div style={{ position: "sticky", top: 0, zIndex: 20, background: "#FAFAF8", borderTop: "1px solid #E4E2DD", borderBottom: "1px solid #E4E2DD" }}>
