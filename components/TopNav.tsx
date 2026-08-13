@@ -14,6 +14,7 @@ const ITEMS: [string, string][] = [
 
 export default function TopNav({ role }: { role?: UserRole | null }) {
   const pathname = usePathname();
+  if (pathname?.startsWith("/embed")) return null;
   const roleItem: [string, string] | null =
     role === "admin" || role === "super_admin" ? ["/admin", "ADMIN"] : role === "organiser" ? ["/organiser", "ORGANISER"] : null;
   const items = roleItem ? [...ITEMS, roleItem] : ITEMS;

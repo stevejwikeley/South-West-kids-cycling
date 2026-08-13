@@ -14,7 +14,7 @@ const DONE_KEY = "swkc_feedback_done";
 const VISIT_COUNT_KEY = "swkc_visit_count";
 const SESSION_COUNTED_KEY = "swkc_session_counted";
 const SHOW_DELAY_MS = 2 * 60 * 1000;
-const HIDDEN_PREFIXES = ["/admin", "/organiser", "/login", "/auth", "/oauth"];
+const HIDDEN_PREFIXES = ["/admin", "/organiser", "/login", "/auth", "/oauth", "/embed"];
 
 type Stage = "hidden" | "collapsed" | "expanded";
 

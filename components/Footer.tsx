@@ -1,9 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { trackEvent } from "@/lib/analytics";
 
 export default function Footer() {
+  const pathname = usePathname();
+  if (pathname?.startsWith("/embed")) return null;
+
   return (
     <footer style={{ borderTop: "1px solid #E4E2DD", marginTop: 40 }}>
       <div style={{ maxWidth: 1100, margin: "0 auto", padding: "28px 24px", display: "flex", gap: 24, flexWrap: "wrap", justifyContent: "space-between", alignItems: "center" }}>

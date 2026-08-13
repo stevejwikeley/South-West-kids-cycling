@@ -5,6 +5,7 @@ import { MapPin, Search, X, ExternalLink } from "lucide-react";
 import { CLUB_DISCIPLINES, clubDisc } from "@/lib/mock-data";
 import type { Club } from "@/lib/types";
 import { trackEvent } from "@/lib/analytics";
+import EmbedSnippet from "@/components/EmbedSnippet";
 
 export default function ClubsPage({ clubs }: { clubs: Club[] }) {
   const [activeDisc, setActiveDisc] = useState<Set<string>>(new Set());
@@ -111,6 +112,8 @@ export default function ClubsPage({ clubs }: { clubs: Club[] }) {
             ))}
           </div>
         )}
+
+        <EmbedSnippet />
       </main>
     </>
   );
