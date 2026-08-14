@@ -38,7 +38,7 @@ export async function saveCandidates(
 
   let saved = 0;
   for (const candidate of candidates) {
-    const duplicate = findDuplicate(candidate, comparisonPool);
+    const duplicate = await findDuplicate(candidate, comparisonPool);
     // A match against another pending row just means "already queued, don't
     // insert again" — only a match against a *live* event should be recorded
     // as duplicate_of (merge target on approval).
