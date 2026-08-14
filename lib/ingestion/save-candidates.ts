@@ -96,8 +96,16 @@ export async function saveCandidates(
   return saved;
 }
 
+// title and venue_name are deliberately excluded — they're the two fields
+// findDuplicate() (dedup.ts) already fuzzy-matched to decide this candidate
+// IS the live event in the first place, so an exact-string difference here
+// is expected extraction-wording noise (a dropped season year, a different
+// dash, "Newnham Bottom" vs "Newnham Bottom Field"), not a real change.
+// Comparing them here undid that entirely — every re-scan re-flagged the
+// same event as "changed" purely because its own re-extracted title/venue
+// text isn't byte-identical to what an earlier run produced.
 const COMPARISON_FIELDS = [
-  "title", "discipline", "status", "start_datetime", "venue_name",
+  "discipline", "status", "start_datetime",
   "address", "postcode", "region", "age_categories", "kids_only",
   "booking_status", "booking_link", "organiser_url", "organiser_name", "organiser_contact",
 ] as const;

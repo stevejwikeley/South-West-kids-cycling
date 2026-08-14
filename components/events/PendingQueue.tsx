@@ -56,10 +56,80 @@ export default function PendingQueue({ pending, liveEvents, redirectTo }: { pend
     router.refresh();
   }
 
+  // A single router.refresh() after every item settles, rather than
+  // reusing run() in a loop (which would refresh once per item — wasteful
+  // and flickery for a whole-queue action).
+  async function runBulk(items: { id: string; fn: () => Promise<PendingActionResult> }[]) {
+    const ids = items.map((i) => i.id);
+    setBusyIds((prev) => new Set([...prev, ...ids]));
+    setErrors((prev) => {
+      const next = { ...prev };
+      ids.forEach((id) => { next[id] = ""; });
+      return next;
+    });
+
+    const results = await Promise.all(items.map(async (i) => ({ id: i.id, result: await i.fn() })));
+
+    setBusyIds((prev) => {
+      const next = new Set(prev);
+      ids.forEach((id) => next.delete(id));
+      return next;
+    });
+
+    const newErrors: Record<string, string> = {};
+    let anySucceeded = false;
+    for (const { id, result } of results) {
+      if (result?.error) newErrors[id] = result.error;
+      else anySucceeded = true;
+    }
+    if (Object.keys(newErrors).length > 0) setErrors((prev) => ({ ...prev, ...newErrors }));
+    if (anySucceeded) {
+      router.push(redirectTo);
+      router.refresh();
+    }
+  }
+
+  function handleApproveAll() {
+    if (!confirm(`Approve all ${pending.length} pending item${pending.length === 1 ? "" : "s"}?`)) return;
+    runBulk(
+      pending.map((p) => ({
+        id: p.id,
+        fn: () => (p.source_type === "smart_ingest" || p.source_type === "public_submission" ? approveIngested(p.id) : approveChange(p.id)),
+      }))
+    );
+  }
+
+  function handleRejectAll() {
+    if (!confirm(`Reject all ${pending.length} pending item${pending.length === 1 ? "" : "s"}?`)) return;
+    runBulk(pending.map((p) => ({ id: p.id, fn: () => rejectChange(p.id) })));
+  }
+
   const editingRow = editingId ? pending.find((p) => p.id === editingId) ?? null : null;
+  const anyBusy = busyIds.size > 0;
 
   return (
-    <div style={{ borderTop: "2px solid #111111" }}>
+    <div>
+      <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginBottom: 14 }}>
+        <button
+          type="button"
+          disabled={anyBusy}
+          onClick={handleApproveAll}
+          className="mono"
+          style={{ fontSize: 11.5, fontWeight: 700, color: "#1F5D3A", background: "#EAF3EC", border: "1px solid #1F5D3A", padding: "7px 14px", cursor: anyBusy ? "default" : "pointer", opacity: anyBusy ? 0.6 : 1 }}
+        >
+          Approve all
+        </button>
+        <button
+          type="button"
+          disabled={anyBusy}
+          onClick={handleRejectAll}
+          className="mono"
+          style={{ fontSize: 11.5, fontWeight: 700, color: "#A13A2A", background: "none", border: "1px solid #D8D6D0", padding: "7px 14px", cursor: anyBusy ? "default" : "pointer", opacity: anyBusy ? 0.6 : 1 }}
+        >
+          Reject all
+        </button>
+      </div>
+      <div style={{ borderTop: "2px solid #111111" }}>
       {pending.map((p) => {
         const isIngested = p.source_type === "smart_ingest" || p.source_type === "public_submission";
         const diff = (p.diff_against ?? {}) as Record<string, { from: unknown; to: unknown }>;
@@ -175,6 +245,7 @@ export default function PendingQueue({ pending, liveEvents, redirectTo }: { pend
           </div>
         );
       })}
+      </div>
 
       {editingRow && (
         <PendingEditPanel
