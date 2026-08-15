@@ -239,6 +239,16 @@ export default function CalendarPage({ events, isAdmin = false }: { events: Cale
             </div>
           </div>
         ))}
+
+        <div style={{ marginTop: 40, padding: "24px 28px", background: "#111111", color: "#FAFAF8", maxWidth: 560 }}>
+          <h2 className="disp" style={{ fontSize: 18, margin: 0, marginBottom: 10 }}>Want these on your own calendar too?</h2>
+          <p style={{ fontSize: 13.5, lineHeight: 1.6, color: "#D8D6D0", marginBottom: 16 }}>
+            It&apos;s better to be in your calendar than checking a website. Subscribe once by email or calendar feed and every new event lands automatically.
+          </p>
+          <Link href="/subscribe" onClick={() => trackEvent("subscribe_click", { source: "calendar_footer" })} style={{ display: "inline-block", background: "#FAFAF8", color: "#111111", padding: "10px 20px", fontWeight: 700, fontSize: 13 }}>
+            Subscribe →
+          </Link>
+        </div>
       </main>
 
       {isAdmin && <EditEventPanel eventId={editingId} onClose={() => setEditingId(null)} />}

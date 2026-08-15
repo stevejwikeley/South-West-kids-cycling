@@ -14,7 +14,7 @@ const DONE_KEY = "swkc_feedback_done";
 const VISIT_COUNT_KEY = "swkc_visit_count";
 const SESSION_COUNTED_KEY = "swkc_session_counted";
 const SHOW_DELAY_MS = 2 * 60 * 1000;
-const HIDDEN_PREFIXES = ["/admin", "/organiser", "/login", "/auth", "/oauth", "/embed"];
+const HIDDEN_PREFIXES = ["/admin", "/organiser", "/login", "/auth", "/oauth"];
 
 type Stage = "hidden" | "collapsed" | "expanded";
 
@@ -50,7 +50,10 @@ export default function FeedbackPopup() {
   const [willSubscribe, setWillSubscribe] = useState<"yes" | "no" | "already" | null>(null);
   const [state, formAction, pending] = useActionState<FeedbackFormState, FormData>(submitFeedback, {});
 
-  const hidden = HIDDEN_PREFIXES.some((p) => pathname?.startsWith(p));
+  // "/embed" is checked separately (exact or a sub-path) rather than as a
+  // plain prefix, so it doesn't also match "/embed-builder" — a normal,
+  // fully-chromed page that just happens to share the "/embed" prefix.
+  const hidden = HIDDEN_PREFIXES.some((p) => pathname?.startsWith(p)) || pathname === "/embed" || !!pathname?.startsWith("/embed/");
 
   useEffect(() => {
     if (hidden) return;

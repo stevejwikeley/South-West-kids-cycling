@@ -6,7 +6,7 @@ import { trackEvent } from "@/lib/analytics";
 
 export default function Footer() {
   const pathname = usePathname();
-  if (pathname?.startsWith("/embed")) return null;
+  if (pathname === "/embed" || pathname?.startsWith("/embed/")) return null;
 
   return (
     <footer style={{ borderTop: "1px solid #E4E2DD", marginTop: 40 }}>

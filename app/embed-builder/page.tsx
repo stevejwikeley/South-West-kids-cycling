@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
 import { EVENT_DISCIPLINES } from "@/lib/mock-data";
 import type { DisciplineId, Region } from "@/lib/types";
 
@@ -128,16 +127,6 @@ export default function EmbedBuilderPage() {
             <iframe src={src} style={{ width: "100%", height: 600, border: 0, display: "block" }} title="Embed preview" />
           </div>
         </div>
-      </div>
-
-      <div style={{ marginTop: 56, padding: "24px 28px", background: "#111111", color: "#FAFAF8", maxWidth: 560 }}>
-        <h2 className="disp" style={{ fontSize: 18, margin: 0, marginBottom: 10 }}>Want these on your own calendar too?</h2>
-        <p style={{ fontSize: 13.5, lineHeight: 1.6, color: "#D8D6D0", marginBottom: 16 }}>
-          Embedding is great for your visitors — but for yourself, it&apos;s better to be in your calendar than checking a website. Subscribe once by email or calendar feed and every new event lands automatically.
-        </p>
-        <Link href="/subscribe" style={{ display: "inline-block", background: "#FAFAF8", color: "#111111", padding: "10px 20px", fontWeight: 700, fontSize: 13 }}>
-          Subscribe →
-        </Link>
       </div>
     </header>
   );
