@@ -66,7 +66,7 @@ test.describe("Calendar page", () => {
 test.describe("Subscribe page", () => {
   test("loads from the calendar CTA and shows platform options", async ({ page }) => {
     await page.goto("/");
-    await page.getByRole("link", { name: /^subscribe$/i }).first().click();
+    await page.getByRole("link", { name: /subscribe to calendar/i }).first().click();
     await expect(page).toHaveURL(/\/subscribe$/);
     await expect(page.getByRole("button", { name: /google calendar/i })).toBeVisible();
     await expect(page.getByRole("button", { name: /apple calendar/i })).toBeVisible();

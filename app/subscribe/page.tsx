@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Rss, Mail } from "lucide-react";
+import { Calendar, Mail } from "lucide-react";
 import SubscribeSelector from "@/components/SubscribeSelector";
 import EmailSubscribeForm from "@/components/EmailSubscribeForm";
 
@@ -12,7 +12,7 @@ export default function SubscribePage() {
   return (
     <header style={{ maxWidth: 720, margin: "0 auto", padding: "56px 24px 120px" }}>
       <div className="mono" style={{ fontSize: 11.5, letterSpacing: "0.12em", color: "#E0102A", marginBottom: 16, fontWeight: 700, display: "flex", alignItems: "center", gap: 8 }}>
-        <Rss size={13} /> SUBSCRIBE
+        <Calendar size={13} /> SUBSCRIBE
       </div>
       <h1 className="disp" style={{ fontSize: "clamp(28px, 4.5vw, 44px)", lineHeight: 1.05, margin: 0, letterSpacing: "-0.01em" }}>
         A calendar that keeps itself up to date.

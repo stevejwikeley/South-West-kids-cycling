@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { MapPin, Search, X, Rss, ArrowUpRight, Filter, Download } from "lucide-react";
+import { MapPin, Search, X, Calendar, ArrowUpRight, Filter, Download } from "lucide-react";
 import { EVENT_DISCIPLINES, eventDisc, ageLabel } from "@/lib/mock-data";
 import type { DisciplineId, CalendarEvent, Region } from "@/lib/types";
 import { MONTHS, fmtDay } from "@/lib/format";
@@ -79,8 +79,8 @@ export default function CalendarPage({ events, isAdmin = false }: { events: Cale
           <p style={{ fontSize: 13.5, color: "#4A4A46", marginBottom: 10, lineHeight: 1.5 }}>
             Get new events the moment they&apos;re added — subscribe once by email or calendar and never miss a race.
           </p>
-          <Link href="/subscribe" onClick={() => trackEvent("subscribe_click", { source: "calendar_hero" })} style={{ background: "#111111", color: "#FAFAF8", border: "none", padding: "13px 24px", fontWeight: 700, fontSize: 13.5, display: "flex", alignItems: "center", gap: 8, cursor: "pointer", width: "fit-content" }}>
-            <Rss size={15} /> Subscribe
+          <Link href="/subscribe" onClick={() => trackEvent("subscribe_click", { source: "calendar_hero" })} style={{ background: "#E0102A", color: "#FAFAF8", border: "none", padding: "13px 24px", fontWeight: 700, fontSize: 13.5, display: "flex", alignItems: "center", gap: 8, cursor: "pointer", width: "fit-content" }}>
+            <Calendar size={15} /> Subscribe to calendar
           </Link>
         </div>
       </header>
@@ -116,7 +116,7 @@ export default function CalendarPage({ events, isAdmin = false }: { events: Cale
                 className="mono"
                 style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "1px solid #D8D6D0", padding: "8px 12px", fontSize: 11, fontWeight: 700, color: "#111111" }}
               >
-                <Rss size={13} /> Subscribe
+                <Calendar size={13} /> Subscribe to calendar
               </Link>
             </div>
           </div>
@@ -201,7 +201,7 @@ export default function CalendarPage({ events, isAdmin = false }: { events: Cale
                         {e.status === "cancelled" && <span className="mono" style={{ color: "#A13A2A", fontSize: 10.5 }}>· CANCELLED</span>}
                         <span className="mono" style={{
                           fontSize: 10, fontWeight: 700, padding: "3px 8px", letterSpacing: "0.03em",
-                          background: e.kidsOnly ? "#EAF3EC" : "#FDF3E4", color: e.kidsOnly ? "#1F5D3A" : "#946A0E",
+                          background: "#F3F2EE", color: "#6B6B66",
                         }}>
                           {e.kidsOnly ? "KIDS ONLY" : "KIDS + ADULTS"}
                         </span>
@@ -248,8 +248,8 @@ export default function CalendarPage({ events, isAdmin = false }: { events: Cale
           <p style={{ fontSize: 13.5, lineHeight: 1.6, color: "#D8D6D0", marginBottom: 16 }}>
             It&apos;s better to be in your calendar than checking a website. Subscribe once by email or calendar feed and every new event lands automatically.
           </p>
-          <Link href="/subscribe" onClick={() => trackEvent("subscribe_click", { source: "calendar_footer" })} style={{ display: "inline-block", background: "#FAFAF8", color: "#111111", padding: "10px 20px", fontWeight: 700, fontSize: 13 }}>
-            Subscribe →
+          <Link href="/subscribe" onClick={() => trackEvent("subscribe_click", { source: "calendar_footer" })} style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "#E0102A", color: "#FAFAF8", padding: "10px 20px", fontWeight: 700, fontSize: 13, width: "fit-content" }}>
+            <Calendar size={14} /> Subscribe to calendar
           </Link>
         </div>
       </main>
