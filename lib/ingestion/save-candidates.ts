@@ -1,6 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { findDuplicate } from "./dedup";
+import { bookingLinkTitleMismatch, LINK_TITLE_MISMATCH_FLAG } from "./link-check";
 import type { ExtractedEvent } from "./extract-events";
 import type { Database, EventRow, EventPendingRow, SourceTypeEnum } from "@/lib/supabase/types";
 
@@ -44,9 +45,15 @@ export async function saveCandidates(
     // as duplicate_of (merge target on approval).
     if (duplicate && !liveIds.has(duplicate.id)) continue;
 
-    const fieldFlags = candidate.low_confidence_fields.length
-      ? Object.fromEntries(candidate.low_confidence_fields.map((f) => [f, "needs verification"]))
-      : null;
+    const flags: Record<string, string> = Object.fromEntries(
+      candidate.low_confidence_fields.map((f) => [f, "needs verification"])
+    );
+    // A code-verified signal, so it overrides a generic "needs verification"
+    // the extraction model may have already put on this field.
+    if (bookingLinkTitleMismatch(candidate.title, candidate.booking_link)) {
+      flags.booking_link = LINK_TITLE_MISMATCH_FLAG;
+    }
+    const fieldFlags = Object.keys(flags).length ? flags : null;
 
     const values = {
       title: candidate.title,

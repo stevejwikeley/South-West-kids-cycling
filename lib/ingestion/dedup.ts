@@ -26,14 +26,14 @@ function normalize(s: string): string {
   return s.toLowerCase().replace(/[^a-z0-9 ]/g, " ").trim();
 }
 
-function tokenize(s: string): Set<string> {
+export function tokenize(s: string): Set<string> {
   return new Set(normalize(s).split(/\s+/).filter(Boolean));
 }
 
 // Symmetric and tolerant of one title being a trimmed/reworded version of
 // the other — unlike substring containment, which fails the moment either
 // title has an infix (a dropped or added word) the other doesn't.
-function similarity(a: string, b: string): number {
+export function similarity(a: string, b: string): number {
   const ta = tokenize(a);
   const tb = tokenize(b);
   if (ta.size === 0 || tb.size === 0) return 0;
