@@ -3,7 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile, isAdminRole } from "@/lib/auth";
 import { checkWatchedSource } from "@/lib/ingestion/check-source";
-import type { WatchedSourceRow } from "@/lib/supabase/types";
+import type { ProfileRow, WatchedSourceRow } from "@/lib/supabase/types";
 
 export interface SourceActionResult {
   error?: string;
@@ -18,9 +18,10 @@ export interface CheckNowResult {
 
 const CHECK_FREQUENCIES = new Set(["nightly", "weekly"]);
 
-async function requireAdmin() {
+async function requireAdmin(): Promise<ProfileRow> {
   const profile = await getCurrentProfile();
-  if (!isAdminRole(profile)) throw new Error("Not authorised.");
+  if (!profile || !isAdminRole(profile)) throw new Error("Not authorised.");
+  return profile;
 }
 
 function summarize(result: Awaited<ReturnType<typeof checkWatchedSource>>): string {
@@ -36,8 +37,9 @@ export async function addWatchedSource(
   _prevState: SourceActionResult,
   formData: FormData
 ): Promise<SourceActionResult> {
+  let profile: ProfileRow;
   try {
-    await requireAdmin();
+    profile = await requireAdmin();
   } catch {
     return { error: "Not authorised." };
   }
@@ -61,7 +63,7 @@ export async function addWatchedSource(
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("watched_sources")
-    .insert({ label, url, check_frequency: checkFrequency })
+    .insert({ label, url, check_frequency: checkFrequency, created_by: profile.id })
     .select("*")
     .single();
 
@@ -89,13 +91,28 @@ export async function checkWatchedSourceNow(id: string): Promise<CheckNowResult>
 }
 
 export async function deleteWatchedSource(id: string): Promise<SourceActionResult> {
+  let profile: ProfileRow;
   try {
-    await requireAdmin();
+    profile = await requireAdmin();
   } catch {
     return { error: "Not authorised." };
   }
 
   const supabase = await createClient();
+
+  // Checked explicitly (not just left to RLS) so a blocked delete surfaces a
+  // clear message instead of silently affecting zero rows — RLS enforces
+  // this same rule at the database level (0015_watched_source_created_by.sql)
+  // regardless of what this check does, it's just the source of the
+  // human-readable error.
+  if (profile.role !== "super_admin") {
+    const { data: existing, error: fetchError } = await supabase.from("watched_sources").select("created_by").eq("id", id).single();
+    if (fetchError || !existing) return { error: "Source not found." };
+    if (existing.created_by !== profile.id) {
+      return { error: "You can only remove sources you added yourself." };
+    }
+  }
+
   const { error } = await supabase.from("watched_sources").delete().eq("id", id);
   if (error) return { error: error.message };
 

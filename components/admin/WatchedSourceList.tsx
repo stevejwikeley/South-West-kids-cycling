@@ -32,7 +32,7 @@ function StatusBadge({ source }: { source: WatchedSourceRow }) {
   );
 }
 
-export default function WatchedSourceList({ sources }: { sources: WatchedSourceRow[] }) {
+export default function WatchedSourceList({ sources, currentUserId, isSuperAdmin }: { sources: WatchedSourceRow[]; currentUserId: string; isSuperAdmin: boolean }) {
   const router = useRouter();
   const [busyIds, setBusyIds] = useState<Set<string>>(new Set());
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -79,6 +79,7 @@ export default function WatchedSourceList({ sources }: { sources: WatchedSourceR
     <div style={{ borderTop: "2px solid #111111" }}>
       {sources.map((s) => {
         const isBusy = busyIds.has(s.id);
+        const canDelete = isSuperAdmin || s.created_by === currentUserId;
         return (
           <div key={s.id} style={{ padding: "16px 6px", borderBottom: "1px solid #E4E2DD" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
@@ -109,15 +110,21 @@ export default function WatchedSourceList({ sources }: { sources: WatchedSourceR
                 >
                   {isBusy ? "Checking…" : "Check now"}
                 </button>
-                <button
-                  type="button"
-                  disabled={isBusy}
-                  onClick={() => handleDelete(s.id, s.label)}
-                  className="mono"
-                  style={{ fontSize: 11.5, fontWeight: 700, color: "#A13A2A", background: "none", border: "1px solid #D8D6D0", padding: "7px 14px", cursor: isBusy ? "default" : "pointer", opacity: isBusy ? 0.6 : 1 }}
-                >
-                  {isBusy ? "Working…" : "Remove"}
-                </button>
+                {canDelete ? (
+                  <button
+                    type="button"
+                    disabled={isBusy}
+                    onClick={() => handleDelete(s.id, s.label)}
+                    className="mono"
+                    style={{ fontSize: 11.5, fontWeight: 700, color: "#A13A2A", background: "none", border: "1px solid #D8D6D0", padding: "7px 14px", cursor: isBusy ? "default" : "pointer", opacity: isBusy ? 0.6 : 1 }}
+                  >
+                    {isBusy ? "Working…" : "Remove"}
+                  </button>
+                ) : (
+                  <span className="mono" style={{ fontSize: 10.5, color: "#6B6B66", padding: "7px 0" }}>
+                    {s.created_by ? "Added by another admin" : "Added before ownership tracking"}
+                  </span>
+                )}
               </div>
             </div>
             {s.last_status === "error" && s.last_error && !notes[s.id] && !errors[s.id] && (

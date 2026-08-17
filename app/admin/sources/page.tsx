@@ -1,9 +1,10 @@
+import { getCurrentProfile } from "@/lib/auth";
 import { getWatchedSources } from "@/lib/data";
 import WatchedSourceForm from "@/components/admin/WatchedSourceForm";
 import WatchedSourceList from "@/components/admin/WatchedSourceList";
 
 export default async function AdminSourcesPage() {
-  const sources = await getWatchedSources();
+  const [profile, sources] = await Promise.all([getCurrentProfile(), getWatchedSources()]);
 
   return (
     <header style={{ maxWidth: 1100, margin: "0 auto", padding: "56px 24px 120px" }}>
@@ -22,7 +23,7 @@ export default async function AdminSourcesPage() {
         </div>
         <div style={{ flex: "2 1 480px", minWidth: 0 }}>
           <h2 className="disp" style={{ fontSize: 18, marginBottom: 14 }}>Currently watching ({sources.length})</h2>
-          <WatchedSourceList sources={sources} />
+          <WatchedSourceList sources={sources} currentUserId={profile!.id} isSuperAdmin={profile?.role === "super_admin"} />
         </div>
       </div>
     </header>
