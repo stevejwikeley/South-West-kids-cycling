@@ -11,6 +11,7 @@ export default function AdminNav({ pendingCount }: { pendingCount: number }) {
     ["/admin/pending", `PENDING QUEUE${pendingCount > 0 ? ` (${pendingCount})` : ""}`],
     ["/admin/ingest", "ADD EVENTS"],
     ["/admin/sources", "WATCHED SOURCES"],
+    ["/admin/team", "TEAM"],
   ];
 
   return (

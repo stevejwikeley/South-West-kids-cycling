@@ -1,19 +1,14 @@
 import Link from "next/link";
 import { getCurrentProfile } from "@/lib/auth";
-import { getAllEventRows, getAdminProfiles } from "@/lib/data";
-import InviteOrganiserForm from "./InviteOrganiserForm";
+import { getAllEventRows } from "@/lib/data";
 import SignOutButton from "./SignOutButton";
 import EventList from "@/components/events/EventList";
-import ManageAdmins from "@/components/admin/ManageAdmins";
 import EmbedSnippet from "@/components/EmbedSnippet";
 
 export default async function AdminPage() {
   const profile = await getCurrentProfile();
   const isSuperAdmin = profile?.role === "super_admin";
-  const [events, admins] = await Promise.all([
-    getAllEventRows(),
-    isSuperAdmin ? getAdminProfiles() : Promise.resolve([]),
-  ]);
+  const events = await getAllEventRows();
 
   return (
     <header style={{ maxWidth: 1100, margin: "0 auto", padding: "56px 24px 120px" }}>
@@ -31,17 +26,23 @@ export default async function AdminPage() {
         Signed in as {profile?.email} ({isSuperAdmin ? "super admin" : "admin"}).
       </p>
 
-      <div style={{ marginTop: 28, maxWidth: 360 }}>
-        <h2 className="disp" style={{ fontSize: 18, marginBottom: 14 }}>Invite an organiser</h2>
-        <InviteOrganiserForm />
+      <div style={{ marginTop: 28, padding: "16px 18px", background: "#F3F2EE", border: "1px solid #E4E2DD", maxWidth: 420 }}>
+        <h3 className="mono" style={{ fontSize: 11, letterSpacing: "0.08em", color: "#6B6B66", marginBottom: 8 }}>
+          {isSuperAdmin ? "ADMINS & ORGANISERS" : "ORGANISERS"}
+        </h3>
+        <p style={{ fontSize: 13, lineHeight: 1.6, color: "#4A4A46", marginBottom: 12 }}>
+          {isSuperAdmin
+            ? "Invite an admin or organiser and manage everyone with access."
+            : "Invite an organiser to manage their own club's events."}
+        </p>
+        <Link
+          href="/admin/team"
+          className="mono"
+          style={{ display: "inline-block", background: "#111111", color: "#FAFAF8", padding: "9px 16px", fontSize: 12.5, fontWeight: 700 }}
+        >
+          Manage team →
+        </Link>
       </div>
-
-      {isSuperAdmin && (
-        <div style={{ marginTop: 40, maxWidth: 420 }}>
-          <h2 className="disp" style={{ fontSize: 18, marginBottom: 14 }}>Manage admins</h2>
-          <ManageAdmins admins={admins} />
-        </div>
-      )}
 
       <EmbedSnippet />
 

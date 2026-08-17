@@ -1,10 +1,10 @@
 "use client";
 
 import { useActionState } from "react";
-import { inviteOrganiser } from "./actions";
+import { inviteTeamMember } from "../actions";
 
-export default function InviteOrganiserForm() {
-  const [state, formAction, pending] = useActionState(inviteOrganiser, {});
+export default function InviteTeamMemberForm({ canInviteAdmin }: { canInviteAdmin: boolean }) {
+  const [state, formAction, pending] = useActionState(inviteTeamMember, {});
 
   return (
     <form action={formAction}>
@@ -13,9 +13,26 @@ export default function InviteOrganiserForm() {
         type="email"
         name="email"
         required
-        placeholder="organiser@club.co.uk"
+        placeholder="name@club.co.uk"
         style={{ width: "100%", background: "#FFFFFF", border: "1px solid #D8D6D0", color: "#111111", padding: "10px 12px", fontSize: 14, marginBottom: 14 }}
       />
+
+      {canInviteAdmin ? (
+        <>
+          <label className="mono" style={{ fontSize: 10.5, color: "#6B6B66", display: "block", marginBottom: 6 }}>ROLE</label>
+          <select
+            name="role"
+            defaultValue="organiser"
+            style={{ width: "100%", background: "#FFFFFF", border: "1px solid #D8D6D0", color: "#111111", padding: "10px 12px", fontSize: 14, marginBottom: 14 }}
+          >
+            <option value="organiser">Organiser</option>
+            <option value="admin">Admin</option>
+          </select>
+        </>
+      ) : (
+        <input type="hidden" name="role" value="organiser" />
+      )}
+
       <button
         type="submit"
         disabled={pending}

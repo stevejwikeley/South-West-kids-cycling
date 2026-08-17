@@ -98,15 +98,19 @@ export async function getPendingChangeRows(): Promise<EventPendingRow[]> {
   return data as EventPendingRow[];
 }
 
-// super_admin's own row is deliberately excluded — this list is only for
-// the "demote back to organiser" management UI, which should never offer to
-// demote a super_admin.
-export async function getAdminProfiles(): Promise<ProfileRow[]> {
+// Every profile is a super_admin, admin, or organiser — this is the full
+// team roster for /admin/team, ordered so the people with the most access
+// show up first rather than alphabetically-by-role (which would put
+// "admin" before "organiser" before "super_admin", backwards from what a
+// reader scanning the page actually wants).
+const ROLE_ORDER: Record<ProfileRow["role"], number> = { super_admin: 0, admin: 1, organiser: 2 };
+
+export async function getTeamProfiles(): Promise<ProfileRow[]> {
   const supabase = await createClient();
-  const { data, error } = await supabase.from("profiles").select("*").eq("role", "admin").order("email", { ascending: true });
+  const { data, error } = await supabase.from("profiles").select("*").order("email", { ascending: true });
 
   if (error) throw error;
-  return data as ProfileRow[];
+  return ((data as ProfileRow[]) ?? []).sort((a, b) => ROLE_ORDER[a.role] - ROLE_ORDER[b.role]);
 }
 
 export async function getWatchedSources(): Promise<WatchedSourceRow[]> {
