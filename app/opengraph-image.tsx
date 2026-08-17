@@ -26,7 +26,7 @@ export default function OpengraphImage() {
             marginBottom: 28,
           }}
         >
-          DEVON &amp; CORNWALL — AGES 5 TO 16
+          DEVON, CORNWALL &amp; SOMERSET — AGES 5 TO 16
         </div>
         <div
           style={{

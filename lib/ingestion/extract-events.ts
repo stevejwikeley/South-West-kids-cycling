@@ -12,7 +12,7 @@ import * as Sentry from "@sentry/nextjs";
 
 const DISCIPLINES = ["cx", "xc", "road", "tri", "gravel", "duathlon", "clusters", "other"] as const;
 const STATUSES = ["confirmed", "provisional", "cancelled"] as const;
-const REGIONS = ["devon", "cornwall", "both"] as const;
+const REGIONS = ["devon", "cornwall", "somerset", "both"] as const;
 const AGE_CATEGORIES = ["u8", "u10", "u12", "u14", "u16"] as const;
 const BOOKING_STATUSES = ["open", "planned"] as const;
 
@@ -24,7 +24,7 @@ const ExtractedEventSchema = z.object({
   venue_name: z.string().nullable(),
   address: z.string().nullable(),
   postcode: z.string().nullable(),
-  region: z.enum(REGIONS).nullable().describe("Infer from venue/address if it clearly indicates Devon or Cornwall; otherwise null."),
+  region: z.enum(REGIONS).nullable().describe("Infer from venue/address if it clearly indicates Devon, Cornwall, or Somerset; otherwise null. \"both\" means specifically Devon and Cornwall (a legacy label) — use it only when the event serves those two, not Somerset."),
   age_categories: z.array(z.enum(AGE_CATEGORIES)),
   kids_only: z.boolean().nullable(),
   booking_status: z.enum(BOOKING_STATUSES).nullable(),
@@ -50,13 +50,13 @@ export { ExtractedEventSchema };
 function buildSystemPrompt(): string {
   const today = new Date().toISOString().slice(0, 10);
 
-  return `You extract youth cycling event listings for South West Kids Cycling, a calendar covering ages 5-16 in Devon & Cornwall, England. Today's date is ${today}.
+  return `You extract youth cycling event listings for South West Kids Cycling, a calendar covering ages 5-16 in Devon, Cornwall & Somerset, England. Today's date is ${today}.
 
 Extract every distinct event you find in the given content (a page, poster, or pasted text may list several rounds of a series — extract each as a separate entry).
 
 Rules:
 - Only extract events happening on or after ${today}. Skip anything dated in the past — this calendar only lists upcoming events, so a past listing (e.g. last year's round of a series, an old training session) is not useful even if it's otherwise a good match. If a date can't be determined at all, still extract the event (a human will confirm the date).
-- Only extract youth/junior cycling events, club coaching sessions, or events that clearly include age-group categories for under-16s. Skip adult-only road racing, enduro, and anything outside Devon/Cornwall.
+- Only extract youth/junior cycling events, club coaching sessions, or events that clearly include age-group categories for under-16s. Skip adult-only road racing, enduro, and anything outside Devon/Cornwall/Somerset.
 - Leave a field null rather than guessing. A poster rarely states exact time, address, or a booking link — leave those null for a human reviewer rather than inventing plausible-looking values.
 - Links extracted from a web page appear inline right after their link text, as "text (URL)" — e.g. a listing page with a "VIEW EVENT" button per row shows up as "…Woodbury Common VIEW EVENT (https://example.com/events/devon-grit/)". Match each link to the event it's positioned next to (by proximity/order in the text, not by the link text itself, which is often identical and generic across every row, like "VIEW EVENT" or "Book now"). Use it as booking_link if it goes to a registration/entry page, otherwise organiser_url.
 - Disciplines: cx (cyclocross), xc (cross country mountain biking), road, tri (triathlon), gravel (gravel racing), duathlon (run-bike-run), clusters (club coaching/training sessions, "Go-Ride" style), other. Skip events with no cycling leg at all (a pure running race, swim event, etc.) — this calendar only covers cycling and cycling-adjacent multisport.

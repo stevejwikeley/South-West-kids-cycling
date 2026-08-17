@@ -70,7 +70,7 @@ export function buildMonthlyDigestHtml(events: CalendarEvent[], siteUrl: string,
         </tr>
         <tr>
           <td style="font-family:Georgia,'Times New Roman',serif;font-weight:bold;font-size:28px;line-height:1.2;color:#111111;padding-bottom:20px;">
-            ${events.length} upcoming ${events.length === 1 ? "event" : "events"} in Devon &amp; Cornwall.
+            ${events.length} upcoming ${events.length === 1 ? "event" : "events"} in Devon, Cornwall &amp; Somerset.
           </td>
         </tr>
         <tr>

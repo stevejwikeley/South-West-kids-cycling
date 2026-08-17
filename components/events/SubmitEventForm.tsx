@@ -10,7 +10,8 @@ const AGE_OPTIONS: AgeCategory[] = ["u8", "u10", "u12", "u14", "u16"];
 const REGION_OPTIONS = [
   ["devon", "Devon"],
   ["cornwall", "Cornwall"],
-  ["both", "Both"],
+  ["somerset", "Somerset"],
+  ["both", "Both (Devon & Cornwall)"],
 ] as const;
 
 const label: React.CSSProperties = { fontSize: 10.5, color: "#6B6B66", display: "block", marginBottom: 6, letterSpacing: "0.03em" };

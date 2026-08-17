@@ -33,12 +33,12 @@ export default function ClubsPage({ clubs }: { clubs: Club[] }) {
   return (
     <>
       <header style={{ maxWidth: 1100, margin: "0 auto", padding: "56px 24px 0" }}>
-        <div className="mono" style={{ fontSize: 11.5, letterSpacing: "0.12em", color: "#E0102A", marginBottom: 16, fontWeight: 700 }}>DEVON &amp; CORNWALL</div>
+        <div className="mono" style={{ fontSize: 11.5, letterSpacing: "0.12em", color: "#E0102A", marginBottom: 16, fontWeight: 700 }}>DEVON, CORNWALL &amp; SOMERSET</div>
         <h1 className="disp" style={{ fontSize: "clamp(38px, 6.5vw, 76px)", lineHeight: 0.98, margin: 0, letterSpacing: "-0.01em" }}>
-          Youth cycling clubs in Devon &amp; Cornwall.
+          Youth cycling clubs in Devon, Cornwall &amp; Somerset.
         </h1>
         <p style={{ maxWidth: 480, fontSize: 16, lineHeight: 1.6, color: "#4A4A46", marginTop: 22 }}>
-          Youth sections, Go-Ride clubs and junior academies from Exeter and Plymouth to Truro and Falmouth — road, cross country mountain biking, cyclocross and triathlon.
+          Youth sections, Go-Ride clubs and junior academies from Exeter and Plymouth to Truro, Falmouth and Somerset — road, cross country mountain biking, cyclocross and triathlon.
         </p>
       </header>
 

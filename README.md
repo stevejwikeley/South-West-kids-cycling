@@ -1,6 +1,6 @@
 # South West Kids Cycling
 
-A public calendar of youth cycling races and events (cyclocross, XC, road, triathlon, gravel, duathlon) across Devon & Cornwall, England, for ages 5–16. Built with Next.js and Supabase, deployed on Vercel.
+A public calendar of youth cycling races and events (cyclocross, XC, road, triathlon, gravel, duathlon) across Devon, Cornwall & Somerset, England, for ages 5–16. Built with Next.js and Supabase, deployed on Vercel.
 
 Live at [southwestkidscycling.uk](https://www.southwestkidscycling.uk).
 

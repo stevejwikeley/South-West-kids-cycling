@@ -9,7 +9,7 @@ export const revalidate = 60;
 // the pathname checks in TopNav/Footer/FeedbackPopup — since this route is
 // meant to be dropped into a club's own website via <iframe>, not browsed
 // directly. Query params let a club scope it to what's relevant to them:
-// ?region=devon|cornwall, ?discipline=cx,xc,..., ?limit=10 (default 15).
+// ?region=devon|cornwall|somerset, ?discipline=cx,xc,..., ?limit=10 (default 15).
 export default async function EmbedPage({
   searchParams,
 }: {

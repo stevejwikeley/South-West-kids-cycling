@@ -18,7 +18,8 @@ const AGE_OPTIONS: AgeCategory[] = ["u8", "u10", "u12", "u14", "u16"];
 const REGION_OPTIONS = [
   ["devon", "Devon"],
   ["cornwall", "Cornwall"],
-  ["both", "Both"],
+  ["somerset", "Somerset"],
+  ["both", "Both (Devon & Cornwall)"],
 ] as const;
 const STATUS_OPTIONS = [
   ["confirmed", "Confirmed"],

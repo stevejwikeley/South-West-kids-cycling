@@ -40,3 +40,4 @@ Follow one of these for any new table rather than inventing a new access pattern
 | `0010_public_submission_source.sql` | Adds `'public_submission'` to `source_type_enum` for the public `/submit-event` page. |
 | `0011_super_admin_role.sql` | Adds `'super_admin'` to `user_role` — just the enum value; `ALTER TYPE ... ADD VALUE` must run in its own statement before the value can be referenced elsewhere (same constraint as `0006`). |
 | `0012_super_admin_grants.sql` | Broadens `is_admin()` to cover `super_admin` (so every existing `is_admin()`-gated policy extends automatically), adds a separate `is_super_admin()` for the promote/demote-admin actions, updates the signup trigger, and promotes the existing site-owner profile to `super_admin`. |
+| `0013_add_somerset_region.sql` | Adds `'somerset'` to `region_type` alongside `devon`/`cornwall`/`both`. `both` keeps its existing Devon+Cornwall meaning rather than being redefined to include Somerset. |

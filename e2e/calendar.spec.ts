@@ -36,6 +36,7 @@ test.describe("Calendar page", () => {
   test("region filter and search narrow the list", async ({ page }) => {
     await page.goto("/");
     await page.getByRole("button", { name: /toggle filters/i }).click();
+    await expect(page.getByRole("button", { name: "SOMERSET", exact: true })).toBeVisible();
     await page.getByRole("button", { name: "DEVON", exact: true }).click();
     await expect(page.getByRole("button", { name: "DEVON", exact: true })).toHaveCSS("color", "rgb(250, 250, 248)");
 

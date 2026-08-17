@@ -9,7 +9,7 @@ import type { DisciplineType, EventRow, RegionType } from "@/lib/supabase/types"
 export const dynamic = "force-dynamic";
 
 const DISCIPLINE_VALUES = new Set<DisciplineType>(["cx", "xc", "road", "tri", "gravel", "duathlon", "clusters", "other"]);
-const REGION_VALUES = new Set<RegionType>(["devon", "cornwall", "both"]);
+const REGION_VALUES = new Set<RegionType>(["devon", "cornwall", "somerset", "both"]);
 const DISCIPLINE_LABELS: Record<DisciplineType, string> = {
   cx: "Cyclocross",
   xc: "XC",
@@ -20,7 +20,7 @@ const DISCIPLINE_LABELS: Record<DisciplineType, string> = {
   clusters: "Club Clusters",
   other: "Other",
 };
-const REGION_LABELS: Record<RegionType, string> = { devon: "Devon", cornwall: "Cornwall", both: "Devon & Cornwall" };
+const REGION_LABELS: Record<RegionType, string> = { devon: "Devon", cornwall: "Cornwall", somerset: "Somerset", both: "Devon & Cornwall" };
 
 function dateOnly(iso: string): DateArray {
   const [y, m, d] = iso.slice(0, 10).split("-").map(Number);
@@ -53,7 +53,7 @@ function toIcsEvent(e: EventRow): EventAttributes {
   };
 }
 
-// Filtered feeds (spec section 9): ?discipline=cx,xc and/or ?region=devon,
+// Filtered feeds (spec section 9): ?discipline=cx,xc and/or ?region=devon,cornwall,
 // same generation path as the unfiltered feed — just a narrower query.
 // Invalid values in either param are dropped rather than erroring, so a
 // stale/mistyped filter degrades to "no filter on that dimension" instead

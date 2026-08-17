@@ -10,6 +10,7 @@ const STATUS_MAP: Record<CalendarEvent["status"], string> = {
 const REGION_LABEL: Record<CalendarEvent["region"], string> = {
   devon: "Devon",
   cornwall: "Cornwall",
+  somerset: "Somerset",
   both: "Devon & Cornwall",
 };
 

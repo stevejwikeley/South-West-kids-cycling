@@ -5,7 +5,7 @@
 export type DisciplineType = "cx" | "xc" | "road" | "tri" | "gravel" | "duathlon" | "clusters" | "other";
 export type EventStatus = "confirmed" | "provisional" | "cancelled";
 export type BookingStatusType = "open" | "planned";
-export type RegionType = "devon" | "cornwall" | "both";
+export type RegionType = "devon" | "cornwall" | "somerset" | "both";
 export type AgeCategory = "u8" | "u10" | "u12" | "u14" | "u16";
 export type SourceTypeEnum = "manual" | "change_request" | "smart_ingest" | "public_submission";
 export type PublishedViaType = "auto" | "reviewed";

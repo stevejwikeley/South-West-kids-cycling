@@ -15,7 +15,7 @@ export default function AboutPage() {
 
       <div style={{ marginTop: 30, fontSize: 16, lineHeight: 1.75, color: "#4A4A46" }}>
         <p style={{ marginBottom: 20 }}>
-          I&apos;m a parent trying to keep track of race weekends. Youth cycling events across Devon and Cornwall are scattered across half a dozen Facebook groups, individual club and organiser websites, British Cycling&apos;s own listings, and the odd email — and when you&apos;re trying to plan months out (are we free that weekend, or is my child racing? where even is the venue?), piecing all of that together every time got old fast.
+          I&apos;m a parent trying to keep track of race weekends. Youth cycling events across Devon, Cornwall and Somerset are scattered across half a dozen Facebook groups, individual club and organiser websites, British Cycling&apos;s own listings, and the odd email — and when you&apos;re trying to plan months out (are we free that weekend, or is my child racing? where even is the venue?), piecing all of that together every time got old fast.
         </p>
         <p style={{ marginBottom: 20 }}>
           So I built one calendar that pulls it all into a single place — every discipline, every club, one list you can actually plan around.

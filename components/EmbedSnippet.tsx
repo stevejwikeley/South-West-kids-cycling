@@ -7,7 +7,7 @@ export default function EmbedSnippet() {
         EMBED THIS CALENDAR ON YOUR CLUB SITE
       </h3>
       <p style={{ fontSize: 13, lineHeight: 1.6, color: "#4A4A46", marginBottom: 12 }}>
-        Give your members the full Devon &amp; Cornwall youth calendar without leaving your own site. Filter it by region or discipline and get a ready-to-paste embed code, with a live preview.
+        Give your members the full Devon, Cornwall &amp; Somerset youth calendar without leaving your own site. Filter it by region or discipline and get a ready-to-paste embed code, with a live preview.
       </p>
       <Link
         href="/embed-builder"
