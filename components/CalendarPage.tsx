@@ -71,7 +71,7 @@ export default function CalendarPage({ events, isAdmin = false }: { events: Cale
           One calendar for all cycling races and events across the Southwest
         </h1>
         <p style={{ maxWidth: 480, fontSize: 16, lineHeight: 1.6, color: "#4A4A46", marginTop: 22 }}>
-          Every Under 8s–16s race and club cluster session from Exeter and Plymouth to Cornwall and Somerset — Cross Country mountain biking, cyclocross, road, triathlon in one calendar.
+          Every Under 8s–16s race and training session from Exeter and Plymouth to Cornwall and Somerset — Cross Country mountain biking, cyclocross, road, triathlon in one calendar.
         </p>
         <Link href="/getting-started" onClick={() => trackEvent("getting_started_click", { source: "calendar_hero" })} style={{ fontSize: 13.5, fontWeight: 700, display: "flex", alignItems: "center", gap: 5, borderBottom: "1px solid #111111", paddingBottom: 2, marginTop: 18, width: "fit-content" }}>
           New to racing? Start here <ArrowUpRight size={14} />

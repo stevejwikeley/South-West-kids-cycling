@@ -42,7 +42,7 @@ const handler = createMcpHandler(
         ]);
 
         const context = {
-          scope: "Youth cycling events (ages 5-16) in Devon, Cornwall & Somerset, England — races, series rounds, and club coaching/cluster sessions.",
+          scope: "Youth cycling events (ages 5-16) in Devon, Cornwall & Somerset, England — races, series rounds, and club coaching/training sessions.",
           disciplines: EVENT_DISCIPLINES.map((d) => d.id),
           regions: ["devon", "cornwall", "somerset", "both"],
           age_categories: ["u8", "u10", "u12", "u14", "u16"],

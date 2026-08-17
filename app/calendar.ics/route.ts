@@ -17,7 +17,7 @@ const DISCIPLINE_LABELS: Record<DisciplineType, string> = {
   tri: "Triathlon",
   gravel: "Gravel",
   duathlon: "Duathlon",
-  clusters: "Club Clusters",
+  clusters: "Training session",
   other: "Other",
 };
 const REGION_LABELS: Record<RegionType, string> = { devon: "Devon", cornwall: "Cornwall", somerset: "Somerset", both: "Devon & Cornwall" };
