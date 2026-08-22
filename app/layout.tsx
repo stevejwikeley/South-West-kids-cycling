@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Analytics } from "@vercel/analytics/next";
 import { Archivo, Inter, JetBrains_Mono } from "next/font/google";
 import TopNav from "@/components/TopNav";
 import Footer from "@/components/Footer";
@@ -60,6 +61,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         {children}
         <Footer />
         <FeedbackPopup />
+        <Analytics />
       </body>
     </html>
   );
