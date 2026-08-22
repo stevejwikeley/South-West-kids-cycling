@@ -55,12 +55,16 @@ test.describe("Calendar page", () => {
     for (const label of shownLabels) expect(label.trim().length).toBeGreaterThan(0);
   });
 
-  test("venue link points at Google Maps with a region/UK hint", async ({ page }) => {
+  test("venue link points at Google Maps, geocoded or with a region/UK hint", async ({ page }) => {
     await page.goto("/");
     const venueLink = page.locator('main a[href*="google.com/maps/search"]').first();
     await expect(venueLink).toBeVisible();
     const href = await venueLink.getAttribute("href");
-    expect(href).toContain("UK");
+    // Geocoded events link straight to coordinates (query=lat,lng — no "UK"
+    // text at all); everything else falls back to a text search that always
+    // includes the "UK" hint. Either is a valid, working Maps link.
+    const query = decodeURIComponent(href?.split("query=")[1] ?? "");
+    expect(/^-?\d+(\.\d+)?,-?\d+(\.\d+)?$/.test(query) || query.includes("UK")).toBe(true);
   });
 });
 

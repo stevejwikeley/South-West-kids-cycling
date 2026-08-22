@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile, isAdminRole } from "@/lib/auth";
 import { parseEventForm, type EventFormValues } from "./parse-event-form";
 import { parsePendingForm, type PendingFormValues } from "./parse-pending-form";
+import { geocodeLocation } from "@/lib/geocode";
 import type { EventPendingRow, EventRow } from "@/lib/supabase/types";
 
 export interface SuggestChangeState {
@@ -132,6 +133,17 @@ export async function approveChange(pendingId: string): Promise<PendingActionRes
     if (change) (update as Record<string, unknown>)[key] = change.to;
   });
 
+  // Postcode is the field geocoding actually keys off — only worth
+  // re-deriving a pin when it's part of what's actually changing here,
+  // not on every unrelated change request.
+  if (typeof update.postcode === "string" && update.postcode) {
+    const coords = await geocodeLocation({ venue_name: null, address: null, postcode: update.postcode, region: null });
+    if (coords) {
+      update.lat = coords.lat;
+      update.lng = coords.lng;
+    }
+  }
+
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -186,6 +198,25 @@ export async function approveIngested(pendingId: string): Promise<PendingActionR
   // 4.2: "needs verification" markers), not a public-facing field, so it's
   // not part of ALLOWED_DIFF_KEYS but still belongs on the live row.
   if (row.field_flags) values.field_flags = row.field_flags;
+
+  // Re-derived here rather than trusted from the pending row: events_pending
+  // accepts unauthenticated inserts (public submissions), so lat/lng always
+  // comes from our own lookup against the postcode/venue/address that just
+  // passed the ALLOWED_DIFF_KEYS sandbox above, never from arbitrary
+  // pending-row data. Only when at least one location field is present —
+  // an approval with no location info at all has nothing to geocode.
+  if (values.venue_name || values.address || values.postcode) {
+    const coords = await geocodeLocation({
+      venue_name: (values.venue_name as string | undefined) ?? null,
+      address: (values.address as string | undefined) ?? null,
+      postcode: (values.postcode as string | undefined) ?? null,
+      region: (values.region as string | undefined) ?? null,
+    });
+    if (coords) {
+      values.lat = coords.lat;
+      values.lng = coords.lng;
+    }
+  }
 
   const {
     data: { user },

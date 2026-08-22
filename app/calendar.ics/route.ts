@@ -45,6 +45,11 @@ function toIcsEvent(e: EventRow): EventAttributes {
     uid: `${e.id}@southwestkidscycling.co.uk`,
     title: e.title,
     location,
+    // GEO gives subscribing calendar apps (Google/Apple/Outlook) an exact
+    // pin independent of how the LOCATION text is worded — only set when
+    // the event was geocoded, so an event with no postcode/address match
+    // just falls back to the app's own free-text lookup on `location`.
+    ...(e.lat != null && e.lng != null ? { geo: { lat: e.lat, lon: e.lng } } : {}),
     description,
     url: e.booking_link ?? e.organiser_url,
     status: e.status === "provisional" ? "TENTATIVE" : "CONFIRMED",

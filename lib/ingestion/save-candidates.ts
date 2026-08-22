@@ -2,6 +2,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { findDuplicate } from "./dedup";
 import { bookingLinkTitleMismatch, LINK_TITLE_MISMATCH_FLAG } from "./link-check";
+import { normalizePostcode } from "@/lib/postcode";
 import type { ExtractedEvent } from "./extract-events";
 import type { Database, EventRow, EventPendingRow, SourceTypeEnum } from "@/lib/supabase/types";
 
@@ -62,7 +63,7 @@ export async function saveCandidates(
       start_datetime: candidate.date ? `${candidate.date}T00:00:00.000Z` : null,
       venue_name: candidate.venue_name,
       address: candidate.address,
-      postcode: candidate.postcode,
+      postcode: normalizePostcode(candidate.postcode),
       region: candidate.region,
       age_categories: candidate.age_categories,
       kids_only: candidate.kids_only,
@@ -82,7 +83,20 @@ export async function saveCandidates(
     // when the extraction is uncertain about a field once more (field
     // flags below), re-queuing something an admin already approved just
     // makes them re-check the same answer twice.
-    if (duplicate && liveIds.has(duplicate.id) && !candidateDiffersFromLive(values, duplicate)) {
+    //
+    // Diffed against the raw candidate fields, not `values` — status and
+    // organiser_url get a fallback default (?? "confirmed", ?? sourceUrl)
+    // applied above for the insert, and candidateDiffersFromLive's
+    // null-means-no-opinion check only works before that default is
+    // applied. Diffing `values` instead meant a candidate that extracted
+    // no organiser_url at all (common — most source pages don't state
+    // one) silently became "organiser_url = sourceUrl", which then
+    // disagreed with the live event's real organiser_url (near-always
+    // admin-corrected away from the raw watched-source page, since that
+    // page is rarely the organiser's own site) — re-flagging the same
+    // already-approved event as changed on every weekly check.
+    const diffCandidate = { ...values, status: candidate.status, organiser_url: candidate.organiser_url };
+    if (duplicate && liveIds.has(duplicate.id) && !candidateDiffersFromLive(diffCandidate, duplicate)) {
       continue;
     }
 
@@ -111,9 +125,15 @@ export async function saveCandidates(
 // Comparing them here undid that entirely — every re-scan re-flagged the
 // same event as "changed" purely because its own re-extracted title/venue
 // text isn't byte-identical to what an earlier run produced.
+//
+// address is excluded for the same reason — it's free text re-extracted
+// fresh every scan (a dropped comma, "Rd" vs "Road", differently-ordered
+// clauses) and, unlike postcode, has no canonical form to normalize
+// against. postcode carries the location precision that actually matters
+// (it's what geocoding keys off), so it stays in the list.
 const COMPARISON_FIELDS = [
   "discipline", "status", "start_datetime",
-  "address", "postcode", "region", "age_categories", "kids_only",
+  "postcode", "region", "age_categories", "kids_only",
   "booking_status", "booking_link", "organiser_url", "organiser_name", "organiser_contact",
 ] as const;
 
@@ -134,6 +154,21 @@ function candidateDiffersFromLive(values: Record<string, unknown>, live: EventRo
     const v = values[field];
     if (v === null || v === undefined) return false;
     if (Array.isArray(v) && v.length === 0) return false;
+    // start_datetime is built here as "...T00:00:00.000Z" but PostgREST
+    // serializes the same instant back as "...T00:00:00+00:00" — confirmed
+    // against live data. Comparing those strings with === always disagrees
+    // even when the date hasn't changed, so this field alone re-flagged
+    // every matched event as "changed" on every re-scan. Compare the
+    // parsed instant instead.
+    if (field === "start_datetime") {
+      return new Date(v as string).getTime() !== new Date(liveRecord[field] as string).getTime();
+    }
+    // Guards against live rows saved before postcode normalization existed —
+    // compare canonical forms so old-format live data doesn't itself look
+    // like a diff against a freshly-normalized candidate.
+    if (field === "postcode") {
+      return normalizePostcode(v as string | null) !== normalizePostcode(liveRecord[field] as string | null);
+    }
     return !sameValue(v, liveRecord[field]);
   });
 }

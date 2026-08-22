@@ -4,19 +4,13 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { MapPin, Search, X, Calendar, ArrowUpRight, Filter, Download } from "lucide-react";
 import { EVENT_DISCIPLINES, eventDisc, ageLabel } from "@/lib/mock-data";
-import type { DisciplineId, CalendarEvent, Region } from "@/lib/types";
+import type { DisciplineId, CalendarEvent } from "@/lib/types";
 import { MONTHS, fmtDay } from "@/lib/format";
 import { trackEvent } from "@/lib/analytics";
 import { eventsToCsv, downloadCsv } from "@/lib/csv";
+import { mapsUrl } from "@/lib/maps";
 import EditEventPanel from "@/components/admin/EditEventPanel";
 import SuggestChangePanel from "@/components/events/SuggestChangePanel";
-
-const REGION_HINT: Record<Region, string | undefined> = {
-  devon: "Devon",
-  cornwall: "Cornwall",
-  somerset: "Somerset",
-  both: undefined,
-};
 
 export default function CalendarPage({ events, isAdmin = false }: { events: CalendarEvent[]; isAdmin?: boolean }) {
   const [activeDisc, setActiveDisc] = useState<Set<DisciplineId>>(new Set());
@@ -188,7 +182,7 @@ export default function CalendarPage({ events, isAdmin = false }: { events: Cale
                       </div>
                       <div style={{ display: "flex", alignItems: "center", gap: 6, color: "#6B6B66", fontSize: 12.5, marginTop: 4, flexWrap: "wrap" }}>
                         <a
-                          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([e.venue, e.address, e.postcode, REGION_HINT[e.region], "UK"].filter(Boolean).join(", "))}`}
+                          href={mapsUrl(e)}
                           target="_blank"
                           rel="noreferrer"
                           onClick={() => trackEvent("venue_map_click", { event_id: e.id, event_title: e.title })}

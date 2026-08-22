@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { parseEventForm } from "./parse-event-form";
 import { getCurrentProfile, isAdminRole } from "@/lib/auth";
 import { getEventRowById } from "@/lib/data";
+import { geocodeLocation } from "@/lib/geocode";
 import type { EventRow } from "@/lib/supabase/types";
 
 export interface EventFormState {
@@ -30,16 +31,24 @@ export async function saveEvent(
 
   const id = String(formData.get("id") ?? "").trim() || null;
 
+  const coords = await geocodeLocation({
+    venue_name: parsed.values.venue_name,
+    address: parsed.values.address,
+    postcode: parsed.values.postcode,
+    region: parsed.values.region,
+  });
+  const values = coords ? { ...parsed.values, lat: coords.lat, lng: coords.lng } : parsed.values;
+
   if (id) {
     const { error } = await supabase
       .from("events")
-      .update({ ...parsed.values, updated_by: user.id })
+      .update({ ...values, updated_by: user.id })
       .eq("id", id);
     if (error) return { error: error.message };
   } else {
     const { error } = await supabase
       .from("events")
-      .insert({ ...parsed.values, created_by: user.id, approved: true, source_type: "manual" });
+      .insert({ ...values, created_by: user.id, approved: true, source_type: "manual" });
     if (error) return { error: error.message };
   }
 

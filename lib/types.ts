@@ -19,6 +19,8 @@ export interface CalendarEvent {
   venue: string;
   address: string | null;
   postcode: string | null;
+  lat: number | null;
+  lng: number | null;
   region: Region;
   status: EventStatus;
   kidsOnly: boolean;

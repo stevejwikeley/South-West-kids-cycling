@@ -11,6 +11,8 @@ function toCalendarEvent(row: EventRow): CalendarEvent {
     venue: row.venue_name,
     address: row.address,
     postcode: row.postcode,
+    lat: row.lat,
+    lng: row.lng,
     region: row.region,
     status: row.status,
     kidsOnly: row.kids_only,
