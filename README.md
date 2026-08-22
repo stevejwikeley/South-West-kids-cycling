@@ -50,6 +50,7 @@ npm run build       # production build
 npm run start        # run a production build locally
 npm run lint         # eslint
 npm run test:e2e     # Playwright end-to-end tests
+npm run traffic-report  # append a weekly Vercel Web Analytics summary to docs/traffic-reports.md
 ```
 
 ## Project structure
@@ -150,7 +151,7 @@ A weekly scheduled Claude task (in the site owner's own claude.ai account, not p
 ## Monitoring
 
 - **Errors & performance**: Sentry, wired into both client and server (`instrumentation*.ts`, `sentry.*.config.ts`). The smart-ingestion pipeline is traced end-to-end (`gen_ai.extract_events`, `ingestion.check_watched_source` spans) since it's the subsystem most likely to fail in an interesting way (bad extraction, blocked fetch, API error).
-- **Usage**: Google Analytics via `components/GoogleAnalytics.tsx`, with custom events fired through `lib/analytics.ts#trackEvent()` at the interaction points that matter (search, filters, booking-link clicks, form submissions, feedback popup).
+- **Usage**: Google Analytics via `components/GoogleAnalytics.tsx`, with custom events fired through `lib/analytics.ts#trackEvent()` at the interaction points that matter (search, filters, booking-link clicks, form submissions, feedback popup). Also **Vercel Web Analytics** (`<Analytics />` in `app/layout.tsx`) — chosen alongside GA because it's queryable via `vercel metrics`/the Web Analytics REST API using the CLI's own login, with no separate Google Cloud project or credentials needed. `scripts/weekly-traffic-report.sh` pulls page views, unique visitors, top pages, and top referrers for the last 7 days and appends them to [`docs/traffic-reports.md`](docs/traffic-reports.md); a `launchd` job (`~/Library/LaunchAgents/uk.co.southwestkidscycling.traffic-report.plist`, local to the machine that set it up, not checked in) runs it every Sunday at 18:00.
 
 ## Deployment
 
