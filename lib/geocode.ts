@@ -25,11 +25,12 @@ async function geocodePostcode(postcode: string): Promise<Coordinates | null> {
   }
 }
 
-// Fallback for the common case of a watched source stating a venue/address
-// with no postcode at all — postcodes.io can't help there since it only
-// looks up postcodes it already knows, not free text. LocationIQ does
-// free-text forward geocoding (OpenStreetMap-backed), same shape of query
-// as the Maps search link this replaces. Optional: skipped entirely (not
+// Free-text forward geocoding (OpenStreetMap-backed), same shape of query as
+// the Maps search link this replaces. Unlike a bare postcode lookup, this
+// can resolve to a named place itself (a bike park, a showground) rather
+// than just the postcode's own centroid — the two are often hundreds of
+// metres apart for an unaddressed rural venue, since the postcode usually
+// belongs to the nearest actual dwelling. Optional: skipped entirely (not
 // an error) when LOCATIONIQ_API_KEY isn't configured.
 async function geocodeFreeText(query: string): Promise<Coordinates | null> {
   const key = process.env.LOCATIONIQ_API_KEY;
@@ -50,10 +51,35 @@ async function geocodeFreeText(query: string): Promise<Coordinates | null> {
   }
 }
 
-// Postcode first (precise, free, no key); free-text venue/address/region
-// fallback only when there's no usable postcode to look up. Returns null
-// rather than throwing either way — geocoding is a nice-to-have for map
-// accuracy, never a reason to block saving/approving an event.
+function kmBetween(a: Coordinates, b: Coordinates): number {
+  const R = 6371;
+  const dLat = ((b.lat - a.lat) * Math.PI) / 180;
+  const dLng = ((b.lng - a.lng) * Math.PI) / 180;
+  const s =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((a.lat * Math.PI) / 180) * Math.cos((b.lat * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(s));
+}
+
+// Confirmed against a real case: "Old Hill Bike Park" (postcode PL30 3EF)
+// geocoded via postcode alone landed ~700m off, at the postcode's own
+// centroid rather than the bike park itself — while a free-text search for
+// the venue name found it as a named OpenStreetMap feature, precisely
+// placed. So a named-venue match is preferred over the bare postcode
+// whenever we have one; the postcode lookup still runs, but now purely as
+// a sanity check, and as the fallback when free text finds nothing.
+// SANITY_RADIUS_KM guards against a free-text mismatch (a same-named venue
+// elsewhere in the country, or an unrelated match for a generic name like
+// "The Track") — if it lands further from the postcode than any real venue
+// reasonably would, that's a sign the match is wrong, not that the venue is
+// unusually large, so fall back to the safer postcode centroid instead.
+const SANITY_RADIUS_KM = 5;
+
+// Postcode is still tried unconditionally (cheap, free, no key) so there's
+// always a fallback/sanity-check point even when there's no venue name or
+// no LocationIQ key configured. Returns null rather than throwing either
+// way — geocoding is a nice-to-have for map accuracy, never a reason to
+// block saving/approving an event.
 export async function geocodeLocation(fields: {
   venue_name: string | null;
   address: string | null;
@@ -61,10 +87,6 @@ export async function geocodeLocation(fields: {
   region: string | null;
 }): Promise<Coordinates | null> {
   const postcode = normalizePostcode(fields.postcode);
-  if (postcode) {
-    const coords = await geocodePostcode(postcode);
-    if (coords) return coords;
-  }
 
   // "UK" is a query-quality hint, not a location itself — appending it
   // unconditionally would mean an event with no venue/address/postcode at
@@ -72,6 +94,13 @@ export async function geocodeLocation(fields: {
   // resolves to the country's centroid rather than correctly returning
   // "nothing to geocode here".
   const parts = [fields.venue_name, fields.address, postcode].filter(Boolean);
-  if (parts.length === 0) return null;
-  return geocodeFreeText([...parts, "UK"].join(", "));
+  const [postcodeCoords, textCoords] = await Promise.all([
+    postcode ? geocodePostcode(postcode) : Promise.resolve(null),
+    parts.length > 0 ? geocodeFreeText([...parts, "UK"].join(", ")) : Promise.resolve(null),
+  ]);
+
+  if (textCoords && (!postcodeCoords || kmBetween(textCoords, postcodeCoords) <= SANITY_RADIUS_KM)) {
+    return textCoords;
+  }
+  return postcodeCoords;
 }
