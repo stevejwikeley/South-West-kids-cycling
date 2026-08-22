@@ -31,13 +31,16 @@ export async function saveEvent(
 
   const id = String(formData.get("id") ?? "").trim() || null;
 
-  const coords = await geocodeLocation({
-    venue_name: parsed.values.venue_name,
-    address: parsed.values.address,
-    postcode: parsed.values.postcode,
-    region: parsed.values.region,
-  });
-  const values = coords ? { ...parsed.values, lat: coords.lat, lng: coords.lng } : parsed.values;
+  // Postcode absent -> explicitly clear lat/lng (an edit that removed the
+  // postcode shouldn't leave a stale, now-unverifiable pin behind). Postcode
+  // present but the lookup itself failed (a transient network issue) ->
+  // leave lat/lng untouched rather than wiping a known-good pin over a blip.
+  const coords = await geocodeLocation({ postcode: parsed.values.postcode });
+  const values = parsed.values.postcode
+    ? coords
+      ? { ...parsed.values, lat: coords.lat, lng: coords.lng }
+      : parsed.values
+    : { ...parsed.values, lat: null, lng: null };
 
   if (id) {
     const { error } = await supabase

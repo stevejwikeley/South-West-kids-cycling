@@ -38,7 +38,10 @@ export function eventsToJsonLd(events: CalendarEvent[]) {
         name: e.venue,
         address: {
           "@type": "PostalAddress",
-          ...(e.address ? { streetAddress: e.address } : {}),
+          // streetAddress only included alongside a postcode confirming
+          // it — see lib/geocode.ts for why unconfirmed free-text address
+          // isn't trusted on its own elsewhere in the app.
+          ...(e.postcode && e.address ? { streetAddress: e.address } : {}),
           ...(e.postcode ? { postalCode: e.postcode } : {}),
           addressRegion: REGION_LABEL[e.region],
           addressCountry: "GB",

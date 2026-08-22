@@ -55,16 +55,18 @@ test.describe("Calendar page", () => {
     for (const label of shownLabels) expect(label.trim().length).toBeGreaterThan(0);
   });
 
-  test("venue link points at Google Maps, geocoded or with a region/UK hint", async ({ page }) => {
+  test("venue links, when present, point at precise Google Maps coordinates", async ({ page }) => {
     await page.goto("/");
-    const venueLink = page.locator('main a[href*="google.com/maps/search"]').first();
-    await expect(venueLink).toBeVisible();
-    const href = await venueLink.getAttribute("href");
-    // Geocoded events link straight to coordinates (query=lat,lng — no "UK"
-    // text at all); everything else falls back to a text search that always
-    // includes the "UK" hint. Either is a valid, working Maps link.
-    const query = decodeURIComponent(href?.split("query=")[1] ?? "");
-    expect(/^-?\d+(\.\d+)?,-?\d+(\.\d+)?$/.test(query) || query.includes("UK")).toBe(true);
+    // Only postcode-geocoded events get a Maps link at all (see
+    // lib/geocode.ts) — an event with no postcode intentionally shows plain,
+    // unlinked venue text rather than a guessed-at location, so this doesn't
+    // assert a link exists on every row, only that any link that does exist
+    // is a real coordinate, not a guessed text search.
+    const hrefs = await page.locator('main a[href*="google.com/maps/search"]').evaluateAll((els) => els.map((el) => el.getAttribute("href")));
+    for (const href of hrefs) {
+      const query = decodeURIComponent(href?.split("query=")[1] ?? "");
+      expect(/^-?\d+(\.\d+)?,-?\d+(\.\d+)?$/.test(query)).toBe(true);
+    }
   });
 });
 

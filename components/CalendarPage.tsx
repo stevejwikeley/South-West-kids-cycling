@@ -181,15 +181,24 @@ export default function CalendarPage({ events, isAdmin = false }: { events: Cale
                         </span>
                       </div>
                       <div style={{ display: "flex", alignItems: "center", gap: 6, color: "#6B6B66", fontSize: 12.5, marginTop: 4, flexWrap: "wrap" }}>
-                        <a
-                          href={mapsUrl(e)}
-                          target="_blank"
-                          rel="noreferrer"
-                          onClick={() => trackEvent("venue_map_click", { event_id: e.id, event_title: e.title })}
-                          style={{ display: "inline-flex", alignItems: "center", gap: 6, color: "#6B6B66", textDecoration: "underline", textUnderlineOffset: 2 }}
-                        >
-                          <MapPin size={12} /> {e.venue}
-                        </a>
+                        {(() => {
+                          const href = mapsUrl(e);
+                          return href ? (
+                            <a
+                              href={href}
+                              target="_blank"
+                              rel="noreferrer"
+                              onClick={() => trackEvent("venue_map_click", { event_id: e.id, event_title: e.title })}
+                              style={{ display: "inline-flex", alignItems: "center", gap: 6, color: "#6B6B66", textDecoration: "underline", textUnderlineOffset: 2 }}
+                            >
+                              <MapPin size={12} /> {e.venue}
+                            </a>
+                          ) : (
+                            <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                              <MapPin size={12} /> {e.venue}
+                            </span>
+                          );
+                        })()}
                         <span className="mono" style={{ fontSize: 9.5, fontWeight: 700, padding: "3px 8px", background: `${d.color}18`, color: d.color, letterSpacing: "0.02em" }}>{d.label.toUpperCase()}</span>
                         <span className="mono" style={{ color: "#6B6B66", fontSize: 10.5 }}>· {e.ages.map(ageLabel).join(", ")}</span>
                         {e.status === "provisional" && <span className="mono" style={{ color: "#C77F17", fontSize: 10.5 }}>· PROVISIONAL</span>}

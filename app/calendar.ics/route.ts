@@ -31,7 +31,12 @@ function dateOnly(iso: string): DateArray {
 // might be sitting in start_datetime (including on rows saved before that
 // was true) rather than branching on the all_day column.
 function toIcsEvent(e: EventRow): EventAttributes {
-  const location = [e.venue_name, e.address, e.postcode].filter(Boolean).join(", ");
+  // address is only trustworthy alongside a postcode confirming it's a real,
+  // checkable location — unconfirmed free-text address on its own is the
+  // same kind of unreliable data that mis-geocoded events elsewhere (see
+  // lib/geocode.ts), so it's left out here rather than risking bad
+  // directions in a subscriber's calendar app.
+  const location = [e.venue_name, e.postcode ? e.address : null, e.postcode].filter(Boolean).join(", ");
   const description = [
     `Discipline: ${e.discipline.toUpperCase()}`,
     `Status: ${e.status}`,

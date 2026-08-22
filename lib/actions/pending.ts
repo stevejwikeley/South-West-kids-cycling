@@ -133,14 +133,20 @@ export async function approveChange(pendingId: string): Promise<PendingActionRes
     if (change) (update as Record<string, unknown>)[key] = change.to;
   });
 
-  // Postcode is the field geocoding actually keys off — only worth
-  // re-deriving a pin when it's part of what's actually changing here,
-  // not on every unrelated change request.
-  if (typeof update.postcode === "string" && update.postcode) {
-    const coords = await geocodeLocation({ venue_name: null, address: null, postcode: update.postcode, region: null });
-    if (coords) {
-      update.lat = coords.lat;
-      update.lng = coords.lng;
+  // Only worth touching lat/lng when postcode is part of what's actually
+  // changing here, not on every unrelated change request. A change that
+  // clears the postcode clears the now-unverifiable pin along with it,
+  // rather than leaving a stale one behind.
+  if ("postcode" in update) {
+    if (update.postcode) {
+      const coords = await geocodeLocation({ postcode: update.postcode });
+      if (coords) {
+        update.lat = coords.lat;
+        update.lng = coords.lng;
+      }
+    } else {
+      update.lat = null;
+      update.lng = null;
     }
   }
 
@@ -201,17 +207,10 @@ export async function approveIngested(pendingId: string): Promise<PendingActionR
 
   // Re-derived here rather than trusted from the pending row: events_pending
   // accepts unauthenticated inserts (public submissions), so lat/lng always
-  // comes from our own lookup against the postcode/venue/address that just
-  // passed the ALLOWED_DIFF_KEYS sandbox above, never from arbitrary
-  // pending-row data. Only when at least one location field is present —
-  // an approval with no location info at all has nothing to geocode.
-  if (values.venue_name || values.address || values.postcode) {
-    const coords = await geocodeLocation({
-      venue_name: (values.venue_name as string | undefined) ?? null,
-      address: (values.address as string | undefined) ?? null,
-      postcode: (values.postcode as string | undefined) ?? null,
-      region: (values.region as string | undefined) ?? null,
-    });
+  // comes from our own lookup against the postcode that just passed the
+  // ALLOWED_DIFF_KEYS sandbox above, never from arbitrary pending-row data.
+  if (values.postcode) {
+    const coords = await geocodeLocation({ postcode: values.postcode as string });
     if (coords) {
       values.lat = coords.lat;
       values.lng = coords.lng;
