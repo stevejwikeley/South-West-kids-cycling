@@ -16,6 +16,10 @@ interface LocatableEvent {
   lng: number | null;
 }
 
+export function searchUrl(query: string): string {
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
+}
+
 // lat/lng (when geocoded) pins the exact spot regardless of how the venue
 // text is worded. Without it, prefer venue + postcode over the full address —
 // postcode alone is enough for Google to resolve a UK location precisely,
@@ -30,5 +34,12 @@ export function mapsQuery(e: LocatableEvent): string {
 }
 
 export function mapsUrl(e: LocatableEvent): string {
-  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapsQuery(e))}`;
+  return searchUrl(mapsQuery(e));
+}
+
+// Clubs only carry one free-text location string (no separate
+// address/postcode/geocoding, unlike events) — a plain text search is the
+// best we can do without adding club geocoding, which isn't in scope here.
+export function clubMapsUrl(location: string): string {
+  return searchUrl(`${location}, UK`);
 }

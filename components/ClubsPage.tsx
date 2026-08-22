@@ -5,6 +5,7 @@ import { MapPin, Search, X, ExternalLink } from "lucide-react";
 import { CLUB_DISCIPLINES, clubDisc } from "@/lib/mock-data";
 import type { Club } from "@/lib/types";
 import { trackEvent } from "@/lib/analytics";
+import { clubMapsUrl } from "@/lib/maps";
 import EmbedSnippet from "@/components/EmbedSnippet";
 
 export default function ClubsPage({ clubs }: { clubs: Club[] }) {
@@ -81,8 +82,16 @@ export default function ClubsPage({ clubs }: { clubs: Club[] }) {
               <div key={c.id} className="row-hover" style={{ display: "flex", alignItems: "flex-start", gap: 20, padding: "18px 6px", borderBottom: "1px solid #E4E2DD", flexWrap: "wrap" }}>
                 <div style={{ flex: "1 1 260px", minWidth: 220 }}>
                   <div style={{ fontWeight: 700, fontSize: 15.5 }}>{c.name}</div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 6, color: "#6B6B66", fontSize: 12.5, marginTop: 3 }}>
-                    <MapPin size={12} /> {c.location}
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, color: "#6B6B66", fontSize: 12.5, marginTop: 3, flexWrap: "wrap" }}>
+                    <a
+                      href={clubMapsUrl(c.location)}
+                      target="_blank"
+                      rel="noreferrer"
+                      onClick={() => trackEvent("club_map_click", { club_id: c.id, club_name: c.name })}
+                      style={{ display: "inline-flex", alignItems: "center", gap: 6, color: "#6B6B66", textDecoration: "underline", textUnderlineOffset: 2 }}
+                    >
+                      <MapPin size={12} /> {c.location}
+                    </a>
                     {c.founded && <span className="mono" style={{ color: "#6B6B66", fontSize: 10.5, marginLeft: 4 }}>· EST. {c.founded}</span>}
                   </div>
                   <p style={{ fontSize: 12.5, lineHeight: 1.6, color: "#4A4A46", marginTop: 8, maxWidth: 480 }}>{c.summary}</p>
