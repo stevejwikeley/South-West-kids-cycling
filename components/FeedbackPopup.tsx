@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { MessageCircle, ChevronDown } from "lucide-react";
 import { submitFeedback, type FeedbackFormState } from "@/lib/actions/feedback";
 import { trackEvent } from "@/lib/analytics";
+import { OPEN_FEEDBACK_EVENT } from "@/components/BetaBanner";
 
 // DONE_KEY persists across sessions (localStorage) — once someone submits,
 // we never ask again. VISIT_COUNT_KEY also persists, incremented once per
@@ -84,6 +85,15 @@ export default function FeedbackPopup() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.success]);
+
+  useEffect(() => {
+    function handleOpen() {
+      setStage("expanded");
+      trackEvent("feedback_bubble_expand", { trigger: "banner" });
+    }
+    window.addEventListener(OPEN_FEEDBACK_EVENT, handleOpen);
+    return () => window.removeEventListener(OPEN_FEEDBACK_EVENT, handleOpen);
+  }, []);
 
   if (hidden || stage === "hidden") return null;
 

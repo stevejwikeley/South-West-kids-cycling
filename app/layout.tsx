@@ -3,6 +3,7 @@ import { Analytics } from "@vercel/analytics/next";
 import { Archivo, Inter, JetBrains_Mono } from "next/font/google";
 import TopNav from "@/components/TopNav";
 import Footer from "@/components/Footer";
+import BetaBanner from "@/components/BetaBanner";
 import FeedbackPopup from "@/components/FeedbackPopup";
 import GoogleAnalytics from "@/components/GoogleAnalytics";
 import { getCurrentProfile } from "@/lib/auth";
@@ -57,6 +58,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     <html lang="en" className={`${archivo.variable} ${inter.variable} ${jetbrainsMono.variable}`}>
       <body style={{ fontFamily: "var(--font-inter), sans-serif" }}>
         <GoogleAnalytics />
+        <BetaBanner />
         <TopNav role={profile?.role} />
         {children}
         <Footer />
