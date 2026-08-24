@@ -8,15 +8,17 @@ import { trackEvent } from "@/lib/analytics";
 import { OPEN_FEEDBACK_EVENT } from "@/components/BetaBanner";
 
 // DONE_KEY persists across sessions (localStorage) — once someone submits,
-// we never ask again. VISIT_COUNT_KEY also persists, incremented once per
-// browser session (guarded by the sessionStorage flag) so we can trigger the
-// full popup to auto-open on a second visit even if it happens well within
-// the 2-minute delay. The collapsed bubble itself shows immediately —
-// only the auto-expand into the full popup waits on this delay.
+// the bubble stays put permanently, but we stop auto-expanding the full
+// popup on them so they're not nagged again. VISIT_COUNT_KEY also persists,
+// incremented once per browser session (guarded by the sessionStorage flag)
+// so we can trigger the full popup to auto-open on a second visit even if
+// it happens well within the auto-expand delay. The collapsed bubble itself
+// shows immediately — only the auto-expand into the full popup waits on
+// this delay.
 const DONE_KEY = "swkc_feedback_done";
 const VISIT_COUNT_KEY = "swkc_visit_count";
 const SESSION_COUNTED_KEY = "swkc_session_counted";
-const AUTO_EXPAND_DELAY_MS = 2 * 60 * 1000;
+const AUTO_EXPAND_DELAY_MS = 30 * 1000;
 const HIDDEN_PREFIXES = ["/admin", "/organiser", "/login", "/auth", "/oauth"];
 
 type Stage = "hidden" | "collapsed" | "expanded";
@@ -65,9 +67,10 @@ export default function FeedbackPopup() {
   useEffect(() => {
     if (hidden) return;
     if (typeof window === "undefined") return;
-    if (window.localStorage.getItem(DONE_KEY)) return;
 
     setStage("collapsed");
+
+    if (window.localStorage.getItem(DONE_KEY)) return;
 
     if (!window.sessionStorage.getItem(SESSION_COUNTED_KEY)) {
       window.sessionStorage.setItem(SESSION_COUNTED_KEY, "1");
@@ -89,7 +92,7 @@ export default function FeedbackPopup() {
     if (state.success) {
       window.localStorage.setItem(DONE_KEY, "1");
       trackEvent("feedback_submit", { raced_before: racedBefore, usefulness, will_subscribe: willSubscribe });
-      const timer = setTimeout(() => setStage("hidden"), 2500);
+      const timer = setTimeout(() => setStage("collapsed"), 2500);
       return () => clearTimeout(timer);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
