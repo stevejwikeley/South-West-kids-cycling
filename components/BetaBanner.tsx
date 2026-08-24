@@ -24,7 +24,7 @@ export default function BetaBanner() {
   return (
     <div style={{ background: "#FFF4D6", borderBottom: "1px solid #E8D9A8", padding: "10px 40px", textAlign: "center", position: "relative" }}>
       <span className="mono" style={{ fontSize: 12, letterSpacing: "0.02em", color: "#4A4A46" }}>
-        CURRENTLY IN BETA — FIRST LAUNCHED AUGUST 2026 —{" "}
+        NEWLY LAUNCHED, AUGUST 2026 —{" "}
         <button
           type="button"
           onClick={() => {
@@ -44,7 +44,7 @@ export default function BetaBanner() {
             letterSpacing: "inherit",
           }}
         >
-          REQUEST FEEDBACK
+          TELL US WHAT YOU THINK
         </button>
       </span>
       <button
