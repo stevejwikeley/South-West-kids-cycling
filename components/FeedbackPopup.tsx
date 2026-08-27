@@ -249,6 +249,25 @@ export default function FeedbackPopup() {
             />
           </div>
 
+          <div style={{ marginBottom: 16 }}>
+            <label className="mono" style={questionLabel}>EMAIL (WE MAY EMAIL YOU WITH ANY QUESTIONS)</label>
+            <input
+              type="email"
+              name="email"
+              placeholder="Optional"
+              style={{
+                width: "100%",
+                background: "#FFFFFF",
+                border: "1px solid #D8D6D0",
+                color: "#111111",
+                padding: "8px 10px",
+                fontSize: 13,
+                fontFamily: "var(--font-inter), sans-serif",
+                boxSizing: "border-box",
+              }}
+            />
+          </div>
+
           <button
             type="submit"
             disabled={pending}

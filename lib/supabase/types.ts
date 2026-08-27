@@ -139,6 +139,7 @@ export interface SiteFeedbackRow {
   will_subscribe: WillSubscribeType | null;
   message: string | null;
   page_url: string | null;
+  email: string | null;
   created_at: string;
 }
 

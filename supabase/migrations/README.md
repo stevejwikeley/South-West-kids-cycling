@@ -43,3 +43,4 @@ Follow one of these for any new table rather than inventing a new access pattern
 | `0013_add_somerset_region.sql` | Adds `'somerset'` to `region_type` alongside `devon`/`cornwall`/`both`. `both` keeps its existing Devon+Cornwall meaning rather than being redefined to include Somerset. |
 | `0014_invite_role_metadata.sql` | Updates the signup trigger to read an intended role (`admin` or `organiser`) out of `raw_user_meta_data` when present, so `inviteTeamMember` can invite someone directly into a role instead of always defaulting new signups to `organiser`. |
 | `0015_watched_source_created_by.sql` | Adds `created_by` to `watched_sources` and replaces the delete policy so a regular admin can only delete a source they added themselves; `super_admin` keeps an override. |
+| `0016_site_feedback_email.sql` | Adds an optional `email` column to `site_feedback` so respondents can leave contact info for follow-up. |

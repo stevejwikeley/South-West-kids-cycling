@@ -28,6 +28,11 @@ export async function submitFeedback(_prevState: FeedbackFormState, formData: Fo
   const message = String(formData.get("message") ?? "").trim() || null;
   const pageUrl = String(formData.get("page_url") ?? "").trim() || null;
 
+  const email = String(formData.get("email") ?? "").trim() || null;
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return { error: "That doesn't look like a valid email address." };
+  }
+
   if (racedBefore === null && usefulness === null && willSubscribe === null && !message) {
     return { error: "Answer at least one question first." };
   }
@@ -39,6 +44,7 @@ export async function submitFeedback(_prevState: FeedbackFormState, formData: Fo
     will_subscribe: willSubscribe,
     message,
     page_url: pageUrl,
+    email,
   });
 
   if (error) {
