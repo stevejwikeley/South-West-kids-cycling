@@ -167,7 +167,7 @@ export default function CalendarPage({ events, isAdmin = false }: { events: Cale
                   <div key={e.id} className="row-hover" style={{ display: "flex", alignItems: "center", gap: 16, padding: "14px 6px", borderBottom: "1px solid #E4E2DD", flexWrap: "wrap" }}>
                     <div style={{ flexShrink: 0, width: 54, textAlign: "center", background: "#F3F2EE", border: "1px solid #E4E2DD", padding: "7px 4px 6px" }}>
                       <div className="disp" style={{ fontSize: 22, lineHeight: 1, letterSpacing: "-0.02em" }}>{f.day}</div>
-                      <div className="mono" style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: "0.05em", color: "#E0102A", marginTop: 3 }}>{f.mon}</div>
+                      <div className="mono" style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: "0.05em", color: "#E0102A", marginTop: 3 }}>{f.dow}</div>
                     </div>
                     <div style={{ flex: 1, minWidth: 220 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
