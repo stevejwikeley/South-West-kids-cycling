@@ -288,15 +288,24 @@ export async function deleteSeries(id: string): Promise<DeleteSeriesResult> {
   const supabase = await createClient();
 
   // Detached occurrences must survive as standalone events, so delete only
-  // the still-linked ones explicitly before removing the series row — the
-  // FK's `on delete set null` then just clears series_id on the detached
-  // rows left behind, as a safety net.
+  // the still-linked ones explicitly before removing the series row.
   const { error: eventsError } = await supabase
     .from("events")
     .delete()
     .eq("series_id", id)
     .eq("series_detached", false);
   if (eventsError) return { error: eventsError.message };
+
+  // Clear series metadata on the survivors explicitly rather than relying
+  // on the FK's `on delete set null`: that would null series_id but leave
+  // occurrence_date set, which violates the occurrence_date_requires_series
+  // check constraint and aborts the series delete below.
+  const { error: detachError } = await supabase
+    .from("events")
+    .update({ series_id: null, occurrence_date: null, series_detached: false })
+    .eq("series_id", id)
+    .eq("series_detached", true);
+  if (detachError) return { error: detachError.message };
 
   const { error: seriesError } = await supabase.from("event_series").delete().eq("id", id);
   if (seriesError) return { error: seriesError.message };
