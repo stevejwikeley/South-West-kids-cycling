@@ -169,7 +169,7 @@ export async function getMyBookings(attendeeId: string): Promise<MyBooking[]> {
     .select("id, status, event:events!inner(id, title, start_datetime, venue_name), people:booking_people(name, age_category)")
     .eq("attendee_id", attendeeId)
     .neq("status", "cancelled")
-    .gte("events.start_datetime", today)
+    .gte("event.start_datetime", today)
     .order("created_at", { ascending: true });
 
   if (error) throw error;
