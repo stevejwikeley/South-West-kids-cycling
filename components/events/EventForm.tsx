@@ -1,8 +1,10 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { saveEvent, deleteEvent, verifyEventFields, type EventFormState } from "@/lib/actions/events";
+import { skipSeriesOccurrences } from "@/lib/actions/event-series";
 import { utcIsoToUkLocalParts } from "@/lib/uk-time";
 import { EVENT_DISCIPLINES } from "@/lib/mock-data";
 import type { EventRow } from "@/lib/supabase/types";
@@ -45,6 +47,8 @@ export default function EventForm({
   const [bookingStatus, setBookingStatus] = useState(event?.booking_status ?? "planned");
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState("");
+  const [skipping, setSkipping] = useState(false);
+  const [skipError, setSkipError] = useState("");
   const [fieldFlags, setFieldFlags] = useState(event?.field_flags ?? null);
   const [verifying, setVerifying] = useState(false);
   const [verifyError, setVerifyError] = useState("");
@@ -89,10 +93,40 @@ export default function EventForm({
   }
 
   const startParts = event ? utcIsoToUkLocalParts(event.start_datetime) : null;
+  const seriesBasePath = redirectTo === "/organiser" ? "/organiser/series" : "/admin/series";
+
+  async function handleSkip() {
+    if (!event?.series_id || !event.occurrence_date) return;
+    if (!confirm(`Skip "${event.title}" on this date? This won't affect the rest of the series.`)) return;
+    setSkipping(true);
+    setSkipError("");
+    const result = await skipSeriesOccurrences(event.series_id, event.occurrence_date, event.occurrence_date);
+    if (result.error) {
+      setSkipping(false);
+      setSkipError(result.error);
+      return;
+    }
+    if (redirectTo) {
+      router.push(redirectTo);
+    } else {
+      onSuccess?.();
+    }
+    router.refresh();
+  }
 
   return (
     <form action={formAction} style={{ maxWidth: 480 }}>
       {event && <input type="hidden" name="id" value={event.id} />}
+      {event?.series_id && <input type="hidden" name="series_id" value={event.series_id} />}
+
+      {event?.series_id && (
+        <div style={{ background: "#F3F2EE", border: "1px solid #E4E2DD", padding: "12px 14px", marginBottom: 20, fontSize: 12.5, color: "#4A4A46", lineHeight: 1.5 }}>
+          Part of a recurring series — saving here only changes this date; the rest of the series is unaffected.{" "}
+          <Link href={`${seriesBasePath}/${event.series_id}/edit`} style={{ fontWeight: 700, color: "#111111" }}>
+            Edit the series →
+          </Link>
+        </div>
+      )}
 
       {fieldFlags && Object.keys(fieldFlags).length > 0 && (
         <div style={{ background: "#FDF3E4", border: "1px solid #F0DDB0", padding: "12px 14px", marginBottom: 20, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
@@ -219,21 +253,34 @@ export default function EventForm({
         >
           {pending ? "Saving…" : event ? "Save changes" : "Publish event"}
         </button>
-        {event && (
+        {event && event.series_id ? (
           <button
             type="button"
-            disabled={deleting}
-            onClick={handleDelete}
+            disabled={skipping}
+            onClick={handleSkip}
             className="mono"
-            style={{ fontSize: 12, fontWeight: 700, color: "#A13A2A", background: "none", border: "1px solid #D8D6D0", padding: "11px 20px", cursor: deleting ? "default" : "pointer", opacity: deleting ? 0.6 : 1 }}
+            style={{ fontSize: 12, fontWeight: 700, color: "#A13A2A", background: "none", border: "1px solid #D8D6D0", padding: "11px 20px", cursor: skipping ? "default" : "pointer", opacity: skipping ? 0.6 : 1 }}
           >
-            {deleting ? "Deleting…" : "Delete event"}
+            {skipping ? "Skipping…" : "Skip this occurrence"}
           </button>
+        ) : (
+          event && (
+            <button
+              type="button"
+              disabled={deleting}
+              onClick={handleDelete}
+              className="mono"
+              style={{ fontSize: 12, fontWeight: 700, color: "#A13A2A", background: "none", border: "1px solid #D8D6D0", padding: "11px 20px", cursor: deleting ? "default" : "pointer", opacity: deleting ? 0.6 : 1 }}
+            >
+              {deleting ? "Deleting…" : "Delete event"}
+            </button>
+          )
         )}
       </div>
 
       {state.error && <p style={{ color: "#A13A2A", fontSize: 12.5, marginTop: 14 }}>{state.error}</p>}
       {deleteError && <p style={{ color: "#A13A2A", fontSize: 12.5, marginTop: 14 }}>{deleteError}</p>}
+      {skipError && <p style={{ color: "#A13A2A", fontSize: 12.5, marginTop: 14 }}>{skipError}</p>}
     </form>
   );
 }

@@ -43,9 +43,18 @@ export async function saveEvent(
     : { ...parsed.values, lat: null, lng: null };
 
   if (id) {
+    // A hidden series_id input means this row belongs to a recurring series
+    // (see EventForm) — editing its own fields here detaches it so
+    // series-level edits/regeneration never overwrite this customization,
+    // matching Google Calendar's "this event only" semantics.
+    const editingSeriesOccurrence = String(formData.get("series_id") ?? "").trim().length > 0;
     const { error } = await supabase
       .from("events")
-      .update({ ...values, updated_by: user.id })
+      .update({
+        ...values,
+        updated_by: user.id,
+        ...(editingSeriesOccurrence ? { series_detached: true } : {}),
+      })
       .eq("id", id);
     if (error) return { error: error.message };
   } else {

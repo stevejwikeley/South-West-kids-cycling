@@ -1,13 +1,15 @@
 import Link from "next/link";
 import { getCurrentProfile } from "@/lib/auth";
-import { getMyEventRows } from "@/lib/data";
+import { getMyEventRows, getMySeriesRows } from "@/lib/data";
 import SignOutButton from "@/app/admin/SignOutButton";
 import EventList from "@/components/events/EventList";
+import SeriesList from "@/components/events/SeriesList";
 import EmbedSnippet from "@/components/EmbedSnippet";
 
 export default async function OrganiserPage() {
   const profile = await getCurrentProfile();
   const events = profile ? await getMyEventRows(profile.id) : [];
+  const series = profile ? await getMySeriesRows(profile.id) : [];
 
   return (
     <header style={{ maxWidth: 1100, margin: "0 auto", padding: "56px 24px 120px" }}>
@@ -33,6 +35,16 @@ export default async function OrganiserPage() {
 
       <div style={{ marginTop: 36 }}>
         <EventList events={events} editBasePath="/organiser/events" redirectTo="/organiser" />
+      </div>
+
+      <div style={{ marginTop: 48 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+          <h2 className="disp" style={{ fontSize: 18 }}>Recurring series</h2>
+          <Link href="/organiser/series/new" style={{ display: "inline-block", background: "#111111", color: "#FAFAF8", border: "none", padding: "10px 18px", fontWeight: 700, fontSize: 12.5 }}>
+            + Add recurring event
+          </Link>
+        </div>
+        <SeriesList series={series} editBasePath="/organiser/series" />
       </div>
 
       <EmbedSnippet />

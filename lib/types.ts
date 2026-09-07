@@ -28,6 +28,7 @@ export interface CalendarEvent {
   bookingStatus: BookingStatus;
   booking: string | null;
   organiserUrl: string;
+  seriesId: string | null;
 }
 
 export interface Club {

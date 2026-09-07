@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { MapPin, Search, X, Calendar, ArrowUpRight, Filter, Download } from "lucide-react";
+import { MapPin, Search, X, Calendar, ArrowUpRight, Filter, Download, Repeat } from "lucide-react";
 import { EVENT_DISCIPLINES, eventDisc, ageLabel } from "@/lib/mock-data";
 import type { DisciplineId, CalendarEvent } from "@/lib/types";
 import { MONTHS, fmtDay } from "@/lib/format";
@@ -172,6 +172,7 @@ export default function CalendarPage({ events, isAdmin = false }: { events: Cale
                     <div style={{ flex: 1, minWidth: 220 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
                         <span style={{ fontWeight: 700, fontSize: 15 }}>{e.title}</span>
+                        {e.seriesId && <Repeat size={13} color="#6B6B66" aria-label="Recurring event" />}
                         <span className="mono" style={{
                           fontSize: 10, fontWeight: 700, padding: "3px 8px", letterSpacing: "0.03em",
                           background: e.bookingStatus === "open" ? "#EAF3EC" : "#FDF3E4",

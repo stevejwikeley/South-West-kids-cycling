@@ -43,6 +43,60 @@ export interface EventRow {
   updated_by: string | null;
   created_at: string;
   updated_at: string;
+  // Set together (both null or both set): occurrence_date is the date this
+  // row was generated for, series_id links back to the event_series it
+  // belongs to. series_detached means an organiser edited this occurrence
+  // directly, so series-level edits/regeneration must never overwrite it.
+  series_id: string | null;
+  occurrence_date: string | null;
+  series_detached: boolean;
+}
+
+// ISO weekday numbers: 1=Mon .. 7=Sun.
+export type Weekday = 1 | 2 | 3 | 4 | 5 | 6 | 7;
+
+// Recurrence rule + the shared template every generated occurrence copies
+// from. Same field set as EventRow minus per-occurrence specifics (no
+// approved/published_via/source_type — occurrences are always
+// source_type "manual" and auto-approved, matching the plain manual-create
+// path) plus the weekly recurrence fields themselves.
+export interface EventSeriesRow {
+  id: string;
+  title: string;
+  discipline: DisciplineType;
+  status: EventStatus;
+  weekdays: Weekday[];
+  start_date: string;
+  until_date: string;
+  venue_name: string;
+  address: string | null;
+  postcode: string | null;
+  lat: number | null;
+  lng: number | null;
+  age_categories: AgeCategory[];
+  kids_only: boolean;
+  booking_status: BookingStatusType;
+  booking_link: string | null;
+  organiser_url: string;
+  organiser_name: string | null;
+  organiser_contact: string | null;
+  club_id: string | null;
+  region: RegionType;
+  approved: boolean;
+  created_by: string | null;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+// A skipped occurrence date. Only ever added/removed, never edited.
+export interface EventSeriesExceptionRow {
+  id: string;
+  series_id: string;
+  occurrence_date: string;
+  reason: string | null;
+  created_by: string | null;
+  created_at: string;
 }
 
 export interface ClubRow {
@@ -162,6 +216,8 @@ export interface Database {
   public: {
     Tables: {
       events: { Row: AsRecord<EventRow>; Insert: AsRecord<Partial<EventRow>>; Update: AsRecord<Partial<EventRow>>; Relationships: [] };
+      event_series: { Row: AsRecord<EventSeriesRow>; Insert: AsRecord<Partial<EventSeriesRow>>; Update: AsRecord<Partial<EventSeriesRow>>; Relationships: [] };
+      event_series_exceptions: { Row: AsRecord<EventSeriesExceptionRow>; Insert: AsRecord<Partial<EventSeriesExceptionRow>>; Update: AsRecord<Partial<EventSeriesExceptionRow>>; Relationships: [] };
       clubs: { Row: AsRecord<ClubRow>; Insert: AsRecord<Partial<ClubRow>>; Update: AsRecord<Partial<ClubRow>>; Relationships: [] };
       events_pending: { Row: AsRecord<EventPendingRow>; Insert: AsRecord<Partial<EventPendingRow>>; Update: AsRecord<Partial<EventPendingRow>>; Relationships: [] };
       watched_sources: { Row: AsRecord<WatchedSourceRow>; Insert: AsRecord<Partial<WatchedSourceRow>>; Update: AsRecord<Partial<WatchedSourceRow>>; Relationships: [] };

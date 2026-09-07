@@ -80,9 +80,14 @@ components/              Shared UI. components/admin and components/events hold
                           equivalents of the admin/public event-edit full pages — both
                           fetch the full EventRow client-side since the calendar page only
                           has the display-oriented CalendarEvent shape to start from.
+                          SeriesForm / SeriesList are the recurring-event equivalents of
+                          EventForm / EventList; EventOrSeriesForm is the one-off/repeating
+                          toggle shown on the "add event" pages.
 
 lib/
   actions/                 Server Actions ("use server"), one file per feature
+                             (event-series.ts creates/edits/deletes recurring series and
+                             their generated occurrences — see "Event publishing paths")
   ingestion/                AI event-extraction pipeline — see its own README
   email/                    Resend email templates + sender
   supabase/                 Supabase client factories + hand-written DB types
@@ -91,6 +96,8 @@ lib/
   data.ts                   Read helpers that map DB rows to the app's CalendarEvent/Club types
   mock-data.ts              Discipline definitions (labels, colors) — not actually mock data,
                              this is the canonical discipline list despite the filename
+  recurrence.ts             Pure weekly-occurrence-date generation for recurring series, no
+                             Supabase dependency
   analytics.ts              trackEvent() wrapper around gtag
 
 supabase/migrations/     Numbered SQL migrations — see its own README, applying them is manual
@@ -112,7 +119,7 @@ Three roles, stored in `profiles.role`: `super_admin`, `admin`, and `organiser`.
 
 There are four ways an event reaches the `events_pending` review queue (or, for organisers, straight into `events`):
 
-1. **Manual** — an admin or organiser fills in the event form directly.
+1. **Manual** — an admin or organiser fills in the event form directly. This includes recurring events (e.g. weekly club training): the "add event" pages offer a "Repeating event" mode (`EventOrSeriesForm` → `SeriesForm`) that picks a set of weekdays and a required end date, then generates one `events` row per occurrence up front (`lib/actions/event-series.ts`, `lib/recurrence.ts`) — bounded, so there's no background job involved. A date can be skipped individually, and editing one occurrence's own fields detaches it from the series (`series_detached`) so a later series-wide edit never overwrites that customization.
 2. **Change request** — anyone can submit a correction to an existing event via `/events/[id]/suggest-change`, no login required.
 3. **Smart ingestion** — an admin pastes a URL, pastes text, or uploads a file/image on `/admin/ingest` ("Add events" in the nav — the page also has a manual-entry option that skips extraction entirely and publishes straight away, see item 1), or a **watched source** gets checked automatically overnight. Either way, extraction goes through `lib/ingestion/extract-events.ts` (Claude does the extraction) before landing in the pending queue for a human to approve. See [`lib/ingestion/README.md`](lib/ingestion/README.md) for the full pipeline.
 4. **Public submission** — anyone can submit a brand-new event via `/submit-event` (linked from the footer), either by pasting a link/text (same AI-extraction pipeline as smart ingestion) or filling in a structured form. Tagged `source_type: "public_submission"` rather than `"smart_ingest"` purely so admins can see where a candidate came from — otherwise it's the exact same pending-queue/approval path (`lib/actions/public-submit.ts`, `saveCandidates()`'s `sourceType` param).
@@ -137,6 +144,8 @@ A floating "Ask a question" widget (`components/ChatWidget.tsx`, bottom-left on 
 | `/api/cron/pending-digest` | 15:50 daily | Emails the admin a digest if anything is sitting in the pending queue. |
 | `/api/cron/link-health` | 04:20 daily | Checks that published events' booking links still resolve, flags dead ones. |
 | `/api/cron/monthly-digest` | 08:00 on the 1st | Emails every active `email_subscribers` row a list of events in the next 31 days. Skips sending if there are none. |
+
+Recurring-event occurrence generation deliberately has **no** cron entry here: every series has a required end date, so its full occurrence set is bounded and generated synchronously in one bulk insert when the series is created or edited (`lib/actions/event-series.ts`) rather than needing a job to keep a rolling window topped up.
 
 All three authenticate via `CRON_SECRET` as a bearer token (Vercel sends this automatically for configured crons).
 

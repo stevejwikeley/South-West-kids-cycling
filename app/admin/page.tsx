@@ -1,14 +1,16 @@
 import Link from "next/link";
 import { getCurrentProfile } from "@/lib/auth";
-import { getAllEventRows } from "@/lib/data";
+import { getAllEventRows, getAllSeriesRows } from "@/lib/data";
 import SignOutButton from "./SignOutButton";
 import EventList from "@/components/events/EventList";
+import SeriesList from "@/components/events/SeriesList";
 import EmbedSnippet from "@/components/EmbedSnippet";
 
 export default async function AdminPage() {
   const profile = await getCurrentProfile();
   const isSuperAdmin = profile?.role === "super_admin";
   const events = await getAllEventRows();
+  const series = await getAllSeriesRows();
 
   return (
     <header style={{ maxWidth: 1100, margin: "0 auto", padding: "56px 24px 120px" }}>
@@ -54,6 +56,16 @@ export default async function AdminPage() {
           </Link>
         </div>
         <EventList events={events} editBasePath="/admin/events" redirectTo="/admin" />
+      </div>
+
+      <div style={{ marginTop: 48 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+          <h2 className="disp" style={{ fontSize: 18 }}>Recurring series</h2>
+          <Link href="/admin/series/new" style={{ display: "inline-block", background: "#111111", color: "#FAFAF8", border: "none", padding: "10px 18px", fontWeight: 700, fontSize: 12.5 }}>
+            + Add recurring event
+          </Link>
+        </div>
+        <SeriesList series={series} editBasePath="/admin/series" />
       </div>
     </header>
   );

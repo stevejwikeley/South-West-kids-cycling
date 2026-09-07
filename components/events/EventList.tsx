@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { Repeat } from "lucide-react";
 import { deleteEvent, verifyEventFields } from "@/lib/actions/events";
 import { fmtDay } from "@/lib/format";
 import { eventDisc } from "@/lib/mock-data";
@@ -94,6 +95,7 @@ export default function EventList({
               <div style={{ flex: 1, minWidth: 200 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
                   <span style={{ fontWeight: 700, fontSize: 14.5 }}>{e.title}</span>
+                  {e.series_id && <Repeat size={13} color="#6B6B66" aria-label="Recurring event" />}
                   <span className="mono" style={{ fontSize: 12.5, color: "#6B6B66", flexShrink: 0 }}>{f.day}.{f.mon}</span>
                 </div>
                 <div className="mono" style={{ fontSize: 10.5, color: "#6B6B66", marginTop: 4, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>

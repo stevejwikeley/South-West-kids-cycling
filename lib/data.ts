@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import type { CalendarEvent, Club } from "@/lib/types";
-import type { EventRow, ClubRow, EventPendingRow, WatchedSourceRow, ProfileRow } from "@/lib/supabase/types";
+import type { EventRow, ClubRow, EventPendingRow, WatchedSourceRow, ProfileRow, EventSeriesRow } from "@/lib/supabase/types";
 
 function toCalendarEvent(row: EventRow): CalendarEvent {
   return {
@@ -20,6 +20,7 @@ function toCalendarEvent(row: EventRow): CalendarEvent {
     bookingStatus: row.booking_status,
     booking: row.booking_link,
     organiserUrl: row.organiser_url,
+    seriesId: row.series_id,
   };
 }
 
@@ -87,6 +88,37 @@ export async function getAllEventRows(): Promise<EventRow[]> {
 
   if (error) throw error;
   return data as EventRow[];
+}
+
+export async function getSeriesRowById(id: string): Promise<EventSeriesRow | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("event_series").select("*").eq("id", id).single();
+
+  if (error) return null;
+  return data as EventSeriesRow;
+}
+
+export async function getMySeriesRows(userId: string): Promise<EventSeriesRow[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("event_series")
+    .select("*")
+    .eq("created_by", userId)
+    .order("start_date", { ascending: true });
+
+  if (error) throw error;
+  return data as EventSeriesRow[];
+}
+
+export async function getAllSeriesRows(): Promise<EventSeriesRow[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("event_series")
+    .select("*")
+    .order("start_date", { ascending: true });
+
+  if (error) throw error;
+  return data as EventSeriesRow[];
 }
 
 export async function getPendingChangeRows(): Promise<EventPendingRow[]> {

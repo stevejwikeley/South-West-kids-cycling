@@ -25,6 +25,7 @@ function toCalendarEvent(row: EventRow): CalendarEvent {
     bookingStatus: row.booking_status,
     booking: row.booking_link,
     organiserUrl: row.organiser_url,
+    seriesId: row.series_id,
   };
 }
 
