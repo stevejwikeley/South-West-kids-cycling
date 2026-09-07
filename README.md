@@ -64,13 +64,20 @@ app/                    Routes (App Router)
   subscribe/               Calendar subscription instructions (email digest + ICS feed)
   calendar.ics/            Live ICS feed — supports ?discipline= and ?region= filters
   embed/                   Chrome-free events widget meant for <iframe> on other sites
+  events/[id]/            Public event detail page — shows the signup form when the event
+                             is bookable (`bookable` column + capacity/waitlist state)
   events/[id]/suggest-change/   Public "suggest a change" form's standalone fallback route —
                              the calendar page normally opens this in a slide-out panel instead
                              (SuggestChangePanel), this route still works for direct links
+  my-events/               Attendee-facing area, magic-link auth (no password): (public)/login
+                             requests the link, (protected)/ lists the attendee's own bookings
+                             across events
   login/                   Auth (admin + organiser)
   admin/                   Admin-only: events, pending queue, watched sources, add events
-                             (formerly "smart ingestion" — paste/upload/manual are all here now)
-  organiser/               Organiser-only: manage their own events
+                             (formerly "smart ingestion" — paste/upload/manual are all here now);
+                             events/[id]/attendees/ manages/messages one event's bookings
+  organiser/               Organiser-only: manage their own events; events/[id]/attendees/
+                             is the organiser-scoped equivalent of the admin attendees page
   api/cron/                Vercel Cron endpoints (see below)
   api/mcp/                 MCP server for weekly event discovery (see below)
 
@@ -87,9 +94,13 @@ components/              Shared UI. components/admin and components/events hold
 lib/
   actions/                 Server Actions ("use server"), one file per feature
                              (event-series.ts creates/edits/deletes recurring series and
-                             their generated occurrences — see "Event publishing paths")
+                             their generated occurrences — see "Event publishing paths";
+                             bookings.ts creates/cancels a booking and promotes off the
+                             waitlist when a confirmed spot frees up)
   ingestion/                AI event-extraction pipeline — see its own README
-  email/                    Resend email templates + sender
+  email/                    Resend email templates + sender (booking-confirmation.ts,
+                             waitlist-promoted.ts, booking-reminder.ts and
+                             attendee-message.ts are the booking-flow templates)
   supabase/                 Supabase client factories + hand-written DB types
   auth.ts                   getCurrentProfile() / isAdminRole() — the one place role checks
                              originate
@@ -144,10 +155,11 @@ A floating "Ask a question" widget (`components/ChatWidget.tsx`, bottom-left on 
 | `/api/cron/pending-digest` | 15:50 daily | Emails the admin a digest if anything is sitting in the pending queue. |
 | `/api/cron/link-health` | 04:20 daily | Checks that published events' booking links still resolve, flags dead ones. |
 | `/api/cron/monthly-digest` | 08:00 on the 1st | Emails every active `email_subscribers` row a list of events in the next 31 days. Skips sending if there are none. |
+| `/api/cron/booking-reminders` | 18:00 daily | Finds bookable events happening tomorrow (UK time) and emails every confirmed attendee a reminder, once each. |
 
 Recurring-event occurrence generation deliberately has **no** cron entry here: every series has a required end date, so its full occurrence set is bounded and generated synchronously in one bulk insert when the series is created or edited (`lib/actions/event-series.ts`) rather than needing a job to keep a rolling window topped up.
 
-All three authenticate via `CRON_SECRET` as a bearer token (Vercel sends this automatically for configured crons).
+All five authenticate via `CRON_SECRET` as a bearer token (Vercel sends this automatically for configured crons).
 
 ## MCP server (`/api/mcp`)
 
