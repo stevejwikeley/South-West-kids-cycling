@@ -126,6 +126,8 @@ Three roles, stored in `profiles.role`: `super_admin`, `admin`, and `organiser`.
 - **Organisers** manage only their own events (`club_id` scoping), and can be invited by an admin.
 - **Inviting someone directly as admin or organiser** (`/admin/team`, `inviteTeamMember` in `app/admin/actions.ts`) sends a Supabase Auth invite email with the intended role baked into `raw_user_meta_data`. `handle_new_user()` (`0014_invite_role_metadata.sql`) reads that metadata when creating the new `profiles` row, so the person lands with the correct role from their very first sign-in — no separate "sign up, then get promoted" step. That metadata is only ever set server-side by the super_admin-gated invite action and is consumed synchronously at signup, before the invited person has ever authenticated, so they can't influence their own starting role.
 
+**Attendees** are a separate, public self-signup identity, not a fourth entry in the role hierarchy above — anyone can become one by booking an event, no invite needed. They authenticate the same way as the three roles above (Supabase Auth magic link), but `handle_new_user()`'s role-metadata branch (extended in `0018_event_booking.sql`) routes `role: 'attendee'` into a separate `attendees` table instead of `profiles`, so they never gain admin/organiser access of any kind. `getCurrentAttendee()` (`lib/auth.ts`) is their equivalent of `getCurrentProfile()`, and `/my-events` is their equivalent of the admin/organiser dashboards.
+
 ## Event publishing paths
 
 There are four ways an event reaches the `events_pending` review queue (or, for organisers, straight into `events`):

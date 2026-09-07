@@ -20,7 +20,7 @@ export function parseBookingForm(
   formData: FormData
 ): { ok: false; error: string } | { ok: true; values: BookingFormValues } {
   const contactName = String(formData.get("contact_name") ?? "").trim();
-  const email = String(formData.get("email") ?? "").trim();
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const phone = String(formData.get("phone") ?? "").trim() || null;
   const names = formData.getAll("person_name").map((v) => String(v).trim());
   const ageCategories = formData.getAll("person_age").map((v) => String(v) as AgeCategory);

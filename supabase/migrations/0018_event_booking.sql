@@ -148,7 +148,7 @@ declare
   v_capacity integer;
   v_confirmed_count integer;
 begin
-  select booking_capacity into v_capacity from events where id = p_event_id;
+  select booking_capacity into v_capacity from events where id = p_event_id and approved = true;
   if v_capacity is null then
     return null;
   end if;

@@ -71,6 +71,7 @@ export async function submitChangeRequest(
   const currentRow = current as EventRow;
   const diff: Diff = {};
   (Object.keys(parsed.values) as (keyof EventFormValues)[]).forEach((key) => {
+    if (!ALLOWED_DIFF_KEYS.has(key)) return;
     const to = parsed.values[key];
     const from = currentRow[key];
     if (!sameValue(to, from)) diff[key] = { from, to };

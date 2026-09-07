@@ -52,7 +52,7 @@ export function buildBookingConfirmationHtml(args: {
           <td style="font-family:-apple-system,Helvetica,Arial,sans-serif;font-size:13px;line-height:1.7;color:#111111;border-top:1px solid #E4E2DD;padding-top:16px;padding-bottom:16px;">
             <strong>${escapeHtml(event.title)}</strong><br/>
             ${f.day} ${f.mon} &middot; ${escapeHtml(event.venue_name)}<br/>
-            ${escapeHtml(peopleList)}
+            ${peopleList}
           </td>
         </tr>
         <tr>

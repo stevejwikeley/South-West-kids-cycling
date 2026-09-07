@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { saveEvent, deleteEvent, verifyEventFields, type EventFormState } from "@/lib/actions/events";
 import { skipSeriesOccurrences } from "@/lib/actions/event-series";
+import { getBookingCountForConfirm } from "@/lib/actions/bookings";
 import { utcIsoToUkLocalParts } from "@/lib/uk-time";
 import { EVENT_DISCIPLINES } from "@/lib/mock-data";
 import type { EventRow } from "@/lib/supabase/types";
@@ -98,7 +99,12 @@ export default function EventForm({
 
   async function handleSkip() {
     if (!event?.series_id || !event.occurrence_date) return;
-    if (!confirm(`Skip "${event.title}" on this date? This won't affect the rest of the series.`)) return;
+    const bookingCount = await getBookingCountForConfirm(event.id);
+    const message =
+      bookingCount > 0
+        ? `Skip "${event.title}" on this date? ${bookingCount} ${bookingCount === 1 ? "person has" : "people have"} booked — they will lose their booking and will NOT be notified. This won't affect the rest of the series.`
+        : `Skip "${event.title}" on this date? This won't affect the rest of the series.`;
+    if (!confirm(message)) return;
     setSkipping(true);
     setSkipError("");
     const result = await skipSeriesOccurrences(event.series_id, event.occurrence_date, event.occurrence_date);

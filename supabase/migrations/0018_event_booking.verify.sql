@@ -31,10 +31,15 @@ declare
   v_promoted_attendee_id uuid;
   v_caught boolean;
 begin
-  insert into auth.users (id, email) values (v_attendee_a, 'scratch-a@example.com');
-  insert into auth.users (id, email) values (v_attendee_b, 'scratch-b@example.com');
-  insert into attendees (id, email, contact_name) values (v_attendee_a, 'scratch-a@example.com', 'Scratch A');
-  insert into attendees (id, email, contact_name) values (v_attendee_b, 'scratch-b@example.com', 'Scratch B');
+  -- raw_user_meta_data with role: 'attendee' is required here so the
+  -- auth.users insert actually fires handle_new_user()'s attendee-routing
+  -- branch (rather than its organiser-default branch) — that branch is what
+  -- keeps a booking parent from ending up with a profiles/organiser row, and
+  -- nothing else in this script or the app's automated tests exercises it.
+  -- The trigger creates the matching attendees rows itself, so no manual
+  -- insert into attendees is needed (or wanted) here.
+  insert into auth.users (id, email, raw_user_meta_data) values (v_attendee_a, 'scratch-a@example.com', '{"role":"attendee"}'::jsonb);
+  insert into auth.users (id, email, raw_user_meta_data) values (v_attendee_b, 'scratch-b@example.com', '{"role":"attendee"}'::jsonb);
 
   -- ---------- Scenario 1: capacity 1 - confirm/waitlist, then real cancel_booking() ----------
   insert into events (title, discipline, start_datetime, venue_name, organiser_url, region, approved, bookable, booking_capacity)

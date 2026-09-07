@@ -2,6 +2,7 @@
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { getActiveBookingCount } from "@/lib/data";
 import { parseBookingForm, type BookingFormValues } from "./parse-booking-form";
 import { sendEmail } from "@/lib/email/resend";
 import { buildBookingConfirmationHtml } from "@/lib/email/booking-confirmation";
@@ -32,7 +33,7 @@ async function findOrCreateAttendee(
     attendeeId = created.user.id;
   }
 
-  await admin.from("attendees").update({ contact_name: values.contactName, phone: values.phone }).eq("id", attendeeId);
+  await admin.from("attendees").update({ contact_name: values.contactName, ...(values.phone ? { phone: values.phone } : {}) }).eq("id", attendeeId);
   return attendeeId;
 }
 
@@ -139,6 +140,14 @@ export async function cancelBooking(bookingId: string): Promise<CancelBookingRes
   return {};
 }
 
+export async function getBookingCountForConfirm(eventId: string): Promise<number> {
+  try {
+    return await getActiveBookingCount(eventId);
+  } catch {
+    return 0;
+  }
+}
+
 export interface MessageAttendeesState {
   error?: string;
   success?: string;
@@ -157,10 +166,13 @@ export async function messageAttendees(
   if (!subject) return { error: "Subject is required." };
   if (!body) return { error: "Message is required." };
 
-  // RLS (Task 1) already scopes this select to events the caller is allowed
-  // to manage — an organiser querying another organiser's event id, or a
-  // non-admin/non-owner at all, gets zero rows back rather than an error,
-  // same defense-in-depth pattern the rest of the app relies on.
+  // RLS does NOT scope this select to events the caller is allowed to
+  // manage — the "public can read approved events" policy (0001_init.sql)
+  // grants read access to any approved event's row regardless of
+  // created_by. The explicit created_by/isAdminRole check just below is
+  // what actually prevents an organiser from acting on another organiser's
+  // event; RLS on bookings/booking_people/attendees is what actually
+  // prevents booking-data leakage even without this check.
   const supabase = await createClient();
   const { data: event, error: eventError } = await supabase.from("events").select("id, title, created_by").eq("id", eventId).single();
   if (eventError || !event) return { error: "Event not found." };
