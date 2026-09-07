@@ -45,6 +45,7 @@ export default function EventForm({
   const boundSave = saveEvent.bind(null, redirectTo);
   const [state, formAction, pending] = useActionState<EventFormState, FormData>(boundSave, {});
   const [bookingStatus, setBookingStatus] = useState(event?.booking_status ?? "planned");
+  const [bookable, setBookable] = useState(event?.bookable ?? false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState("");
   const [skipping, setSkipping] = useState(false);
@@ -243,6 +244,19 @@ export default function EventForm({
           <label className="mono" style={label}>ORGANISER CONTACT (OPTIONAL)</label>
           <input style={input} name="organiser_contact" defaultValue={event?.organiser_contact ?? ""} />
         </div>
+      </div>
+
+      <div style={{ background: "#F3F2EE", border: "1px solid #E4E2DD", padding: "16px 18px", marginBottom: 20 }}>
+        <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, marginBottom: bookable ? 14 : 0 }}>
+          <input type="checkbox" name="bookable" checked={bookable} onChange={(e) => setBookable(e.target.checked)} />
+          Free event with signup on this site
+        </label>
+        {bookable && (
+          <div>
+            <label className="mono" style={label}>SPACE LIMIT (OPTIONAL — BLANK = UNLIMITED)</label>
+            <input style={{ ...input, maxWidth: 140 }} type="number" min={1} step={1} name="booking_capacity" defaultValue={event?.booking_capacity ?? ""} />
+          </div>
+        )}
       </div>
 
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
