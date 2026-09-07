@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import type { CalendarEvent, Club } from "@/lib/types";
-import type { EventRow, ClubRow, EventPendingRow, WatchedSourceRow, ProfileRow, EventSeriesRow } from "@/lib/supabase/types";
+import type { EventRow, ClubRow, EventPendingRow, WatchedSourceRow, ProfileRow, EventSeriesRow, SignupStatus, BookingPersonRow } from "@/lib/supabase/types";
 
 function toCalendarEvent(row: EventRow): CalendarEvent {
   return {
@@ -152,6 +152,28 @@ export async function getEventSpacesLeft(eventId: string): Promise<number | null
   const { data, error } = await supabase.rpc("event_spaces_left", { p_event_id: eventId });
   if (error) throw error;
   return data;
+}
+
+export interface MyBooking {
+  id: string;
+  status: SignupStatus;
+  event: Pick<EventRow, "id" | "title" | "start_datetime" | "venue_name">;
+  people: Pick<BookingPersonRow, "name" | "age_category">[];
+}
+
+export async function getMyBookings(attendeeId: string): Promise<MyBooking[]> {
+  const supabase = await createClient();
+  const today = new Date().toISOString().slice(0, 10);
+  const { data, error } = await supabase
+    .from("bookings")
+    .select("id, status, event:events!inner(id, title, start_datetime, venue_name), people:booking_people(name, age_category)")
+    .eq("attendee_id", attendeeId)
+    .neq("status", "cancelled")
+    .gte("events.start_datetime", today)
+    .order("created_at", { ascending: true });
+
+  if (error) throw error;
+  return data as unknown as MyBooking[];
 }
 
 export async function getWatchedSources(): Promise<WatchedSourceRow[]> {

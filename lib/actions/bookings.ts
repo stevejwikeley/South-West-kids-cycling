@@ -1,9 +1,11 @@
 "use server";
 
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 import { parseBookingForm, type BookingFormValues } from "./parse-booking-form";
 import { sendEmail } from "@/lib/email/resend";
 import { buildBookingConfirmationHtml } from "@/lib/email/booking-confirmation";
+import { buildWaitlistPromotedHtml } from "@/lib/email/waitlist-promoted";
 import type { AttendeeRow, EventRow } from "@/lib/supabase/types";
 
 export interface CreateBookingState {
@@ -86,4 +88,51 @@ export async function createBooking(
   }
 
   return { success: { status } };
+}
+
+export interface CancelBookingResult {
+  error?: string;
+}
+
+export async function cancelBooking(bookingId: string): Promise<CancelBookingResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Not signed in." };
+
+  const { data, error } = await supabase.rpc("cancel_booking", { p_booking_id: bookingId });
+  if (error) return { error: error.message };
+
+  const promoted = data?.[0];
+  if (promoted?.promoted_booking_id && promoted.promoted_attendee_id) {
+    // The promoted booking belongs to a *different* attendee than the
+    // caller — reading their email needs the service-role client, since
+    // the caller's own RLS-bound session can't see another attendee's row.
+    const admin = createAdminClient();
+    const [{ data: attendee }, { data: event }] = await Promise.all([
+      admin.from("attendees").select("email").eq("id", promoted.promoted_attendee_id).single(),
+      admin.from("events").select("*").eq("id", promoted.cancelled_event_id).single(),
+    ]);
+
+    if (attendee && event) {
+      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+      const { data: linkData } = await admin.auth.admin.generateLink({
+        type: "magiclink",
+        email: (attendee as { email: string }).email,
+        options: { redirectTo: `${siteUrl}/auth/confirm?next=/my-events` },
+      });
+      try {
+        await sendEmail({
+          to: (attendee as { email: string }).email,
+          subject: `You're in: ${(event as EventRow).title}`,
+          html: buildWaitlistPromotedHtml(event as EventRow, linkData?.properties?.action_link ?? `${siteUrl}/my-events/login`),
+        });
+      } catch {
+        // Best-effort, same as createBooking's confirmation email.
+      }
+    }
+  }
+
+  return {};
 }
