@@ -50,6 +50,8 @@ export interface EventRow {
   series_id: string | null;
   occurrence_date: string | null;
   series_detached: boolean;
+  bookable: boolean;
+  booking_capacity: number | null;
 }
 
 // ISO weekday numbers: 1=Mon .. 7=Sun.
@@ -97,6 +99,31 @@ export interface EventSeriesExceptionRow {
   reason: string | null;
   created_by: string | null;
   created_at: string;
+}
+
+export type SignupStatus = "confirmed" | "waitlisted" | "cancelled";
+
+export interface AttendeeRow {
+  id: string;
+  email: string;
+  contact_name: string | null;
+  phone: string | null;
+  created_at: string;
+}
+
+export interface BookingRow {
+  id: string;
+  event_id: string;
+  attendee_id: string;
+  status: SignupStatus;
+  created_at: string;
+}
+
+export interface BookingPersonRow {
+  id: string;
+  booking_id: string;
+  name: string;
+  age_category: AgeCategory;
 }
 
 export interface ClubRow {
@@ -224,8 +251,24 @@ export interface Database {
       profiles: { Row: AsRecord<ProfileRow>; Insert: AsRecord<Partial<ProfileRow>>; Update: AsRecord<Partial<ProfileRow>>; Relationships: [] };
       site_feedback: { Row: AsRecord<SiteFeedbackRow>; Insert: AsRecord<Partial<SiteFeedbackRow>>; Update: AsRecord<Partial<SiteFeedbackRow>>; Relationships: [] };
       email_subscribers: { Row: AsRecord<EmailSubscriberRow>; Insert: AsRecord<Partial<EmailSubscriberRow>>; Update: AsRecord<Partial<EmailSubscriberRow>>; Relationships: [] };
+      attendees: { Row: AsRecord<AttendeeRow>; Insert: AsRecord<Partial<AttendeeRow>>; Update: AsRecord<Partial<AttendeeRow>>; Relationships: [] };
+      bookings: { Row: AsRecord<BookingRow>; Insert: AsRecord<Partial<BookingRow>>; Update: AsRecord<Partial<BookingRow>>; Relationships: [] };
+      booking_people: { Row: AsRecord<BookingPersonRow>; Insert: AsRecord<Partial<BookingPersonRow>>; Update: AsRecord<Partial<BookingPersonRow>>; Relationships: [] };
     };
     Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Functions: {
+      create_booking: {
+        Args: { p_event_id: string; p_attendee_id: string; p_people: { name: string; age_category: AgeCategory }[] };
+        Returns: { booking_id: string; status: string }[];
+      };
+      cancel_booking: {
+        Args: { p_booking_id: string };
+        Returns: { cancelled_event_id: string; promoted_booking_id: string | null; promoted_attendee_id: string | null }[];
+      };
+      event_spaces_left: {
+        Args: { p_event_id: string };
+        Returns: number | null;
+      };
+    };
   };
 }
