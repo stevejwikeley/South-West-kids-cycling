@@ -5,6 +5,7 @@ import TopNav from "@/components/TopNav";
 import Footer from "@/components/Footer";
 import BetaBanner from "@/components/BetaBanner";
 import FeedbackPopup from "@/components/FeedbackPopup";
+import ChatWidget from "@/components/ChatWidget";
 import GoogleAnalytics from "@/components/GoogleAnalytics";
 import { getCurrentProfile } from "@/lib/auth";
 import "./globals.css";
@@ -63,6 +64,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         {children}
         <Footer />
         <FeedbackPopup />
+        <ChatWidget />
         <Analytics />
       </body>
     </html>

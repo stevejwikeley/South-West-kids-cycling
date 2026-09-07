@@ -8,7 +8,7 @@ Live at [southwestkidscycling.uk](https://www.southwestkidscycling.uk).
 
 - **Next.js 16** (App Router, React 19, Server Actions) — see `AGENTS.md` before writing Next.js code, this app tracks a fast-moving pre-release Next.js and the framework docs are vendored into `node_modules/next/dist/docs/`.
 - **Supabase** (Postgres + Auth + RLS) for data, `@supabase/ssr` for the client.
-- **Anthropic API** (`@anthropic-ai/sdk`) for the smart-ingestion event extraction pipeline — see [`lib/ingestion/README.md`](lib/ingestion/README.md).
+- **Anthropic API** (`@anthropic-ai/sdk`) for the smart-ingestion event extraction pipeline (see [`lib/ingestion/README.md`](lib/ingestion/README.md)) and the site's "Ask a question" chat widget (`lib/actions/chat.ts`).
 - **Resend** for transactional email (contact form, pending-approval digest).
 - **Sentry** for error tracking and performance tracing.
 - **Google Analytics** (gtag) for usage analytics.
@@ -123,7 +123,11 @@ Smart-ingestion candidates can carry `field_flags` — fields the extraction pip
 
 ## Embeddable widget
 
-`/embed` renders a compact, nav/footer/feedback-bubble-free events list meant for `<iframe>`-ing into a club's own site (`TopNav`/`Footer`/`FeedbackPopup` all check the pathname and render nothing under `/embed`). Supports `?region=`, `?discipline=`, `?limit=` to scope what's shown, and always links back to `/subscribe`. The Clubs page has a copyable `<iframe>` snippet (`components/EmbedSnippet.tsx`) so club admins can find and use it without needing to ask.
+`/embed` renders a compact, nav/footer/feedback-bubble-free events list meant for `<iframe>`-ing into a club's own site (`TopNav`/`Footer`/`FeedbackPopup`/`ChatWidget` all check the pathname and render nothing under `/embed`). Supports `?region=`, `?discipline=`, `?limit=` to scope what's shown, and always links back to `/subscribe`. The Clubs page has a copyable `<iframe>` snippet (`components/EmbedSnippet.tsx`) so club admins can find and use it without needing to ask.
+
+## Chat assistant
+
+A floating "Ask a question" widget (`components/ChatWidget.tsx`, bottom-left on every public page except `/admin`, `/organiser`, `/login`, `/auth`, `/oauth` and `/embed`) answers questions about disciplines, subscribing, clubs, and specific events. `lib/actions/chat.ts` grounds each reply in a system prompt built from live data (`getEvents()`, `getClubs()`) plus a hand-written FAQ (disciplines, subscribing, getting started, event submission) — it's told never to invent a date, venue, or booking link. If it doesn't know the answer or the user needs a real person, it points them to WhatsApp (`lib/whatsapp.ts`), whose link is also always shown under the message input.
 
 ## Cron jobs (`vercel.json`)
 
