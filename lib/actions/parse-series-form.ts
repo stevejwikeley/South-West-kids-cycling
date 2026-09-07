@@ -1,7 +1,9 @@
+import { utcIsoToUkLocalParts } from "@/lib/uk-time";
 import type {
   AgeCategory,
   BookingStatusType,
   DisciplineType,
+  EventRow,
   EventSeriesRow,
   EventStatus,
   RegionType,
@@ -28,6 +30,32 @@ export type EventSeriesFormValues = Pick<
   | "organiser_name"
   | "organiser_contact"
 >;
+
+// Values carried over when converting an existing one-off event into a
+// series (EventForm's "Convert to recurring event" link) — everything
+// except the recurrence-only fields (weekdays/until_date), which the
+// organiser still has to choose.
+export type SeriesPrefill = Omit<EventSeriesFormValues, "weekdays" | "until_date">;
+
+export function eventRowToSeriesPrefill(event: EventRow): SeriesPrefill {
+  return {
+    title: event.title,
+    discipline: event.discipline,
+    status: event.status,
+    start_date: utcIsoToUkLocalParts(event.start_datetime).date,
+    venue_name: event.venue_name,
+    address: event.address,
+    postcode: event.postcode,
+    region: event.region,
+    age_categories: event.age_categories,
+    kids_only: event.kids_only,
+    booking_status: event.booking_status,
+    booking_link: event.booking_link,
+    organiser_url: event.organiser_url,
+    organiser_name: event.organiser_name,
+    organiser_contact: event.organiser_contact,
+  };
+}
 
 // Mirrors parse-event-form.ts's validation, plus the recurrence-specific
 // fields (weekdays, start_date, until_date) in place of the single `date`.

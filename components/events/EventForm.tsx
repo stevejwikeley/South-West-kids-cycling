@@ -278,6 +278,14 @@ export default function EventForm({
         )}
       </div>
 
+      {event && !event.series_id && (
+        <p style={{ marginTop: 14 }}>
+          <Link href={`${seriesBasePath}/new?from=${event.id}`} className="mono" style={{ fontSize: 11.5, color: "#6B6B66", textDecoration: "underline" }}>
+            Need this to repeat? Convert to a recurring event →
+          </Link>
+        </p>
+      )}
+
       {state.error && <p style={{ color: "#A13A2A", fontSize: 12.5, marginTop: 14 }}>{state.error}</p>}
       {deleteError && <p style={{ color: "#A13A2A", fontSize: 12.5, marginTop: 14 }}>{deleteError}</p>}
       {skipError && <p style={{ color: "#A13A2A", fontSize: 12.5, marginTop: 14 }}>{skipError}</p>}

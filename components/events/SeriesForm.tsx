@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { saveSeries, deleteSeries, type SeriesFormState } from "@/lib/actions/event-series";
 import { EVENT_DISCIPLINES } from "@/lib/mock-data";
 import type { EventSeriesRow } from "@/lib/supabase/types";
+import type { SeriesPrefill } from "@/lib/actions/parse-series-form";
 import type { AgeCategory } from "@/lib/types";
 
 const AGE_OPTIONS: AgeCategory[] = ["u8", "u10", "u12", "u14", "u16"];
@@ -35,11 +36,24 @@ const field: React.CSSProperties = { marginBottom: 18 };
 const row: React.CSSProperties = { display: "flex", gap: 14, flexWrap: "wrap", ...field };
 const col: React.CSSProperties = { flex: "1 1 140px" };
 
-export default function SeriesForm({ series, redirectTo }: { series?: EventSeriesRow; redirectTo: string }) {
+export default function SeriesForm({
+  series,
+  prefill,
+  fromEventId,
+  redirectTo,
+}: {
+  series?: EventSeriesRow;
+  prefill?: SeriesPrefill;
+  fromEventId?: string;
+  redirectTo: string;
+}) {
   const router = useRouter();
   const boundSave = saveSeries.bind(null, redirectTo);
   const [state, formAction, pending] = useActionState<SeriesFormState, FormData>(boundSave, {});
-  const [bookingStatus, setBookingStatus] = useState(series?.booking_status ?? "planned");
+  // series (editing) takes priority; prefill (converting a one-off event to
+  // recurring) only applies when creating brand new.
+  const base = series ?? prefill;
+  const [bookingStatus, setBookingStatus] = useState(base?.booking_status ?? "planned");
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState("");
 
@@ -61,23 +75,30 @@ export default function SeriesForm({ series, redirectTo }: { series?: EventSerie
   return (
     <form action={formAction} style={{ maxWidth: 480 }}>
       {series && <input type="hidden" name="id" value={series.id} />}
+      {fromEventId && <input type="hidden" name="from_event_id" value={fromEventId} />}
+
+      {fromEventId && (
+        <div style={{ background: "#F3F2EE", border: "1px solid #E4E2DD", padding: "12px 14px", marginBottom: 20, fontSize: 12.5, color: "#4A4A46", lineHeight: 1.5 }}>
+          Converting this event to a recurring series. Pick the days it repeats on and an end date below — saving will replace the original one-off event with the new series.
+        </div>
+      )}
 
       <div style={field}>
         <label className="mono" style={label}>TITLE</label>
-        <input style={input} name="title" defaultValue={series?.title} required />
+        <input style={input} name="title" defaultValue={base?.title} required />
       </div>
 
       <div style={row}>
         <div style={col}>
           <label className="mono" style={label}>DISCIPLINE</label>
-          <select style={input} name="discipline" defaultValue={series?.discipline ?? ""} required>
+          <select style={input} name="discipline" defaultValue={base?.discipline ?? ""} required>
             <option value="" disabled>Select…</option>
             {EVENT_DISCIPLINES.map((d) => <option key={d.id} value={d.id}>{d.label}</option>)}
           </select>
         </div>
         <div style={col}>
           <label className="mono" style={label}>STATUS</label>
-          <select style={input} name="status" defaultValue={series?.status ?? "confirmed"}>
+          <select style={input} name="status" defaultValue={base?.status ?? "confirmed"}>
             {STATUS_OPTIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
           </select>
         </div>
@@ -98,7 +119,7 @@ export default function SeriesForm({ series, redirectTo }: { series?: EventSerie
       <div style={row}>
         <div style={col}>
           <label className="mono" style={label}>STARTS ON</label>
-          <input style={input} type="date" name="start_date" defaultValue={series?.start_date} required />
+          <input style={input} type="date" name="start_date" defaultValue={base?.start_date} required />
         </div>
         <div style={col}>
           <label className="mono" style={label}>REPEATS UNTIL</label>
@@ -108,23 +129,23 @@ export default function SeriesForm({ series, redirectTo }: { series?: EventSerie
 
       <div style={field}>
         <label className="mono" style={label}>VENUE</label>
-        <input style={input} name="venue_name" defaultValue={series?.venue_name} required />
+        <input style={input} name="venue_name" defaultValue={base?.venue_name} required />
       </div>
 
       <div style={row}>
         <div style={col}>
           <label className="mono" style={label}>ADDRESS (OPTIONAL)</label>
-          <input style={input} name="address" defaultValue={series?.address ?? ""} />
+          <input style={input} name="address" defaultValue={base?.address ?? ""} />
         </div>
         <div style={col}>
           <label className="mono" style={label}>POSTCODE (OPTIONAL)</label>
-          <input style={input} name="postcode" defaultValue={series?.postcode ?? ""} />
+          <input style={input} name="postcode" defaultValue={base?.postcode ?? ""} />
         </div>
       </div>
 
       <div style={field}>
         <label className="mono" style={label}>REGION</label>
-        <select style={input} name="region" defaultValue={series?.region ?? ""} required>
+        <select style={input} name="region" defaultValue={base?.region ?? ""} required>
           <option value="" disabled>Select…</option>
           {REGION_OPTIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
         </select>
@@ -135,7 +156,7 @@ export default function SeriesForm({ series, redirectTo }: { series?: EventSerie
         <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
           {AGE_OPTIONS.map((a) => (
             <label key={a} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 13 }}>
-              <input type="checkbox" name="ages" value={a} defaultChecked={series?.age_categories?.includes(a)} />
+              <input type="checkbox" name="ages" value={a} defaultChecked={base?.age_categories?.includes(a)} />
               {a.toUpperCase()}
             </label>
           ))}
@@ -144,7 +165,7 @@ export default function SeriesForm({ series, redirectTo }: { series?: EventSerie
 
       <div style={field}>
         <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
-          <input type="checkbox" name="kids_only" defaultChecked={series?.kids_only} />
+          <input type="checkbox" name="kids_only" defaultChecked={base?.kids_only} />
           Kids only (no adults racing alongside)
         </label>
       </div>
@@ -159,23 +180,23 @@ export default function SeriesForm({ series, redirectTo }: { series?: EventSerie
         </div>
         <div style={col}>
           <label className="mono" style={label}>BOOKING LINK{bookingStatus === "open" ? "" : " (OPTIONAL)"}</label>
-          <input style={input} type="url" name="booking_link" defaultValue={series?.booking_link ?? ""} required={bookingStatus === "open"} />
+          <input style={input} type="url" name="booking_link" defaultValue={base?.booking_link ?? ""} required={bookingStatus === "open"} />
         </div>
       </div>
 
       <div style={field}>
         <label className="mono" style={label}>ORGANISER URL (FALLBACK LINK WHILE BOOKING IS PLANNED)</label>
-        <input style={input} type="url" name="organiser_url" defaultValue={series?.organiser_url} required />
+        <input style={input} type="url" name="organiser_url" defaultValue={base?.organiser_url} required />
       </div>
 
       <div style={row}>
         <div style={col}>
           <label className="mono" style={label}>ORGANISER NAME (OPTIONAL)</label>
-          <input style={input} name="organiser_name" defaultValue={series?.organiser_name ?? ""} />
+          <input style={input} name="organiser_name" defaultValue={base?.organiser_name ?? ""} />
         </div>
         <div style={col}>
           <label className="mono" style={label}>ORGANISER CONTACT (OPTIONAL)</label>
-          <input style={input} name="organiser_contact" defaultValue={series?.organiser_contact ?? ""} />
+          <input style={input} name="organiser_contact" defaultValue={base?.organiser_contact ?? ""} />
         </div>
       </div>
 

@@ -82,10 +82,11 @@ export async function saveSeries(
     : { ...parsed.values, lat: null, lng: null };
 
   const seriesId = String(formData.get("id") ?? "").trim() || null;
+  const fromEventId = String(formData.get("from_event_id") ?? "").trim() || null;
 
   const result = seriesId
     ? await updateExistingSeries(supabase, user.id, seriesId, values)
-    : await createNewSeries(supabase, user.id, values);
+    : await createNewSeries(supabase, user.id, values, fromEventId);
 
   if (result.error) return result;
   if (redirectTo) redirect(redirectTo);
@@ -95,7 +96,8 @@ export async function saveSeries(
 async function createNewSeries(
   supabase: SupabaseServerClient,
   userId: string,
-  values: EventSeriesFormValues & { lat: number | null; lng: number | null }
+  values: EventSeriesFormValues & { lat: number | null; lng: number | null },
+  fromEventId: string | null
 ): Promise<SeriesFormState> {
   const occurrences = generateOccurrenceDates({
     startDate: values.start_date,
@@ -143,6 +145,15 @@ async function createNewSeries(
     // series row rather than leaving a series with zero occurrences behind.
     await supabase.from("event_series").delete().eq("id", series.id);
     return { error: occurrencesError.message };
+  }
+
+  // "Convert to recurring event" (EventForm's link on a plain event) passes
+  // the original one-off event's id here — replace it with the new series
+  // now that its occurrences exist, best-effort: the series is already
+  // created successfully at this point, so a failure here isn't reported as
+  // a failure of the save itself.
+  if (fromEventId) {
+    await supabase.from("events").delete().eq("id", fromEventId);
   }
 
   return {};
