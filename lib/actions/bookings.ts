@@ -7,6 +7,8 @@ import { sendEmail } from "@/lib/email/resend";
 import { buildBookingConfirmationHtml } from "@/lib/email/booking-confirmation";
 import { buildWaitlistPromotedHtml } from "@/lib/email/waitlist-promoted";
 import type { AttendeeRow, EventRow } from "@/lib/supabase/types";
+import { getCurrentProfile, isAdminRole } from "@/lib/auth";
+import { buildAttendeeMessageHtml } from "@/lib/email/attendee-message";
 
 export interface CreateBookingState {
   error?: string;
@@ -135,4 +137,56 @@ export async function cancelBooking(bookingId: string): Promise<CancelBookingRes
   }
 
   return {};
+}
+
+export interface MessageAttendeesState {
+  error?: string;
+  success?: string;
+}
+
+export async function messageAttendees(
+  eventId: string,
+  _prevState: MessageAttendeesState,
+  formData: FormData
+): Promise<MessageAttendeesState> {
+  const profile = await getCurrentProfile();
+  if (!profile) return { error: "Not signed in." };
+
+  const subject = String(formData.get("subject") ?? "").trim();
+  const body = String(formData.get("body") ?? "").trim();
+  if (!subject) return { error: "Subject is required." };
+  if (!body) return { error: "Message is required." };
+
+  // RLS (Task 1) already scopes this select to events the caller is allowed
+  // to manage — an organiser querying another organiser's event id, or a
+  // non-admin/non-owner at all, gets zero rows back rather than an error,
+  // same defense-in-depth pattern the rest of the app relies on.
+  const supabase = await createClient();
+  const { data: event, error: eventError } = await supabase.from("events").select("id, title, created_by").eq("id", eventId).single();
+  if (eventError || !event) return { error: "Event not found." };
+  if (!isAdminRole(profile) && event.created_by !== profile.id) return { error: "Not authorised." };
+
+  const { data: attendeeRows, error: attendeesError } = await supabase
+    .from("bookings")
+    .select("attendee:attendees(email)")
+    .eq("event_id", eventId)
+    .eq("status", "confirmed");
+  if (attendeesError) return { error: attendeesError.message };
+
+  const emails = [...new Set((attendeeRows as unknown as { attendee: { email: string } }[]).map((r) => r.attendee.email))];
+  if (emails.length === 0) return { error: "No confirmed attendees to message yet." };
+
+  const html = buildAttendeeMessageHtml(event.title, body);
+  let sent = 0;
+  for (const to of emails) {
+    try {
+      await sendEmail({ to, subject, html });
+      sent++;
+    } catch {
+      // Best-effort per recipient, same pattern as the monthly-digest cron's
+      // per-subscriber loop — one bad address shouldn't block the rest.
+    }
+  }
+
+  return { success: `Sent to ${sent} of ${emails.length} attendee${emails.length === 1 ? "" : "s"}.` };
 }

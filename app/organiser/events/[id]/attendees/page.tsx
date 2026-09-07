@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { getEventRowById, getBookingsForEvent } from "@/lib/data";
 import AttendeesList from "@/components/events/AttendeesList";
+import MessageAttendeesForm from "@/components/events/MessageAttendeesForm";
 
 export default async function OrganiserAttendeesPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -15,6 +16,7 @@ export default async function OrganiserAttendeesPage({ params }: { params: Promi
         Attendees — {event.title}
       </h1>
       <AttendeesList eventTitle={event.title} bookings={bookings} capacity={event.booking_capacity} />
+      <MessageAttendeesForm eventId={id} />
     </header>
   );
 }
