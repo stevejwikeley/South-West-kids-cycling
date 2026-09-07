@@ -147,6 +147,13 @@ export async function getTeamProfiles(): Promise<ProfileRow[]> {
   return ((data as ProfileRow[]) ?? []).sort((a, b) => ROLE_ORDER[a.role] - ROLE_ORDER[b.role]);
 }
 
+export async function getEventSpacesLeft(eventId: string): Promise<number | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("event_spaces_left", { p_event_id: eventId });
+  if (error) throw error;
+  return data;
+}
+
 export async function getWatchedSources(): Promise<WatchedSourceRow[]> {
   const supabase = await createClient();
   const { data, error } = await supabase

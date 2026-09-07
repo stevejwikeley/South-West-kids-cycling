@@ -1,7 +1,8 @@
 import { notFound } from "next/navigation";
-import { getEventRowById } from "@/lib/data";
+import { getEventRowById, getEventSpacesLeft } from "@/lib/data";
 import { eventDisc } from "@/lib/mock-data";
 import { fmtDay } from "@/lib/format";
+import SignupForm from "@/components/events/SignupForm";
 
 export default async function EventDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -26,7 +27,11 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
         {event.organiser_name && <p><strong>Organiser:</strong> {event.organiser_name}</p>}
       </div>
 
-      {!event.bookable && (
+      {event.bookable ? (
+        <div style={{ marginTop: 28 }}>
+          <SignupForm eventId={event.id} spacesLeft={await getEventSpacesLeft(event.id)} />
+        </div>
+      ) : (
         <div style={{ marginTop: 28 }}>
           <a
             href={event.booking_status === "open" ? event.booking_link ?? event.organiser_url : event.organiser_url}
