@@ -121,6 +121,11 @@ export default function EventList({
                   {isBusy ? "…" : "Verify"}
                 </button>
               )}
+              {e.bookable && (
+                <Link href={`${editBasePath}/${e.id}/attendees`} className="mono" style={{ fontSize: 11.5, fontWeight: 700, color: "#111111", border: "1px solid #111111", padding: "7px 14px" }}>
+                  Attendees
+                </Link>
+              )}
               <Link href={`${editBasePath}/${e.id}/edit`} className="mono" style={{ fontSize: 11.5, fontWeight: 700, color: "#111111", border: "1px solid #111111", padding: "7px 14px" }}>
                 Edit
               </Link>

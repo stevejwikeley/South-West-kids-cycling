@@ -176,6 +176,36 @@ export async function getMyBookings(attendeeId: string): Promise<MyBooking[]> {
   return data as unknown as MyBooking[];
 }
 
+export interface EventBooking {
+  id: string;
+  status: SignupStatus;
+  contactName: string | null;
+  email: string;
+  phone: string | null;
+  people: Pick<BookingPersonRow, "name" | "age_category">[];
+}
+
+export async function getBookingsForEvent(eventId: string): Promise<EventBooking[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("bookings")
+    .select("id, status, attendee:attendees(contact_name, email, phone), people:booking_people(name, age_category)")
+    .eq("event_id", eventId)
+    .order("created_at", { ascending: true });
+
+  if (error) throw error;
+  return (data as unknown as { id: string; status: SignupStatus; attendee: { contact_name: string | null; email: string; phone: string | null }; people: Pick<BookingPersonRow, "name" | "age_category">[] }[]).map(
+    (row) => ({
+      id: row.id,
+      status: row.status,
+      contactName: row.attendee.contact_name,
+      email: row.attendee.email,
+      phone: row.attendee.phone,
+      people: row.people,
+    })
+  );
+}
+
 export async function getWatchedSources(): Promise<WatchedSourceRow[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
