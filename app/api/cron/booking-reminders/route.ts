@@ -39,16 +39,19 @@ export async function GET(request: NextRequest) {
 
     const emails = [...new Set((bookings as unknown as { attendee: { email: string } }[]).map((b) => b.attendee.email))];
     for (const email of emails) {
-      const { data: linkData } = await supabase.auth.admin.generateLink({
-        type: "magiclink",
-        email,
-        options: { redirectTo: `${siteUrl}/auth/confirm?next=/my-events` },
-      });
       try {
+        let actionLink = `${siteUrl}/my-events/login`;
+        const { data: linkData } = await supabase.auth.admin.generateLink({
+          type: "magiclink",
+          email,
+          options: { redirectTo: `${siteUrl}/auth/confirm?next=/my-events` },
+        });
+        if (linkData?.properties?.action_link) actionLink = linkData.properties.action_link;
+
         await sendEmail({
           to: email,
           subject: `Tomorrow: ${event.title}`,
-          html: buildBookingReminderHtml(event, linkData?.properties?.action_link ?? `${siteUrl}/my-events/login`),
+          html: buildBookingReminderHtml(event, actionLink),
         });
         sent++;
       } catch {
