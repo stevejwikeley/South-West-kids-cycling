@@ -171,7 +171,9 @@ export default function CalendarPage({ events, isAdmin = false }: { events: Cale
                     </div>
                     <div style={{ flex: 1, minWidth: 220 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-                        <span style={{ fontWeight: 700, fontSize: 15 }}>{e.title}</span>
+                        <Link href={`/events/${e.id}`} style={{ color: "inherit", textDecoration: "none" }}>
+                          <span style={{ fontWeight: 700, fontSize: 15 }}>{e.title}</span>
+                        </Link>
                         {e.seriesId && <Repeat size={13} color="#6B6B66" aria-label="Recurring event" />}
                         <span className="mono" style={{
                           fontSize: 10, fontWeight: 700, padding: "3px 8px", letterSpacing: "0.03em",
