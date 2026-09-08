@@ -37,13 +37,10 @@ create policy "admins can read all attendees"
   on attendees for select
   using (is_admin());
 
-create policy "organisers can read attendees who booked their events"
-  on attendees for select
-  using (exists (
-    select 1 from bookings
-    join events on events.id = bookings.event_id
-    where bookings.attendee_id = attendees.id and events.created_by = auth.uid()
-  ));
+-- "organisers can read attendees who booked their events" is added further
+-- down, after the bookings table exists — its USING clause references
+-- bookings, and CREATE POLICY resolves table references immediately, so it
+-- can't be created before bookings does.
 
 -- ---------- bookings ----------
 -- One row per family's signup for one event. signup_status is a distinct
@@ -75,6 +72,15 @@ create policy "admins can read all bookings"
 create policy "organisers can read bookings for their own events"
   on bookings for select
   using (exists (select 1 from events where events.id = bookings.event_id and events.created_by = auth.uid()));
+
+-- Now that bookings exists, add the attendees policy deferred from above.
+create policy "organisers can read attendees who booked their events"
+  on attendees for select
+  using (exists (
+    select 1 from bookings
+    join events on events.id = bookings.event_id
+    where bookings.attendee_id = attendees.id and events.created_by = auth.uid()
+  ));
 
 -- No insert/update policies here at all: every write to bookings goes
 -- through create_booking()/cancel_booking() below, called via the
