@@ -27,6 +27,8 @@ export type EventFormValues = Pick<
   | "organiser_url"
   | "organiser_name"
   | "organiser_contact"
+  | "bookable"
+  | "booking_capacity"
 >;
 
 // Every event is all-day — there is no time-of-day concept anywhere in this
@@ -50,6 +52,13 @@ export function parseEventForm(
   const organiserUrl = String(formData.get("organiser_url") ?? "").trim();
   const organiserName = String(formData.get("organiser_name") ?? "").trim() || null;
   const organiserContact = String(formData.get("organiser_contact") ?? "").trim() || null;
+
+  const bookable = formData.get("bookable") === "on";
+  const bookingCapacityRaw = String(formData.get("booking_capacity") ?? "").trim();
+  const bookingCapacity = bookingCapacityRaw ? Number(bookingCapacityRaw) : null;
+  if (bookable && bookingCapacityRaw && (!Number.isInteger(bookingCapacity) || bookingCapacity! <= 0)) {
+    return { ok: false, error: "Space limit must be a whole number greater than zero, or left blank for unlimited." };
+  }
 
   if (!title) return { ok: false, error: "Title is required." };
   if (!discipline) return { ok: false, error: "Discipline is required." };
@@ -80,6 +89,8 @@ export function parseEventForm(
       organiser_url: organiserUrl,
       organiser_name: organiserName,
       organiser_contact: organiserContact,
+      bookable,
+      booking_capacity: bookingCapacity,
     },
   };
 }

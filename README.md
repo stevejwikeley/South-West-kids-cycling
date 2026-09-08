@@ -64,13 +64,20 @@ app/                    Routes (App Router)
   subscribe/               Calendar subscription instructions (email digest + ICS feed)
   calendar.ics/            Live ICS feed — supports ?discipline= and ?region= filters
   embed/                   Chrome-free events widget meant for <iframe> on other sites
+  events/[id]/            Public event detail page — shows the signup form when the event
+                             is bookable (`bookable` column + capacity/waitlist state)
   events/[id]/suggest-change/   Public "suggest a change" form's standalone fallback route —
                              the calendar page normally opens this in a slide-out panel instead
                              (SuggestChangePanel), this route still works for direct links
+  my-events/               Attendee-facing area, magic-link auth (no password): (public)/login
+                             requests the link, (protected)/ lists the attendee's own bookings
+                             across events
   login/                   Auth (admin + organiser)
   admin/                   Admin-only: events, pending queue, watched sources, add events
-                             (formerly "smart ingestion" — paste/upload/manual are all here now)
-  organiser/               Organiser-only: manage their own events
+                             (formerly "smart ingestion" — paste/upload/manual are all here now);
+                             events/[id]/attendees/ manages/messages one event's bookings
+  organiser/               Organiser-only: manage their own events; events/[id]/attendees/
+                             is the organiser-scoped equivalent of the admin attendees page
   api/cron/                Vercel Cron endpoints (see below)
   api/mcp/                 MCP server for weekly event discovery (see below)
 
@@ -89,9 +96,13 @@ lib/
                              (event-series.ts creates/edits/deletes recurring series and
                              their generated occurrences, parse-series-form.ts validates the
                              series form and builds prefill values when converting an existing
-                             event to a series — see "Event publishing paths")
+                             event to a series — see "Event publishing paths"; bookings.ts
+                             creates/cancels a booking and promotes off the waitlist when a
+                             confirmed spot frees up)
   ingestion/                AI event-extraction pipeline — see its own README
-  email/                    Resend email templates + sender
+  email/                    Resend email templates + sender (booking-confirmation.ts,
+                             waitlist-promoted.ts, booking-reminder.ts and
+                             attendee-message.ts are the booking-flow templates)
   supabase/                 Supabase client factories + hand-written DB types
   auth.ts                   getCurrentProfile() / isAdminRole() — the one place role checks
                              originate
@@ -116,6 +127,8 @@ Three roles, stored in `profiles.role`: `super_admin`, `admin`, and `organiser`.
 - **Admins** manage all events, review the pending-change queue, run smart ingestion, manage watched sources, can invite organisers, and can see the full `/admin/team` roster (just without the promote/demote/invite-as-admin controls).
 - **Organisers** manage only their own events (`club_id` scoping), and can be invited by an admin.
 - **Inviting someone directly as admin or organiser** (`/admin/team`, `inviteTeamMember` in `app/admin/actions.ts`) sends a Supabase Auth invite email with the intended role baked into `raw_user_meta_data`. `handle_new_user()` (`0014_invite_role_metadata.sql`) reads that metadata when creating the new `profiles` row, so the person lands with the correct role from their very first sign-in — no separate "sign up, then get promoted" step. That metadata is only ever set server-side by the super_admin-gated invite action and is consumed synchronously at signup, before the invited person has ever authenticated, so they can't influence their own starting role.
+
+**Attendees** are a separate, public self-signup identity, not a fourth entry in the role hierarchy above — anyone can become one by booking an event, no invite needed. They authenticate the same way as the three roles above (Supabase Auth magic link), but `handle_new_user()`'s role-metadata branch (extended in `0018_event_booking.sql`) routes `role: 'attendee'` into a separate `attendees` table instead of `profiles`, so they never gain admin/organiser access of any kind. `getCurrentAttendee()` (`lib/auth.ts`) is their equivalent of `getCurrentProfile()`, and `/my-events` is their equivalent of the admin/organiser dashboards.
 
 ## Event publishing paths
 
@@ -146,10 +159,11 @@ A floating "Ask a question" widget (`components/ChatWidget.tsx`, bottom-left on 
 | `/api/cron/pending-digest` | 15:50 daily | Emails the admin a digest if anything is sitting in the pending queue. |
 | `/api/cron/link-health` | 04:20 daily | Checks that published events' booking links still resolve, flags dead ones. |
 | `/api/cron/monthly-digest` | 08:00 on the 1st | Emails every active `email_subscribers` row a list of events in the next 31 days. Skips sending if there are none. |
+| `/api/cron/booking-reminders` | 18:00 daily | Finds bookable events happening tomorrow (UK time) and emails every confirmed attendee a reminder, once each. |
 
 Recurring-event occurrence generation deliberately has **no** cron entry here: every series has a required end date, so its full occurrence set is bounded and generated synchronously in one bulk insert when the series is created or edited (`lib/actions/event-series.ts`) rather than needing a job to keep a rolling window topped up.
 
-All three authenticate via `CRON_SECRET` as a bearer token (Vercel sends this automatically for configured crons).
+All five authenticate via `CRON_SECRET` as a bearer token (Vercel sends this automatically for configured crons).
 
 ## MCP server (`/api/mcp`)
 

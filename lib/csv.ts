@@ -1,9 +1,18 @@
 import type { CalendarEvent } from "@/lib/types";
 import { eventDisc } from "@/lib/mock-data";
+import type { EventBooking } from "./data";
 
 function csvEscape(value: string): string {
   if (/[",\n]/.test(value)) return `"${value.replace(/"/g, '""')}"`;
   return value;
+}
+
+export function bookingsToCsv(bookings: EventBooking[]): string {
+  const headers = ["Contact name", "Contact email", "Contact phone", "Person name", "Age category", "Status"];
+  const rows = bookings.flatMap((b) =>
+    b.people.map((p) => [b.contactName ?? "", b.email, b.phone ?? "", p.name, p.age_category, b.status])
+  );
+  return [headers, ...rows].map((row) => row.map(String).map(csvEscape).join(",")).join("\n");
 }
 
 export function eventsToCsv(events: CalendarEvent[]): string {

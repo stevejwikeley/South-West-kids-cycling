@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { saveEvent, deleteEvent, verifyEventFields, type EventFormState } from "@/lib/actions/events";
 import { skipSeriesOccurrences } from "@/lib/actions/event-series";
+import { getBookingCountForConfirm } from "@/lib/actions/bookings";
 import { utcIsoToUkLocalParts } from "@/lib/uk-time";
 import { EVENT_DISCIPLINES } from "@/lib/mock-data";
 import type { EventRow } from "@/lib/supabase/types";
@@ -45,6 +46,7 @@ export default function EventForm({
   const boundSave = saveEvent.bind(null, redirectTo);
   const [state, formAction, pending] = useActionState<EventFormState, FormData>(boundSave, {});
   const [bookingStatus, setBookingStatus] = useState(event?.booking_status ?? "planned");
+  const [bookable, setBookable] = useState(event?.bookable ?? false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState("");
   const [skipping, setSkipping] = useState(false);
@@ -97,7 +99,12 @@ export default function EventForm({
 
   async function handleSkip() {
     if (!event?.series_id || !event.occurrence_date) return;
-    if (!confirm(`Skip "${event.title}" on this date? This won't affect the rest of the series.`)) return;
+    const bookingCount = await getBookingCountForConfirm(event.id);
+    const message =
+      bookingCount > 0
+        ? `Skip "${event.title}" on this date? ${bookingCount} ${bookingCount === 1 ? "person has" : "people have"} booked — they will lose their booking and will NOT be notified. This won't affect the rest of the series.`
+        : `Skip "${event.title}" on this date? This won't affect the rest of the series.`;
+    if (!confirm(message)) return;
     setSkipping(true);
     setSkipError("");
     const result = await skipSeriesOccurrences(event.series_id, event.occurrence_date, event.occurrence_date);
@@ -243,6 +250,19 @@ export default function EventForm({
           <label className="mono" style={label}>ORGANISER CONTACT (OPTIONAL)</label>
           <input style={input} name="organiser_contact" defaultValue={event?.organiser_contact ?? ""} />
         </div>
+      </div>
+
+      <div style={{ background: "#F3F2EE", border: "1px solid #E4E2DD", padding: "16px 18px", marginBottom: 20 }}>
+        <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, marginBottom: bookable ? 14 : 0 }}>
+          <input type="checkbox" name="bookable" checked={bookable} onChange={(e) => setBookable(e.target.checked)} />
+          Free event with signup on this site
+        </label>
+        {bookable && (
+          <div>
+            <label className="mono" style={label}>SPACE LIMIT (OPTIONAL — BLANK = UNLIMITED)</label>
+            <input style={{ ...input, maxWidth: 140 }} type="number" min={1} step={1} name="booking_capacity" defaultValue={event?.booking_capacity ?? ""} />
+          </div>
+        )}
       </div>
 
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>

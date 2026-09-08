@@ -1,6 +1,6 @@
 import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
-import type { ProfileRow } from "@/lib/supabase/types";
+import type { AttendeeRow, ProfileRow } from "@/lib/supabase/types";
 
 // Memoized per-request (React cache()) — the root layout and individual
 // pages both need "is this an admin?" now, and without this they'd each
@@ -24,3 +24,15 @@ export const getCurrentProfile = cache(async (): Promise<ProfileRow | null> => {
 export function isAdminRole(profile: ProfileRow | null): boolean {
   return profile?.role === "admin" || profile?.role === "super_admin";
 }
+
+export const getCurrentAttendee = cache(async (): Promise<AttendeeRow | null> => {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) return null;
+
+  const { data } = await supabase.from("attendees").select("*").eq("id", user.id).single();
+  return data as AttendeeRow | null;
+});

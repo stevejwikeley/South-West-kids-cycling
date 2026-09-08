@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Repeat } from "lucide-react";
 import { deleteEvent, verifyEventFields } from "@/lib/actions/events";
+import { getBookingCountForConfirm } from "@/lib/actions/bookings";
 import { fmtDay } from "@/lib/format";
 import { eventDisc } from "@/lib/mock-data";
 import type { EventRow } from "@/lib/supabase/types";
@@ -34,7 +35,12 @@ export default function EventList({
   const visibleEvents = showPast ? events : upcoming;
 
   async function handleDelete(id: string, title: string) {
-    if (!confirm(`Delete "${title}"? This can't be undone.`)) return;
+    const bookingCount = await getBookingCountForConfirm(id);
+    const message =
+      bookingCount > 0
+        ? `Delete "${title}"? ${bookingCount} ${bookingCount === 1 ? "person has" : "people have"} booked — they will lose their booking and will NOT be notified. This can't be undone.`
+        : `Delete "${title}"? This can't be undone.`;
+    if (!confirm(message)) return;
     setBusyIds((prev) => new Set(prev).add(id));
     setErrors((prev) => ({ ...prev, [id]: "" }));
     const result = await deleteEvent(id);
@@ -120,6 +126,11 @@ export default function EventList({
                 >
                   {isBusy ? "…" : "Verify"}
                 </button>
+              )}
+              {e.bookable && (
+                <Link href={`${editBasePath}/${e.id}/attendees`} className="mono" style={{ fontSize: 11.5, fontWeight: 700, color: "#111111", border: "1px solid #111111", padding: "7px 14px" }}>
+                  Attendees
+                </Link>
               )}
               <Link href={`${editBasePath}/${e.id}/edit`} className="mono" style={{ fontSize: 11.5, fontWeight: 700, color: "#111111", border: "1px solid #111111", padding: "7px 14px" }}>
                 Edit
