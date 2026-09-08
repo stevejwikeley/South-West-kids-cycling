@@ -49,6 +49,8 @@ interface FormValues {
   organiser_url: string;
   organiser_name: string;
   organiser_contact: string;
+  bookable: boolean;
+  booking_capacity: number | null;
 }
 
 type Diff = Record<string, { from: unknown; to: unknown }>;
@@ -85,6 +87,8 @@ function computeInitial(row: EventPendingRow, liveEvent: EventRow | null): FormV
     organiser_url: (resolveField(row, liveEvent, "organiser_url") as string) ?? "",
     organiser_name: (resolveField(row, liveEvent, "organiser_name") as string) ?? "",
     organiser_contact: (resolveField(row, liveEvent, "organiser_contact") as string) ?? "",
+    bookable: (resolveField(row, liveEvent, "bookable") as boolean) ?? false,
+    booking_capacity: (resolveField(row, liveEvent, "booking_capacity") as number | null) ?? null,
   };
 }
 
@@ -172,6 +176,8 @@ export default function PendingEditPanel({
     formData.set("organiser_url", values.organiser_url);
     formData.set("organiser_name", values.organiser_name);
     formData.set("organiser_contact", values.organiser_contact);
+    if (values.bookable) formData.set("bookable", "on");
+    formData.set("booking_capacity", values.booking_capacity != null ? String(values.booking_capacity) : "");
 
     const result = await updatePending(row.id, formData);
     setSaving(false);
@@ -325,6 +331,26 @@ export default function PendingEditPanel({
             <label className="mono" style={labelStyle}>ORGANISER CONTACT</label>
             <input style={inputStyle} value={values.organiser_contact} onChange={(e) => set("organiser_contact", e.target.value)} />
           </div>
+        </div>
+
+        <div style={{ background: "#F3F2EE", border: "1px solid #E4E2DD", padding: "16px 18px", marginBottom: 20 }}>
+          <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, marginBottom: values.bookable ? 14 : 0 }}>
+            <input type="checkbox" checked={values.bookable} onChange={(e) => set("bookable", e.target.checked)} />
+            Free event with signup on this site
+          </label>
+          {values.bookable && (
+            <div>
+              <label className="mono" style={labelStyle}>SPACE LIMIT (OPTIONAL — BLANK = UNLIMITED)</label>
+              <input
+                style={{ ...inputStyle, maxWidth: 140 }}
+                type="number"
+                min={1}
+                step={1}
+                value={values.booking_capacity ?? ""}
+                onChange={(e) => set("booking_capacity", e.target.value ? Number(e.target.value) : null)}
+              />
+            </div>
+          )}
         </div>
 
         <button

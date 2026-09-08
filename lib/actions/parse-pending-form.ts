@@ -29,6 +29,8 @@ export interface PendingFormValues {
   organiser_url: string | null;
   organiser_name: string | null;
   organiser_contact: string | null;
+  bookable: boolean;
+  booking_capacity: number | null;
 }
 
 // Every event is all-day — there is no time-of-day concept anywhere in this
@@ -50,6 +52,13 @@ export function parsePendingForm(formData: FormData): PendingFormValues {
   const organiserUrl = String(formData.get("organiser_url") ?? "").trim() || null;
   const organiserName = String(formData.get("organiser_name") ?? "").trim() || null;
   const organiserContact = String(formData.get("organiser_contact") ?? "").trim() || null;
+  const bookable = formData.get("bookable") === "on";
+  const bookingCapacityRaw = String(formData.get("booking_capacity") ?? "").trim();
+  // No validation here (unlike parseEventForm) — this is always a partial
+  // draft (see the interface comment above), so an unparsable/negative value
+  // just falls back to null rather than blocking the save.
+  const bookingCapacityNumber = bookingCapacityRaw ? Number(bookingCapacityRaw) : null;
+  const bookingCapacity = bookingCapacityNumber && bookingCapacityNumber > 0 ? bookingCapacityNumber : null;
 
   return {
     title,
@@ -69,5 +78,7 @@ export function parsePendingForm(formData: FormData): PendingFormValues {
     organiser_url: organiserUrl,
     organiser_name: organiserName,
     organiser_contact: organiserContact,
+    bookable,
+    booking_capacity: bookingCapacity,
   };
 }

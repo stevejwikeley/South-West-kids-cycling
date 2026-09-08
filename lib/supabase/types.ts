@@ -183,6 +183,8 @@ export interface EventPendingRow {
   created_by: string | null;
   created_at: string;
   updated_at: string;
+  bookable: boolean | null;
+  booking_capacity: number | null;
 }
 
 export interface WatchedSourceRow {

@@ -24,7 +24,17 @@ type Diff = Partial<Record<keyof EventFormValues | "_note", { from: unknown; to:
 // source_type, etc. Applying only known EventFormValues keys on approval
 // means such a row can't touch anything beyond what the legitimate form
 // could have produced, regardless of what's actually stored in the diff.
-const ALLOWED_DIFF_KEYS = new Set<keyof EventFormValues>([
+//
+// Two allowlists, not one: PUBLIC_DIFF_KEYS gates submitChangeRequest, the
+// only unauthenticated path — SuggestChangeForm has no bookable/
+// booking_capacity fields, so parseEventForm always returns false/null for
+// them from that form, and including them here would diff every public
+// suggest-change against a bookable event as a bogus "bookable: true→false"
+// change nobody actually made. ADMIN_DIFF_KEYS is the isAdminRole()-gated
+// superset (adds bookable/booking_capacity) used by the three paths that
+// only ever run for a signed-in admin: updatePending's change_request
+// branch, approveChange, and approveIngested.
+const PUBLIC_DIFF_KEYS = new Set<keyof EventFormValues>([
   "title",
   "discipline",
   "status",
@@ -43,6 +53,8 @@ const ALLOWED_DIFF_KEYS = new Set<keyof EventFormValues>([
   "organiser_name",
   "organiser_contact",
 ]);
+
+const ADMIN_DIFF_KEYS = new Set<keyof EventFormValues>([...PUBLIC_DIFF_KEYS, "bookable", "booking_capacity"]);
 
 function sameValue(a: unknown, b: unknown): boolean {
   if (Array.isArray(a) && Array.isArray(b)) {
@@ -71,7 +83,7 @@ export async function submitChangeRequest(
   const currentRow = current as EventRow;
   const diff: Diff = {};
   (Object.keys(parsed.values) as (keyof EventFormValues)[]).forEach((key) => {
-    if (!ALLOWED_DIFF_KEYS.has(key)) return;
+    if (!PUBLIC_DIFF_KEYS.has(key)) return;
     const to = parsed.values[key];
     const from = currentRow[key];
     if (!sameValue(to, from)) diff[key] = { from, to };
@@ -129,7 +141,7 @@ export async function approveChange(pendingId: string): Promise<PendingActionRes
   const diff = row.diff_against as Diff;
   const update: Partial<EventRow> = {};
   (Object.keys(diff) as (keyof Diff)[]).forEach((key) => {
-    if (!ALLOWED_DIFF_KEYS.has(key as keyof EventFormValues)) return;
+    if (!ADMIN_DIFF_KEYS.has(key as keyof EventFormValues)) return;
     const change = diff[key];
     if (change) (update as Record<string, unknown>)[key] = change.to;
   });
@@ -194,7 +206,7 @@ export async function approveIngested(pendingId: string): Promise<PendingActionR
   }
 
   const values: Record<string, unknown> = {};
-  ALLOWED_DIFF_KEYS.forEach((key) => {
+  ADMIN_DIFF_KEYS.forEach((key) => {
     const v = (row as unknown as Record<string, unknown>)[key];
     // Skip null/undefined so DB defaults apply on insert, and so a field the
     // extraction wasn't confident about doesn't clobber good live data on
@@ -203,13 +215,13 @@ export async function approveIngested(pendingId: string): Promise<PendingActionR
   });
   // field_flags carries forward regardless — it's admin-only metadata (spec
   // 4.2: "needs verification" markers), not a public-facing field, so it's
-  // not part of ALLOWED_DIFF_KEYS but still belongs on the live row.
+  // not part of ADMIN_DIFF_KEYS but still belongs on the live row.
   if (row.field_flags) values.field_flags = row.field_flags;
 
   // Re-derived here rather than trusted from the pending row: events_pending
   // accepts unauthenticated inserts (public submissions), so lat/lng always
   // comes from our own lookup against the postcode that just passed the
-  // ALLOWED_DIFF_KEYS sandbox above, never from arbitrary pending-row data.
+  // ADMIN_DIFF_KEYS sandbox above, never from arbitrary pending-row data.
   if (values.postcode) {
     const coords = await geocodeLocation({ postcode: values.postcode as string });
     if (coords) {
@@ -323,7 +335,7 @@ export async function updatePending(pendingId: string, formData: FormData): Prom
   const currentRow = liveEvent as EventRow;
   const diff: Diff = {};
   (Object.keys(values) as (keyof PendingFormValues)[]).forEach((key) => {
-    if (!ALLOWED_DIFF_KEYS.has(key as keyof EventFormValues)) return;
+    if (!ADMIN_DIFF_KEYS.has(key as keyof EventFormValues)) return;
     const to = values[key];
     const from = currentRow[key as keyof EventRow];
     if (!sameValue(to, from)) diff[key as keyof EventFormValues] = { from, to };
