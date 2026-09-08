@@ -29,6 +29,7 @@ export interface CalendarEvent {
   booking: string | null;
   organiserUrl: string;
   seriesId: string | null;
+  bookable: boolean;
 }
 
 export interface Club {
