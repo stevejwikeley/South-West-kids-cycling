@@ -1,6 +1,8 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { sendEmail } from "@/lib/email/resend";
+import { buildFeedbackEmailHtml, buildFeedbackSubject } from "@/lib/email/feedback";
 import type { WillSubscribeType } from "@/lib/supabase/types";
 
 export interface FeedbackFormState {
@@ -49,6 +51,32 @@ export async function submitFeedback(_prevState: FeedbackFormState, formData: Fo
 
   if (error) {
     return { error: "Couldn't send your feedback — please try again in a moment." };
+  }
+
+  // Notify the admin. Deliberately non-fatal, unlike the contact form: the
+  // feedback row is already safely stored by this point, so a Resend outage
+  // must not turn a saved submission into an error the visitor would retry —
+  // that would only duplicate the row. Same reasoning for a missing
+  // ADMIN_NOTIFICATION_EMAIL, which is skipped silently.
+  const adminEmail = process.env.ADMIN_NOTIFICATION_EMAIL;
+  if (adminEmail) {
+    const fields = {
+      racedBefore,
+      usefulness,
+      willSubscribe,
+      message,
+      pageUrl,
+      email,
+    };
+    try {
+      await sendEmail({
+        to: adminEmail,
+        subject: buildFeedbackSubject(fields),
+        html: buildFeedbackEmailHtml(fields),
+      });
+    } catch (err) {
+      console.error("Failed to send feedback notification email:", err);
+    }
   }
 
   return { success: true };
