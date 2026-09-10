@@ -35,7 +35,7 @@ Open [http://localhost:3000](http://localhost:3000). You'll need a `.env.local` 
 | `ANTHROPIC_API_KEY` | Yes | Powers the smart-ingestion event extraction (`lib/ingestion/extract-events.ts`), the club "Look up online" web-search lookup (`lib/club-research.ts`), and the event "Generate from source" description writer (`lib/event-description.ts`). |
 | `RESEND_API_KEY` | Yes | Sends transactional email via Resend. |
 | `RESEND_FROM_EMAIL` | Yes | From-address for outgoing email. |
-| `ADMIN_NOTIFICATION_EMAIL` | Yes | Where contact-form submissions and the pending-approval digest are sent. |
+| `ADMIN_NOTIFICATION_EMAIL` | Yes | Where contact-form submissions, site-feedback notifications, and the pending-approval digest are sent. Set for Production only — Preview deployments have no email credentials, so notifications are skipped there. |
 | `CRON_SECRET` | Yes | Shared secret Vercel Cron sends as a bearer token to authorize `/api/cron/*` routes. |
 | `MCP_SECRET` | Yes | Bearer/OAuth secret for the `/api/mcp` server (weekly event-discovery connector — see below). |
 | `NEXT_PUBLIC_GA_MEASUREMENT_ID` | No | Google Analytics measurement ID (`G-XXXXXXX`). Analytics no-ops if unset. |
@@ -212,7 +212,7 @@ A weekly scheduled Claude task (in the site owner's own claude.ai account, not p
 
 ## Testing
 
-`npm run test:e2e` runs the Playwright suite (`e2e/`) against a local dev server — desktop Chromium plus a Pixel 7 mobile-emulation project. Covers the calendar, clubs page, contact form, suggest-change flow, and the admin/organiser auth gate.
+`npm run test:e2e` runs the Playwright suite (`e2e/`) against a local dev server — desktop Chromium plus a Pixel 7 mobile-emulation project. Covers the calendar, clubs page, contact form, feedback popup, suggest-change flow, and the admin/organiser auth gate. Note that the suite runs against the live Supabase project rather than a seeded test database, so the submission tests write real rows.
 
 ## Monitoring
 
@@ -225,4 +225,6 @@ Deploys to Vercel on push to `main` (the repo's `master` branch is stale, tens o
 
 ### Preview environment
 
-`sw-calendar-alpha.vercel.app` is a Vercel domain bound (Project → Domains → Edit → "Connect to an environment: Preview") to a dedicated `preview` branch — push there (not `main`) to verify a change before it goes live. This exists because Supabase Auth's magic-link sign-in silently falls back to the production Site URL whenever the requesting origin isn't on its redirect allow-list, which made `localhost` sign-in untestable; Supabase's Authentication → URL Configuration → Redirect URLs now includes `https://*.vercel.app/**` alongside the production domain, so signing in on the preview URL works the same as production. It shares the same Supabase project/database as production — there's no sandboxed copy — so anything done while testing there (saving, deleting, sending real emails) is real, not staged.
+`sw-calendar-alpha.vercel.app` is a Vercel domain bound (Project → Domains → Edit → "Connect to an environment: Preview") to a dedicated `preview` branch — push there (not `main`) to verify a change before it goes live. This exists because Supabase Auth's magic-link sign-in silently falls back to the production Site URL whenever the requesting origin isn't on its redirect allow-list, which made `localhost` sign-in untestable; Supabase's Authentication → URL Configuration → Redirect URLs now includes `https://*.vercel.app/**` alongside the production domain, so signing in on the preview URL works the same as production. It shares the same Supabase project/database as production — there's no sandboxed copy — so anything done while testing there (saving, deleting, verifying) is real, not staged.
+
+One thing preview **cannot** verify is outgoing email: `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, and `ADMIN_NOTIFICATION_EMAIL` are scoped to the Production environment only, so on preview the notification paths take their "not configured" branch and skip silently. Testing email end-to-end means either adding those three variables to the Preview scope or verifying after deploying to production.
