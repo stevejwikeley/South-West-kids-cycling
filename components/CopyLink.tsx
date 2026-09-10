@@ -22,6 +22,7 @@ export default function CopyLink({ url }: { url: string }) {
     <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
       <input
         readOnly
+        aria-label="Calendar feed link"
         value={url}
         onClick={(e) => e.currentTarget.select()}
         className="mono"

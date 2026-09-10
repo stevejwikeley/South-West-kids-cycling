@@ -22,6 +22,12 @@ const DISCIPLINE_LABELS: Record<DisciplineType, string> = {
 };
 const REGION_LABELS: Record<RegionType, string> = { devon: "Devon", cornwall: "Cornwall", somerset: "Somerset", both: "Devon & Cornwall" };
 
+// Club ids are uuids and go straight into a Postgres `in` filter, so anything
+// that isn't uuid-shaped is dropped before it reaches the query — a mistyped
+// id would otherwise fail the whole request with a 22P02 cast error rather
+// than degrading like the other filters do.
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 function dateOnly(iso: string): DateArray {
   const [y, m, d] = iso.slice(0, 10).split("-").map(Number);
   return [y, m, d];
@@ -63,11 +69,14 @@ function toIcsEvent(e: EventRow): EventAttributes {
   };
 }
 
-// Filtered feeds (spec section 9): ?discipline=cx,xc and/or ?region=devon,cornwall,
-// same generation path as the unfiltered feed — just a narrower query.
-// Invalid values in either param are dropped rather than erroring, so a
-// stale/mistyped filter degrades to "no filter on that dimension" instead
-// of a broken subscription.
+// Filtered feeds (spec section 9): ?discipline=cx,xc, ?region=devon,cornwall
+// and/or ?club=<uuid>,<uuid> — same generation path as the unfiltered feed,
+// just a narrower query. Invalid values in any param are dropped rather than
+// erroring, so a stale/mistyped filter degrades to "no filter on that
+// dimension" instead of a broken subscription. A club id that's well-formed
+// but no longer exists is the one exception: it stays in the query and
+// yields an empty feed, because silently widening someone's club-only
+// subscription back out to every event in the region would be worse.
 function parseFilters(searchParams: URLSearchParams) {
   const disciplines = (searchParams.get("discipline") ?? "")
     .split(",")
@@ -77,11 +86,29 @@ function parseFilters(searchParams: URLSearchParams) {
     .split(",")
     .map((s) => s.trim())
     .filter((s): s is RegionType => REGION_VALUES.has(s as RegionType));
-  return { disciplines, regions };
+  const clubs = (searchParams.get("club") ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter((s) => UUID_RE.test(s));
+  return { disciplines, regions, clubs };
 }
 
-function feedName(disciplines: DisciplineType[], regions: RegionType[]): string {
+// "both" means Devon & Cornwall, so an event stored that way belongs in
+// either of those feeds — the same widening the calendar and embed views
+// already do (components/CalendarPage.tsx, app/embed/page.tsx). Without it a
+// ?region=devon subscriber silently loses every cross-county event.
+function regionsToMatch(regions: RegionType[]): RegionType[] {
+  const wanted = new Set<RegionType>(regions);
+  if (wanted.has("devon") || wanted.has("cornwall")) wanted.add("both");
+  return [...wanted];
+}
+
+// Subscribers commonly add more than one of these feeds, and the calendar
+// name is all their app shows to tell them apart — so it spells out the
+// filters, club names included (a raw uuid would be useless there).
+function feedName(disciplines: DisciplineType[], regions: RegionType[], clubNames: string[]): string {
   const parts = [
+    clubNames.length ? clubNames.join("/") : null,
     disciplines.length ? disciplines.map((d) => DISCIPLINE_LABELS[d]).join("/") : null,
     regions.length ? regions.map((r) => REGION_LABELS[r]).join("/") : null,
   ].filter(Boolean);
@@ -89,20 +116,30 @@ function feedName(disciplines: DisciplineType[], regions: RegionType[]): string 
 }
 
 export async function GET(request: NextRequest) {
-  const { disciplines, regions } = parseFilters(request.nextUrl.searchParams);
+  const { disciplines, regions, clubs } = parseFilters(request.nextUrl.searchParams);
 
   const supabase = await createClient();
   let query = supabase.from("events").select("*").eq("approved", true).neq("status", "cancelled");
   if (disciplines.length) query = query.in("discipline", disciplines);
-  if (regions.length) query = query.in("region", regions);
+  if (regions.length) query = query.in("region", regionsToMatch(regions));
+  if (clubs.length) query = query.in("club_id", clubs);
   const { data, error } = await query.order("start_datetime", { ascending: true });
 
   if (error) {
     return new Response("Failed to load events", { status: 500 });
   }
 
+  // Names only — the filtering above already used the ids, so a club that has
+  // since been deleted just drops out of the title without changing which
+  // events the feed contains.
+  const clubNames = clubs.length
+    ? ((await supabase.from("clubs").select("name").in("id", clubs).order("name")).data ?? []).map(
+        (c) => (c as { name: string }).name
+      )
+    : [];
+
   const { error: icsError, value } = createEvents((data as EventRow[]).map(toIcsEvent), {
-    calName: feedName(disciplines, regions),
+    calName: feedName(disciplines, regions, clubNames),
     productId: "-//South West Kids Cycling//Calendar//EN",
   });
 

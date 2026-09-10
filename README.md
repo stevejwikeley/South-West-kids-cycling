@@ -63,7 +63,7 @@ app/                    Routes (App Router)
   getting-started/         New-to-racing guide
   contact/                 Contact form (general enquiry / organiser account request)
   subscribe/               Calendar subscription instructions (email digest + ICS feed)
-  calendar.ics/            Live ICS feed — supports ?discipline= and ?region= filters
+  calendar.ics/            Live ICS feed — supports ?discipline=, ?region= and ?club= filters
   embed/                   Chrome-free events widget meant for <iframe> on other sites
   events/[id]/            Public event detail page — shows the signup form when the event
                              is bookable (`bookable` column + capacity/waitlist state)
@@ -161,6 +161,16 @@ Every event has an optional `description` (`events.description`, also on `events
 - **AI-ingested events** (smart ingestion, or the public paste-a-link path) get it for free — `description` is just another field in `extract-events.ts`'s extraction schema, generated from whatever source text/page the pipeline is already reading.
 - **Everywhere else** (admin/organiser event and series forms, the pending-queue edit panel, and the public `/submit-event` structured form — deliberately available to all of these, not gated to staff, since it only ever reads a URL the person themselves supplied) has a "Generate from source" button next to the description field. It fetches the event's organiser URL directly (`lib/event-description.ts`, via `generateDescriptionAction()` in `lib/actions/event-description.ts`) and asks Claude to write the description from that page's actual content — same propose-into-an-editable-field-don't-auto-save posture as the club "Look up online" button and AI event ingestion generally.
 - **Backfilling existing events** that predate this feature is a one-off admin tool, not a migration script — `/admin` shows a "Missing descriptions" panel (`components/admin/BackfillDescriptions.tsx`) whenever any live event has none, working through them one at a time (sequential, not parallel, since each one is an LLM call + external page fetch) with a stoppable/resumable progress view. It disappears on its own once every event has a description.
+
+## Subscribing to a filtered feed
+
+`/subscribe` is a feed builder, not just a set of instructions. `components/SubscribeSelector.tsx` offers the same three axes the feed itself understands — discipline (multi-select), county, and club — composes them into a `/calendar.ics?discipline=…&region=…&club=…` URL, and feeds that URL into the per-platform (Google/Apple/Outlook) setup steps, so the link someone copies is already scoped to what they picked. Leaving everything untouched yields the plain full-calendar URL, exactly as before.
+
+The feed URL is always built against the production origin, never the origin the page is served from — a subscription lives in someone's calendar app for years, so a preview or localhost URL there would be a slow-burning bug. `components/EmbedBuilderPage.tsx` hardcodes production for the same reason.
+
+Filters travel between the two surfaces: the calendar page's three "Subscribe" buttons carry whatever filters are currently applied through as query params (`subscribeHref` in `components/CalendarPage.tsx`) and relabel themselves "Subscribe to these events", and `/subscribe` reads those params back to preselect the builder. Free-text search is deliberately excluded — a calendar feed has no equivalent, so a search-only filter still links to the plain subscribe page.
+
+On the feed route itself (`app/calendar.ics/route.ts`): unrecognised filter values are dropped rather than erroring, so a stale or mistyped subscription degrades to "no filter on that dimension" instead of breaking. The one deliberate exception is a well-formed but unknown club id, which yields an empty feed — silently widening a club-only subscription back out to every event in the South West would be the worse failure. `?region=devon` also matches events stored as `region: "both"` (Devon & Cornwall), matching how the calendar and `/embed` views have always filtered. The generated calendar's `X-WR-CALNAME` spells out the active filters, club names included, since that name is all a calendar app shows to distinguish several subscribed feeds.
 
 ## Embeddable widget
 

@@ -44,6 +44,21 @@ export default function CalendarPage({ events, clubs = [], isAdmin = false }: { 
 
   const activeFilterCount = (region !== "all" ? 1 : 0) + (clubFilter !== "all" ? 1 : 0) + (search ? 1 : 0) + activeDisc.size;
 
+  // Carry the active filters through to /subscribe so a subscription can be
+  // built from what someone is already looking at. Search text is left out —
+  // a calendar feed has no equivalent of it, so a search-only filter still
+  // links to the plain full-calendar subscribe page.
+  const subscribeHref = useMemo(() => {
+    const params = new URLSearchParams();
+    if (activeDisc.size > 0) params.set("discipline", [...activeDisc].join(","));
+    if (region !== "all") params.set("region", region);
+    if (clubFilter !== "all") params.set("club", clubFilter);
+    const query = params.toString();
+    return query ? `/subscribe?${query}` : "/subscribe";
+  }, [activeDisc, region, clubFilter]);
+  const subscribeIsFiltered = subscribeHref !== "/subscribe";
+  const subscribeLabel = subscribeIsFiltered ? "Subscribe to these events" : "Subscribe to calendar";
+
   const filtered = useMemo(
     () =>
       events.filter((e) => {
@@ -83,8 +98,8 @@ export default function CalendarPage({ events, clubs = [], isAdmin = false }: { 
           <p style={{ fontSize: 13.5, color: "#4A4A46", marginBottom: 10, lineHeight: 1.5 }}>
             Get new events the moment they&apos;re added — subscribe once by email or calendar and never miss a race.
           </p>
-          <Link href="/subscribe" onClick={() => trackEvent("subscribe_click", { source: "calendar_hero" })} style={{ background: "#E0102A", color: "#FAFAF8", border: "none", padding: "13px 24px", fontWeight: 700, fontSize: 13.5, display: "flex", alignItems: "center", gap: 8, cursor: "pointer", width: "fit-content" }}>
-            <Calendar size={15} /> Subscribe to calendar
+          <Link href={subscribeHref} onClick={() => trackEvent("subscribe_click", { source: "calendar_hero", filtered: subscribeIsFiltered })} style={{ background: "#E0102A", color: "#FAFAF8", border: "none", padding: "13px 24px", fontWeight: 700, fontSize: 13.5, display: "flex", alignItems: "center", gap: 8, cursor: "pointer", width: "fit-content" }}>
+            <Calendar size={15} /> {subscribeLabel}
           </Link>
         </div>
       </header>
@@ -115,12 +130,12 @@ export default function CalendarPage({ events, clubs = [], isAdmin = false }: { 
                 <Download size={13} /> Download CSV
               </button>
               <Link
-                href="/subscribe"
-                onClick={() => trackEvent("subscribe_click", { source: "filter_bar" })}
+                href={subscribeHref}
+                onClick={() => trackEvent("subscribe_click", { source: "filter_bar", filtered: subscribeIsFiltered })}
                 className="mono"
-                style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "1px solid #D8D6D0", padding: "8px 12px", fontSize: 11, fontWeight: 700, color: "#111111" }}
+                style={{ display: "flex", alignItems: "center", gap: 6, background: subscribeIsFiltered ? "#111111" : "none", color: subscribeIsFiltered ? "#FAFAF8" : "#111111", border: `1px solid ${subscribeIsFiltered ? "#111111" : "#D8D6D0"}`, padding: "8px 12px", fontSize: 11, fontWeight: 700 }}
               >
-                <Calendar size={13} /> Subscribe to calendar
+                <Calendar size={13} /> {subscribeLabel}
               </Link>
             </div>
           </div>
@@ -289,8 +304,8 @@ export default function CalendarPage({ events, clubs = [], isAdmin = false }: { 
           <p style={{ fontSize: 13.5, lineHeight: 1.6, color: "#D8D6D0", marginBottom: 16 }}>
             It&apos;s better to be in your calendar than checking a website. Subscribe once by email or calendar feed and every new event lands automatically.
           </p>
-          <Link href="/subscribe" onClick={() => trackEvent("subscribe_click", { source: "calendar_footer" })} style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "#E0102A", color: "#FAFAF8", padding: "10px 20px", fontWeight: 700, fontSize: 13, width: "fit-content" }}>
-            <Calendar size={14} /> Subscribe to calendar
+          <Link href={subscribeHref} onClick={() => trackEvent("subscribe_click", { source: "calendar_footer", filtered: subscribeIsFiltered })} style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "#E0102A", color: "#FAFAF8", padding: "10px 20px", fontWeight: 700, fontSize: 13, width: "fit-content" }}>
+            <Calendar size={14} /> {subscribeLabel}
           </Link>
         </div>
       </main>

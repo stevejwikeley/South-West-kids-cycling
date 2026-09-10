@@ -2,13 +2,38 @@ import Link from "next/link";
 import { Calendar, Mail } from "lucide-react";
 import SubscribeSelector from "@/components/SubscribeSelector";
 import EmailSubscribeForm from "@/components/EmailSubscribeForm";
+import { getClubs } from "@/lib/data";
+import { EVENT_DISCIPLINES } from "@/lib/mock-data";
+import type { DisciplineId, Region } from "@/lib/types";
+
+// "both" is a storage value (an event that counts as Devon *and* Cornwall),
+// not something anyone picks — the selector offers the three counties only.
+const REGIONS = new Set<Region>(["devon", "cornwall", "somerset"]);
 
 export const metadata = {
   title: "Subscribe to the calendar",
   description: "Add the South West Kids Cycling calendar to your phone or computer so it stays up to date automatically.",
 };
 
-export default function SubscribePage() {
+// The same ?discipline=/?region=/?club= params the feed itself takes, so the
+// calendar page can hand its active filters straight through and land people
+// here with the right feed already built. Unrecognised values are ignored.
+export default async function SubscribePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ discipline?: string; region?: string; club?: string }>;
+}) {
+  const { discipline, region, club } = await searchParams;
+  const clubs = await getClubs();
+
+  const validDisciplines = new Set(EVENT_DISCIPLINES.map((d) => d.id));
+  const initialDisciplines = (discipline ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter((s): s is DisciplineId => validDisciplines.has(s as DisciplineId));
+  const initialRegion = REGIONS.has(region as Region) ? (region as Region) : "all";
+  const initialClub = club && clubs.some((c) => c.id === club) ? club : "all";
+
   return (
     <header style={{ maxWidth: 720, margin: "0 auto", padding: "56px 24px 120px" }}>
       <div className="mono" style={{ fontSize: 11.5, letterSpacing: "0.12em", color: "#E0102A", marginBottom: 16, fontWeight: 700, display: "flex", alignItems: "center", gap: 8 }}>
@@ -25,7 +50,12 @@ export default function SubscribePage() {
       </p>
 
       <div style={{ marginTop: 44 }}>
-        <SubscribeSelector />
+        <SubscribeSelector
+          clubs={clubs}
+          initialDisciplines={initialDisciplines}
+          initialRegion={initialRegion}
+          initialClub={initialClub}
+        />
       </div>
 
       <div style={{ marginTop: 48, paddingTop: 32, borderTop: "1px solid #E4E2DD" }}>
