@@ -29,6 +29,10 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
         {club && <p><strong>Club:</strong> {club.name}</p>}
       </div>
 
+      {event.description && (
+        <p style={{ fontSize: 14.5, lineHeight: 1.7, color: "#4A4A46", marginTop: 20 }}>{event.description}</p>
+      )}
+
       {event.bookable ? (
         <div style={{ marginTop: 28 }}>
           <SignupForm eventId={event.id} spacesLeft={await getEventSpacesLeft(event.id)} />

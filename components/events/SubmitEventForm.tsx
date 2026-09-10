@@ -1,7 +1,8 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useRef, useState } from "react";
 import { submitPublicUrlOrText, submitPublicEventForm, type PublicSubmitState } from "@/lib/actions/public-submit";
+import { generateDescriptionAction } from "@/lib/actions/event-description";
 import { EVENT_DISCIPLINES } from "@/lib/mock-data";
 import { trackEvent } from "@/lib/analytics";
 import type { AgeCategory, Club } from "@/lib/types";
@@ -83,15 +84,35 @@ function LinkOrTextForm() {
 }
 
 function StructuredForm({ clubs }: { clubs: Club[] }) {
+  const formRef = useRef<HTMLFormElement>(null);
   const [state, formAction, pending] = useActionState<PublicSubmitState, FormData>(submitPublicEventForm, {});
   const [bookingStatus, setBookingStatus] = useState<"open" | "planned">("planned");
+  const [description, setDescription] = useState("");
+  const [generating, setGenerating] = useState(false);
+  const [generateNote, setGenerateNote] = useState("");
 
   if (state.success) {
     return <p style={{ maxWidth: 460, fontSize: 15, lineHeight: 1.6, color: "#4A4A46" }}>{state.success}</p>;
   }
 
+  async function handleGenerateDescription() {
+    const fd = new FormData(formRef.current!);
+    const url = String(fd.get("organiser_url") ?? "");
+    const title = String(fd.get("title") ?? "");
+    const venueName = String(fd.get("venue_name") ?? "");
+    setGenerating(true);
+    setGenerateNote("");
+    const { description: generated, error } = await generateDescriptionAction(url, title, venueName);
+    setGenerating(false);
+    if (error) {
+      setGenerateNote(error);
+      return;
+    }
+    setDescription(generated ?? "");
+  }
+
   return (
-    <form action={formAction} style={{ maxWidth: 480 }}>
+    <form ref={formRef} action={formAction} style={{ maxWidth: 480 }}>
       <p style={{ fontSize: 13, lineHeight: 1.6, color: "#6B6B66", marginBottom: 24 }}>
         No login needed — an admin reviews every submission before it goes live.
       </p>
@@ -194,6 +215,23 @@ function StructuredForm({ clubs }: { clubs: Club[] }) {
           <option value="">None</option>
           {clubs.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
+      </div>
+
+      <div style={field}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+          <label className="mono" style={{ ...label, marginBottom: 0 }}>DESCRIPTION (OPTIONAL)</label>
+          <button
+            type="button"
+            disabled={generating}
+            onClick={handleGenerateDescription}
+            className="mono"
+            style={{ fontSize: 11, fontWeight: 700, color: "#111111", background: "none", border: "1px solid #111111", padding: "5px 11px", cursor: generating ? "default" : "pointer", opacity: generating ? 0.6 : 1 }}
+          >
+            {generating ? "Generating…" : "Generate from source"}
+          </button>
+        </div>
+        <textarea style={{ ...input, minHeight: 90, resize: "vertical" }} name="description" value={description} onChange={(e) => setDescription(e.target.value)} />
+        {generateNote && <p style={{ fontSize: 12, color: "#6B6B66", marginTop: 6 }}>{generateNote}</p>}
       </div>
 
       <button

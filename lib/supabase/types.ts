@@ -52,6 +52,7 @@ export interface EventRow {
   series_detached: boolean;
   bookable: boolean;
   booking_capacity: number | null;
+  description: string | null;
 }
 
 // ISO weekday numbers: 1=Mon .. 7=Sun.
@@ -89,6 +90,7 @@ export interface EventSeriesRow {
   updated_by: string | null;
   created_at: string;
   updated_at: string;
+  description: string | null;
 }
 
 // A skipped occurrence date. Only ever added/removed, never edited.
@@ -185,6 +187,7 @@ export interface EventPendingRow {
   updated_at: string;
   bookable: boolean | null;
   booking_capacity: number | null;
+  description: string | null;
 }
 
 export interface WatchedSourceRow {

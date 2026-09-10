@@ -102,6 +102,7 @@ export async function submitPublicEventForm(_prevState: PublicSubmitState, formD
     organiser_name: parsed.values.organiser_name,
     organiser_contact: parsed.values.organiser_contact,
     club_id: parsed.values.club_id,
+    description: parsed.values.description,
     confidence: 1,
     low_confidence_fields: [],
   };

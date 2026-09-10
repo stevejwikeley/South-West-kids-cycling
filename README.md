@@ -32,7 +32,7 @@ Open [http://localhost:3000](http://localhost:3000). You'll need a `.env.local` 
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes | Supabase anon/public key — used by the browser and by server-side reads that respect RLS. |
 | `SUPABASE_SERVICE_ROLE_KEY` | Yes | Bypasses RLS — used only in trusted server contexts (cron jobs, admin actions). Never expose to the client. |
 | `NEXT_PUBLIC_SITE_URL` | Yes | Canonical site URL, used for absolute links (ICS feed, emails, OG tags). |
-| `ANTHROPIC_API_KEY` | Yes | Powers the smart-ingestion event extraction (`lib/ingestion/extract-events.ts`) and the club "Look up online" web-search lookup (`lib/club-research.ts`). |
+| `ANTHROPIC_API_KEY` | Yes | Powers the smart-ingestion event extraction (`lib/ingestion/extract-events.ts`), the club "Look up online" web-search lookup (`lib/club-research.ts`), and the event "Generate from source" description writer (`lib/event-description.ts`). |
 | `RESEND_API_KEY` | Yes | Sends transactional email via Resend. |
 | `RESEND_FROM_EMAIL` | Yes | From-address for outgoing email. |
 | `ADMIN_NOTIFICATION_EMAIL` | Yes | Where contact-form submissions and the pending-approval digest are sent. |
@@ -148,6 +148,14 @@ There are four ways an event reaches the `events_pending` review queue (or, for 
 Everything in `events_pending` needs an admin's approval before it becomes a real, published event — smart ingestion never auto-publishes.
 
 Smart-ingestion candidates can carry `field_flags` — fields the extraction pipeline wasn't fully confident about (e.g. `kids_only`, `age_categories`). These survive into the live `events` row on approval and show as a "NEEDS VERIFICATION" badge on the admin event list and in the edit form/panel; a **Verify** button (`verifyEventFields()`, `lib/actions/events.ts`) clears the flag once an admin has reviewed the event — it's an all-or-nothing clear, not per-field.
+
+## Event descriptions
+
+Every event has an optional `description` (`events.description`, also on `events_pending` and `event_series`), shown on the event detail page — a short, welcoming few sentences aimed at someone who might be coming for the first time (what to expect, what makes it worth attending, anything that lowers the barrier for a beginner), not a neutral directory blurb. It's never required and never invents detail beyond what its source actually says.
+
+- **AI-ingested events** (smart ingestion, or the public paste-a-link path) get it for free — `description` is just another field in `extract-events.ts`'s extraction schema, generated from whatever source text/page the pipeline is already reading.
+- **Everywhere else** (admin/organiser event and series forms, the pending-queue edit panel, and the public `/submit-event` structured form — deliberately available to all of these, not gated to staff, since it only ever reads a URL the person themselves supplied) has a "Generate from source" button next to the description field. It fetches the event's organiser URL directly (`lib/event-description.ts`, via `generateDescriptionAction()` in `lib/actions/event-description.ts`) and asks Claude to write the description from that page's actual content — same propose-into-an-editable-field-don't-auto-save posture as the club "Look up online" button and AI event ingestion generally.
+- **Backfilling existing events** that predate this feature is a one-off admin tool, not a migration script — `/admin` shows a "Missing descriptions" panel (`components/admin/BackfillDescriptions.tsx`) whenever any live event has none, working through them one at a time (sequential, not parallel, since each one is an LLM call + external page fetch) with a stoppable/resumable progress view. It disappears on its own once every event has a description.
 
 ## Embeddable widget
 

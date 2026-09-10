@@ -1,16 +1,21 @@
 import Link from "next/link";
 import { getCurrentProfile } from "@/lib/auth";
 import { getAllEventRows, getAllSeriesRows } from "@/lib/data";
+import { getEventsMissingDescriptions } from "@/lib/actions/event-description";
 import SignOutButton from "./SignOutButton";
 import EventList from "@/components/events/EventList";
 import SeriesList from "@/components/events/SeriesList";
 import EmbedSnippet from "@/components/EmbedSnippet";
+import BackfillDescriptions from "@/components/admin/BackfillDescriptions";
 
 export default async function AdminPage() {
   const profile = await getCurrentProfile();
   const isSuperAdmin = profile?.role === "super_admin";
-  const events = await getAllEventRows();
-  const series = await getAllSeriesRows();
+  const [events, series, missingDescriptions] = await Promise.all([
+    getAllEventRows(),
+    getAllSeriesRows(),
+    getEventsMissingDescriptions(),
+  ]);
 
   return (
     <header style={{ maxWidth: 1100, margin: "0 auto", padding: "56px 24px 120px" }}>
@@ -45,6 +50,8 @@ export default async function AdminPage() {
           Manage team →
         </Link>
       </div>
+
+      {missingDescriptions.length > 0 && <BackfillDescriptions events={missingDescriptions} />}
 
       <EmbedSnippet />
 

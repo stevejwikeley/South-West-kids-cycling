@@ -1,9 +1,10 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { saveEvent, deleteEvent, verifyEventFields, type EventFormState } from "@/lib/actions/events";
+import { generateDescriptionAction } from "@/lib/actions/event-description";
 import { skipSeriesOccurrences } from "@/lib/actions/event-series";
 import { getBookingCountForConfirm } from "@/lib/actions/bookings";
 import { utcIsoToUkLocalParts } from "@/lib/uk-time";
@@ -46,11 +47,15 @@ export default function EventForm({
   onSuccess?: () => void;
 }) {
   const router = useRouter();
+  const formRef = useRef<HTMLFormElement>(null);
   const boundSave = saveEvent.bind(null, redirectTo);
   const [state, formAction, pending] = useActionState<EventFormState, FormData>(boundSave, {});
   const [bookingStatus, setBookingStatus] = useState(event?.booking_status ?? "planned");
   const [bookable, setBookable] = useState(event?.bookable ?? false);
   const [clubId, setClubId] = useState(event?.club_id ?? "");
+  const [description, setDescription] = useState(event?.description ?? "");
+  const [generating, setGenerating] = useState(false);
+  const [generateNote, setGenerateNote] = useState("");
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState("");
   const [skipping, setSkipping] = useState(false);
@@ -98,6 +103,22 @@ export default function EventForm({
     router.refresh();
   }
 
+  async function handleGenerateDescription() {
+    const fd = new FormData(formRef.current!);
+    const url = String(fd.get("organiser_url") ?? "");
+    const title = String(fd.get("title") ?? "");
+    const venueName = String(fd.get("venue_name") ?? "");
+    setGenerating(true);
+    setGenerateNote("");
+    const { description: generated, error } = await generateDescriptionAction(url, title, venueName);
+    setGenerating(false);
+    if (error) {
+      setGenerateNote(error);
+      return;
+    }
+    setDescription(generated ?? "");
+  }
+
   const startParts = event ? utcIsoToUkLocalParts(event.start_datetime) : null;
   const seriesBasePath = redirectTo === "/organiser" ? "/organiser/series" : "/admin/series";
 
@@ -126,7 +147,7 @@ export default function EventForm({
   }
 
   return (
-    <form action={formAction} style={{ maxWidth: 480 }}>
+    <form ref={formRef} action={formAction} style={{ maxWidth: 480 }}>
       {event && <input type="hidden" name="id" value={event.id} />}
       {event?.series_id && <input type="hidden" name="series_id" value={event.series_id} />}
 
@@ -257,6 +278,23 @@ export default function EventForm({
       </div>
 
       <ClubSelect clubs={clubs} value={clubId} onChange={setClubId} />
+
+      <div style={field}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+          <label className="mono" style={{ ...label, marginBottom: 0 }}>DESCRIPTION (OPTIONAL)</label>
+          <button
+            type="button"
+            disabled={generating}
+            onClick={handleGenerateDescription}
+            className="mono"
+            style={{ fontSize: 11, fontWeight: 700, color: "#111111", background: "none", border: "1px solid #111111", padding: "5px 11px", cursor: generating ? "default" : "pointer", opacity: generating ? 0.6 : 1 }}
+          >
+            {generating ? "Generating…" : "Generate from source"}
+          </button>
+        </div>
+        <textarea style={{ ...input, minHeight: 90, resize: "vertical" }} name="description" value={description} onChange={(e) => setDescription(e.target.value)} />
+        {generateNote && <p style={{ fontSize: 12, color: "#6B6B66", marginTop: 6 }}>{generateNote}</p>}
+      </div>
 
       <div style={{ background: "#F3F2EE", border: "1px solid #E4E2DD", padding: "16px 18px", marginBottom: 20 }}>
         <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, marginBottom: bookable ? 14 : 0 }}>

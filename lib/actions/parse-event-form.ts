@@ -30,6 +30,7 @@ export type EventFormValues = Pick<
   | "bookable"
   | "booking_capacity"
   | "club_id"
+  | "description"
 >;
 
 // Every event is all-day — there is no time-of-day concept anywhere in this
@@ -54,6 +55,7 @@ export function parseEventForm(
   const organiserName = String(formData.get("organiser_name") ?? "").trim() || null;
   const organiserContact = String(formData.get("organiser_contact") ?? "").trim() || null;
   const clubId = String(formData.get("club_id") ?? "").trim() || null;
+  const description = String(formData.get("description") ?? "").trim() || null;
 
   const bookable = formData.get("bookable") === "on";
   const bookingCapacityRaw = String(formData.get("booking_capacity") ?? "").trim();
@@ -94,6 +96,7 @@ export function parseEventForm(
       bookable,
       booking_capacity: bookingCapacity,
       club_id: clubId,
+      description,
     },
   };
 }

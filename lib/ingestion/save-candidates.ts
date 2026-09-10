@@ -81,6 +81,7 @@ export async function saveCandidates(
       organiser_url: candidate.organiser_url ?? sourceUrl ?? null,
       organiser_name: candidate.organiser_name,
       organiser_contact: candidate.organiser_contact,
+      description: candidate.description,
       // An explicit pick (the public structured form's club dropdown) wins;
       // otherwise fall back to matching the extracted organiser name against
       // a known club, since the AI extraction itself never sets club_id.

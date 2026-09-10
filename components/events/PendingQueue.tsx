@@ -28,6 +28,7 @@ const FIELD_ORDER: (keyof EventPendingRow)[] = [
   "booking_link",
   "organiser_url",
   "club_id",
+  "description",
 ];
 
 export default function PendingQueue({ pending, liveEvents, clubs, redirectTo }: { pending: EventPendingRow[]; liveEvents: EventRow[]; clubs: Club[]; redirectTo: string }) {

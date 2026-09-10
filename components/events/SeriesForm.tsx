@@ -1,8 +1,9 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { saveSeries, deleteSeries, type SeriesFormState } from "@/lib/actions/event-series";
+import { generateDescriptionAction } from "@/lib/actions/event-description";
 import { EVENT_DISCIPLINES } from "@/lib/mock-data";
 import ClubSelect from "@/components/clubs/ClubSelect";
 import type { EventSeriesRow } from "@/lib/supabase/types";
@@ -51,6 +52,7 @@ export default function SeriesForm({
   redirectTo: string;
 }) {
   const router = useRouter();
+  const formRef = useRef<HTMLFormElement>(null);
   const boundSave = saveSeries.bind(null, redirectTo);
   const [state, formAction, pending] = useActionState<SeriesFormState, FormData>(boundSave, {});
   // series (editing) takes priority; prefill (converting a one-off event to
@@ -58,8 +60,27 @@ export default function SeriesForm({
   const base = series ?? prefill;
   const [bookingStatus, setBookingStatus] = useState(base?.booking_status ?? "planned");
   const [clubId, setClubId] = useState(base?.club_id ?? "");
+  const [description, setDescription] = useState(base?.description ?? "");
+  const [generating, setGenerating] = useState(false);
+  const [generateNote, setGenerateNote] = useState("");
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState("");
+
+  async function handleGenerateDescription() {
+    const fd = new FormData(formRef.current!);
+    const url = String(fd.get("organiser_url") ?? "");
+    const title = String(fd.get("title") ?? "");
+    const venueName = String(fd.get("venue_name") ?? "");
+    setGenerating(true);
+    setGenerateNote("");
+    const { description: generated, error } = await generateDescriptionAction(url, title, venueName);
+    setGenerating(false);
+    if (error) {
+      setGenerateNote(error);
+      return;
+    }
+    setDescription(generated ?? "");
+  }
 
   async function handleDelete() {
     if (!series) return;
@@ -77,7 +98,7 @@ export default function SeriesForm({
   }
 
   return (
-    <form action={formAction} style={{ maxWidth: 480 }}>
+    <form ref={formRef} action={formAction} style={{ maxWidth: 480 }}>
       {series && <input type="hidden" name="id" value={series.id} />}
       {fromEventId && <input type="hidden" name="from_event_id" value={fromEventId} />}
 
@@ -205,6 +226,23 @@ export default function SeriesForm({
       </div>
 
       <ClubSelect clubs={clubs} value={clubId} onChange={setClubId} />
+
+      <div style={field}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+          <label className="mono" style={{ ...label, marginBottom: 0 }}>DESCRIPTION (OPTIONAL)</label>
+          <button
+            type="button"
+            disabled={generating}
+            onClick={handleGenerateDescription}
+            className="mono"
+            style={{ fontSize: 11, fontWeight: 700, color: "#111111", background: "none", border: "1px solid #111111", padding: "5px 11px", cursor: generating ? "default" : "pointer", opacity: generating ? 0.6 : 1 }}
+          >
+            {generating ? "Generating…" : "Generate from source"}
+          </button>
+        </div>
+        <textarea style={{ ...input, minHeight: 90, resize: "vertical" }} name="description" value={description} onChange={(e) => setDescription(e.target.value)} />
+        {generateNote && <p style={{ fontSize: 12, color: "#6B6B66", marginTop: 6 }}>{generateNote}</p>}
+      </div>
 
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
         <button

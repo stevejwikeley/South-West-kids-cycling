@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { updatePending } from "@/lib/actions/pending";
+import { generateDescriptionAction } from "@/lib/actions/event-description";
 import { utcIsoToUkLocalParts } from "@/lib/uk-time";
 import { EVENT_DISCIPLINES } from "@/lib/mock-data";
 import ClubSelect from "@/components/clubs/ClubSelect";
@@ -54,6 +55,7 @@ interface FormValues {
   bookable: boolean;
   booking_capacity: number | null;
   club_id: string;
+  description: string;
 }
 
 type Diff = Record<string, { from: unknown; to: unknown }>;
@@ -93,6 +95,7 @@ function computeInitial(row: EventPendingRow, liveEvent: EventRow | null): FormV
     bookable: (resolveField(row, liveEvent, "bookable") as boolean) ?? false,
     booking_capacity: (resolveField(row, liveEvent, "booking_capacity") as number | null) ?? null,
     club_id: (resolveField(row, liveEvent, "club_id") as string) ?? "",
+    description: (resolveField(row, liveEvent, "description") as string) ?? "",
   };
 }
 
@@ -149,9 +152,23 @@ export default function PendingEditPanel({
   const [values, setValues] = useState<FormValues>(() => computeInitial(row, liveEvent));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [generating, setGenerating] = useState(false);
+  const [generateNote, setGenerateNote] = useState("");
 
   function set<K extends keyof FormValues>(key: K, value: FormValues[K]) {
     setValues((prev) => ({ ...prev, [key]: value }));
+  }
+
+  async function handleGenerateDescription() {
+    setGenerating(true);
+    setGenerateNote("");
+    const { description, error: err } = await generateDescriptionAction(values.organiser_url, values.title, values.venue_name);
+    setGenerating(false);
+    if (err) {
+      setGenerateNote(err);
+      return;
+    }
+    set("description", description ?? "");
   }
 
   function liveFor(key: string): string {
@@ -183,6 +200,7 @@ export default function PendingEditPanel({
     formData.set("organiser_name", values.organiser_name);
     formData.set("organiser_contact", values.organiser_contact);
     formData.set("club_id", values.club_id);
+    formData.set("description", values.description);
     if (values.bookable) formData.set("bookable", "on");
     formData.set("booking_capacity", values.booking_capacity != null ? String(values.booking_capacity) : "");
 
@@ -341,6 +359,24 @@ export default function PendingEditPanel({
         </div>
 
         <ClubSelect clubs={clubs} value={values.club_id} onChange={(v) => set("club_id", v)} />
+
+        <div style={fieldStyle}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+            <label className="mono" style={{ ...labelStyle, marginBottom: 0 }}>DESCRIPTION</label>
+            <button
+              type="button"
+              disabled={generating}
+              onClick={handleGenerateDescription}
+              className="mono"
+              style={{ fontSize: 11, fontWeight: 700, color: "#111111", background: "none", border: "1px solid #111111", padding: "5px 11px", cursor: generating ? "default" : "pointer", opacity: generating ? 0.6 : 1 }}
+            >
+              {generating ? "Generating…" : "Generate from source"}
+            </button>
+          </div>
+          <textarea style={{ ...inputStyle, minHeight: 90, resize: "vertical" }} value={values.description} onChange={(e) => set("description", e.target.value)} />
+          <FlagNote note={row.field_flags?.description} />
+          {generateNote && <p style={{ fontSize: 12, color: "#6B6B66", marginTop: 6 }}>{generateNote}</p>}
+        </div>
 
         <div style={{ background: "#F3F2EE", border: "1px solid #E4E2DD", padding: "16px 18px", marginBottom: 20 }}>
           <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, marginBottom: values.bookable ? 14 : 0 }}>

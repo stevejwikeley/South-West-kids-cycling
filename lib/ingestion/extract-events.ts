@@ -32,6 +32,10 @@ const ExtractedEventSchema = z.object({
   organiser_url: z.string().nullable(),
   organiser_name: z.string().nullable(),
   organiser_contact: z.string().nullable(),
+  description: z
+    .string()
+    .nullable()
+    .describe("A warm, welcoming 2-4 sentence description aimed at someone considering coming for the first time — the format, what riders can expect, and anything from the source that lowers the barrier for a beginner (no experience needed, coached, sociable). Plain, inviting language, not racing-insider jargon. Only use what's actually stated in the source. Null if the source has nothing beyond what's already captured in the other fields."),
   club_id: z
     .string()
     .nullable()
@@ -68,6 +72,7 @@ Rules:
 - Every event on this calendar is treated as all-day — don't extract or infer a start/end time even if the source states one.
 - confidence should reflect the whole event: high when title, date, venue and discipline are all clear and unambiguous; low when you had to infer significantly or the source is degraded/ambiguous.
 - low_confidence_fields flags individual populated fields you're unsure about (e.g. you inferred a postcode from a venue name rather than reading it directly) — this is separate from confidence and from leaving a field null; it's for values you filled in but aren't fully sure are right.
+- description should read like a friendly invitation to someone who might be coming for the first time — accessible language, what to expect, and anything in the source that makes it feel approachable for a beginner (no experience needed, coached, sociable, welcoming). Ground it only in what the source actually says; don't invent beginner-friendliness or details that aren't there, and don't pad it out if the source doesn't say much beyond the title/venue.
 - If nothing in the content is a relevant event, return an empty events array.`;
 }
 

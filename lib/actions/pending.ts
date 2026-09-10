@@ -52,6 +52,7 @@ const PUBLIC_DIFF_KEYS = new Set<keyof EventFormValues>([
   "organiser_url",
   "organiser_name",
   "organiser_contact",
+  "description",
 ]);
 
 const ADMIN_DIFF_KEYS = new Set<keyof EventFormValues>([...PUBLIC_DIFF_KEYS, "bookable", "booking_capacity", "club_id"]);
