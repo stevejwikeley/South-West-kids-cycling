@@ -1,12 +1,14 @@
 import Link from "next/link";
 import SubmitEventForm from "@/components/events/SubmitEventForm";
+import { getClubs } from "@/lib/data";
 
 export const metadata = {
   title: "Submit an event",
   description: "Know about a youth cycling event that's missing from the calendar? Submit it here — no login needed.",
 };
 
-export default function SubmitEventPage() {
+export default async function SubmitEventPage() {
+  const clubs = await getClubs();
   return (
     <header style={{ maxWidth: 720, margin: "0 auto", padding: "56px 24px 120px" }}>
       <div className="mono" style={{ fontSize: 11.5, letterSpacing: "0.12em", color: "#E0102A", marginBottom: 16, fontWeight: 700 }}>SUBMIT AN EVENT</div>
@@ -18,7 +20,7 @@ export default function SubmitEventPage() {
       </p>
 
       <div style={{ marginTop: 44 }}>
-        <SubmitEventForm />
+        <SubmitEventForm clubs={clubs} />
       </div>
 
       <div style={{ marginTop: 48, paddingTop: 24, borderTop: "1px solid #E4E2DD" }}>

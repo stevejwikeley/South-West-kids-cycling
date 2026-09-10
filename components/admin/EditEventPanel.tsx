@@ -6,8 +6,9 @@ import { X } from "lucide-react";
 import EventForm from "@/components/events/EventForm";
 import { getEventForEdit } from "@/lib/actions/events";
 import type { EventRow } from "@/lib/supabase/types";
+import type { Club } from "@/lib/types";
 
-export default function EditEventPanel({ eventId, onClose }: { eventId: string | null; onClose: () => void }) {
+export default function EditEventPanel({ eventId, clubs = [], onClose }: { eventId: string | null; clubs?: Club[]; onClose: () => void }) {
   const router = useRouter();
   const [event, setEvent] = useState<EventRow | null>(null);
   // Tracks which id `event` was fetched for, so loading is derived rather
@@ -57,7 +58,7 @@ export default function EditEventPanel({ eventId, onClose }: { eventId: string |
         </div>
 
         {loading && <p style={{ color: "#6B6B66", fontSize: 13.5 }}>Loading…</p>}
-        {!loading && event && <EventForm event={event} redirectTo={null} onSuccess={handleSuccess} />}
+        {!loading && event && <EventForm event={event} clubs={clubs} redirectTo={null} onSuccess={handleSuccess} />}
         {!loading && !event && <p style={{ color: "#A13A2A", fontSize: 13.5 }}>Couldn&apos;t load this event.</p>}
       </div>
     </div>

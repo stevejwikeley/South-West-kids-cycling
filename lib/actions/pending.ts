@@ -54,7 +54,7 @@ const PUBLIC_DIFF_KEYS = new Set<keyof EventFormValues>([
   "organiser_contact",
 ]);
 
-const ADMIN_DIFF_KEYS = new Set<keyof EventFormValues>([...PUBLIC_DIFF_KEYS, "bookable", "booking_capacity"]);
+const ADMIN_DIFF_KEYS = new Set<keyof EventFormValues>([...PUBLIC_DIFF_KEYS, "bookable", "booking_capacity", "club_id"]);
 
 function sameValue(a: unknown, b: unknown): boolean {
   if (Array.isArray(a) && Array.isArray(b)) {

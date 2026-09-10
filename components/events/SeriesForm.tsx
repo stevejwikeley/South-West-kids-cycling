@@ -6,7 +6,7 @@ import { saveSeries, deleteSeries, type SeriesFormState } from "@/lib/actions/ev
 import { EVENT_DISCIPLINES } from "@/lib/mock-data";
 import type { EventSeriesRow } from "@/lib/supabase/types";
 import type { SeriesPrefill } from "@/lib/actions/parse-series-form";
-import type { AgeCategory } from "@/lib/types";
+import type { AgeCategory, Club } from "@/lib/types";
 
 const AGE_OPTIONS: AgeCategory[] = ["u8", "u10", "u12", "u14", "u16"];
 const REGION_OPTIONS = [
@@ -39,11 +39,13 @@ const col: React.CSSProperties = { flex: "1 1 140px" };
 export default function SeriesForm({
   series,
   prefill,
+  clubs = [],
   fromEventId,
   redirectTo,
 }: {
   series?: EventSeriesRow;
   prefill?: SeriesPrefill;
+  clubs?: Club[];
   fromEventId?: string;
   redirectTo: string;
 }) {
@@ -198,6 +200,14 @@ export default function SeriesForm({
           <label className="mono" style={label}>ORGANISER CONTACT (OPTIONAL)</label>
           <input style={input} name="organiser_contact" defaultValue={base?.organiser_contact ?? ""} />
         </div>
+      </div>
+
+      <div style={field}>
+        <label className="mono" style={label}>CLUB (OPTIONAL)</label>
+        <select style={input} name="club_id" defaultValue={base?.club_id ?? ""}>
+          <option value="">None</option>
+          {clubs.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+        </select>
       </div>
 
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>

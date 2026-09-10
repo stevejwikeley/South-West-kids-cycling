@@ -32,6 +32,10 @@ const ExtractedEventSchema = z.object({
   organiser_url: z.string().nullable(),
   organiser_name: z.string().nullable(),
   organiser_contact: z.string().nullable(),
+  club_id: z
+    .string()
+    .nullable()
+    .describe("Always null. Club association is matched by name in a later step, not extracted here."),
   confidence: z
     .number()
     .describe("0-1: overall confidence this is a real event and the extracted fields are accurate. Lower for ambiguous, partial, or hard-to-read source content."),

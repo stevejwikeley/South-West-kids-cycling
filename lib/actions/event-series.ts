@@ -46,6 +46,7 @@ function occurrenceInsertRow(
     organiser_url: values.organiser_url,
     organiser_name: values.organiser_name,
     organiser_contact: values.organiser_contact,
+    club_id: values.club_id,
     region: values.region,
     source_type: "manual" as const,
     approved: true,
@@ -130,6 +131,7 @@ async function createNewSeries(
       organiser_url: values.organiser_url,
       organiser_name: values.organiser_name,
       organiser_contact: values.organiser_contact,
+      club_id: values.club_id,
       region: values.region,
       approved: true,
       created_by: userId,
@@ -203,6 +205,7 @@ async function updateExistingSeries(
       organiser_url: values.organiser_url,
       organiser_name: values.organiser_name,
       organiser_contact: values.organiser_contact,
+      club_id: values.club_id,
       region: values.region,
       updated_by: userId,
     })
@@ -249,6 +252,7 @@ async function updateExistingSeries(
         organiser_url: values.organiser_url,
         organiser_name: values.organiser_name,
         organiser_contact: values.organiser_contact,
+        club_id: values.club_id,
         region: values.region,
         updated_by: userId,
       })

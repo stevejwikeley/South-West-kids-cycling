@@ -22,6 +22,7 @@ function toCalendarEvent(row: EventRow): CalendarEvent {
     organiserUrl: row.organiser_url,
     seriesId: row.series_id,
     bookable: row.bookable,
+    clubId: row.club_id,
   };
 }
 
@@ -58,6 +59,14 @@ export async function getClubs(): Promise<Club[]> {
 
   if (error) throw error;
   return (data as ClubRow[]).map(toClub);
+}
+
+export async function getClubById(id: string): Promise<Club | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("clubs").select("*").eq("id", id).single();
+
+  if (error) return null;
+  return toClub(data as ClubRow);
 }
 
 export async function getEventRowById(id: string): Promise<EventRow | null> {

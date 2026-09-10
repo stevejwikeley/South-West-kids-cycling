@@ -29,6 +29,7 @@ export type EventSeriesFormValues = Pick<
   | "organiser_url"
   | "organiser_name"
   | "organiser_contact"
+  | "club_id"
 >;
 
 // Values carried over when converting an existing one-off event into a
@@ -54,6 +55,7 @@ export function eventRowToSeriesPrefill(event: EventRow): SeriesPrefill {
     organiser_url: event.organiser_url,
     organiser_name: event.organiser_name,
     organiser_contact: event.organiser_contact,
+    club_id: event.club_id,
   };
 }
 
@@ -82,6 +84,7 @@ export function parseSeriesForm(
   const organiserUrl = String(formData.get("organiser_url") ?? "").trim();
   const organiserName = String(formData.get("organiser_name") ?? "").trim() || null;
   const organiserContact = String(formData.get("organiser_contact") ?? "").trim() || null;
+  const clubId = String(formData.get("club_id") ?? "").trim() || null;
 
   if (!title) return { ok: false, error: "Title is required." };
   if (!discipline) return { ok: false, error: "Discipline is required." };
@@ -115,6 +118,7 @@ export function parseSeriesForm(
       organiser_url: organiserUrl,
       organiser_name: organiserName,
       organiser_contact: organiserContact,
+      club_id: clubId,
     },
   };
 }

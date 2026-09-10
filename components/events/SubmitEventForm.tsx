@@ -4,7 +4,7 @@ import { useActionState, useState } from "react";
 import { submitPublicUrlOrText, submitPublicEventForm, type PublicSubmitState } from "@/lib/actions/public-submit";
 import { EVENT_DISCIPLINES } from "@/lib/mock-data";
 import { trackEvent } from "@/lib/analytics";
-import type { AgeCategory } from "@/lib/types";
+import type { AgeCategory, Club } from "@/lib/types";
 
 const AGE_OPTIONS: AgeCategory[] = ["u8", "u10", "u12", "u14", "u16"];
 const REGION_OPTIONS = [
@@ -82,7 +82,7 @@ function LinkOrTextForm() {
   );
 }
 
-function StructuredForm() {
+function StructuredForm({ clubs }: { clubs: Club[] }) {
   const [state, formAction, pending] = useActionState<PublicSubmitState, FormData>(submitPublicEventForm, {});
   const [bookingStatus, setBookingStatus] = useState<"open" | "planned">("planned");
 
@@ -188,6 +188,14 @@ function StructuredForm() {
         </div>
       </div>
 
+      <div style={field}>
+        <label className="mono" style={label}>CLUB (OPTIONAL)</label>
+        <select style={input} name="club_id" defaultValue="">
+          <option value="">None</option>
+          {clubs.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+        </select>
+      </div>
+
       <button
         type="submit"
         disabled={pending}
@@ -200,13 +208,13 @@ function StructuredForm() {
   );
 }
 
-export default function SubmitEventForm() {
+export default function SubmitEventForm({ clubs }: { clubs: Club[] }) {
   const [mode, setMode] = useState<Mode>("link");
 
   return (
     <div>
       <ModeToggle mode={mode} setMode={setMode} />
-      {mode === "link" ? <LinkOrTextForm /> : <StructuredForm />}
+      {mode === "link" ? <LinkOrTextForm /> : <StructuredForm clubs={clubs} />}
     </div>
   );
 }

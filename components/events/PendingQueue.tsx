@@ -5,8 +5,10 @@ import { useRouter } from "next/navigation";
 import { approveChange, approveIngested, rejectChange, type PendingActionResult } from "@/lib/actions/pending";
 import PendingEditPanel from "./PendingEditPanel";
 import type { EventPendingRow, EventRow } from "@/lib/supabase/types";
+import type { Club } from "@/lib/types";
 
-function formatValue(v: unknown): string {
+function formatValue(v: unknown, key: string, clubNameById: Map<string, string>): string {
+  if (key === "club_id") return typeof v === "string" && clubNameById.has(v) ? clubNameById.get(v)! : "—";
   if (v === null || v === undefined || v === "") return "—";
   if (Array.isArray(v)) return v.length ? v.join(", ") : "—";
   if (typeof v === "boolean") return v ? "Yes" : "No";
@@ -25,15 +27,17 @@ const FIELD_ORDER: (keyof EventPendingRow)[] = [
   "booking_status",
   "booking_link",
   "organiser_url",
+  "club_id",
 ];
 
-export default function PendingQueue({ pending, liveEvents, redirectTo }: { pending: EventPendingRow[]; liveEvents: EventRow[]; redirectTo: string }) {
+export default function PendingQueue({ pending, liveEvents, clubs, redirectTo }: { pending: EventPendingRow[]; liveEvents: EventRow[]; clubs: Club[]; redirectTo: string }) {
   const router = useRouter();
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [busyIds, setBusyIds] = useState<Set<string>>(new Set());
   const [editingId, setEditingId] = useState<string | null>(null);
 
   const liveById = new Map(liveEvents.map((e) => [e.id, e]));
+  const clubNameById = new Map(clubs.map((c) => [c.id, c.name]));
 
   if (pending.length === 0) {
     return <p style={{ color: "#6B6B66", fontSize: 13.5 }}>No pending changes — you&apos;re all caught up.</p>;
@@ -195,13 +199,13 @@ export default function PendingQueue({ pending, liveEvents, redirectTo }: { pend
                 <tbody>
                   {FIELD_ORDER.map((key) => {
                     const liveValue = matchedLive ? (matchedLive as unknown as Record<string, unknown>)[key] : undefined;
-                    const differs = matchedLive && formatValue(liveValue) !== formatValue(p[key]);
+                    const differs = matchedLive && formatValue(liveValue, key, clubNameById) !== formatValue(p[key], key, clubNameById);
                     const flagged = p.field_flags?.[key];
                     return (
                       <tr key={key}>
                         <td style={{ color: "#6B6B66", padding: "3px 12px 3px 0", verticalAlign: "top", whiteSpace: "nowrap" }}>{key}</td>
                         <td style={{ color: "#111111", padding: "3px 0", verticalAlign: "top" }}>
-                          {formatValue(p[key])}
+                          {formatValue(p[key], key, clubNameById)}
                           {flagged && (
                             <span className="mono" style={{ color: "#9A6B00", marginLeft: 8, fontSize: 10.5 }} title={flagged}>
                               ⚠ needs verification
@@ -209,7 +213,7 @@ export default function PendingQueue({ pending, liveEvents, redirectTo }: { pend
                           )}
                           {differs && (
                             <span className="mono" style={{ color: "#9A6B00", marginLeft: 8, fontSize: 10.5 }}>
-                              (live: {formatValue(liveValue)})
+                              (live: {formatValue(liveValue, key, clubNameById)})
                             </span>
                           )}
                         </td>
@@ -225,9 +229,9 @@ export default function PendingQueue({ pending, liveEvents, redirectTo }: { pend
                     {diffFields.map(([key, change]) => (
                       <tr key={key}>
                         <td style={{ color: "#6B6B66", padding: "3px 12px 3px 0", verticalAlign: "top", whiteSpace: "nowrap" }}>{key}</td>
-                        <td style={{ color: "#A13A2A", padding: "3px 12px 3px 0", verticalAlign: "top" }}>{formatValue(change.from)}</td>
+                        <td style={{ color: "#A13A2A", padding: "3px 12px 3px 0", verticalAlign: "top" }}>{formatValue(change.from, key, clubNameById)}</td>
                         <td style={{ color: "#6B6B66", padding: "3px 6px 3px 0" }}>→</td>
-                        <td style={{ color: "#1F5D3A", padding: "3px 0", verticalAlign: "top", fontWeight: 700 }}>{formatValue(change.to)}</td>
+                        <td style={{ color: "#1F5D3A", padding: "3px 0", verticalAlign: "top", fontWeight: 700 }}>{formatValue(change.to, key, clubNameById)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -251,6 +255,7 @@ export default function PendingQueue({ pending, liveEvents, redirectTo }: { pend
         <PendingEditPanel
           row={editingRow}
           liveEvent={editingRow.duplicate_of ? liveById.get(editingRow.duplicate_of) ?? null : null}
+          clubs={clubs}
           onClose={() => setEditingId(null)}
           onSaved={() => {
             setEditingId(null);

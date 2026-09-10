@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { MapPin, Search, X, Calendar, ArrowUpRight, Filter, Download, Repeat } from "lucide-react";
 import { EVENT_DISCIPLINES, eventDisc, ageLabel } from "@/lib/mock-data";
-import type { DisciplineId, CalendarEvent } from "@/lib/types";
+import type { DisciplineId, CalendarEvent, Club } from "@/lib/types";
 import { MONTHS, fmtDay } from "@/lib/format";
 import { trackEvent } from "@/lib/analytics";
 import { eventsToCsv, downloadCsv } from "@/lib/csv";
@@ -12,9 +12,10 @@ import { mapsUrl } from "@/lib/maps";
 import EditEventPanel from "@/components/admin/EditEventPanel";
 import SuggestChangePanel from "@/components/events/SuggestChangePanel";
 
-export default function CalendarPage({ events, isAdmin = false }: { events: CalendarEvent[]; isAdmin?: boolean }) {
+export default function CalendarPage({ events, clubs = [], isAdmin = false }: { events: CalendarEvent[]; clubs?: Club[]; isAdmin?: boolean }) {
   const [activeDisc, setActiveDisc] = useState<Set<DisciplineId>>(new Set());
   const [region, setRegion] = useState("all");
+  const [clubFilter, setClubFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -25,6 +26,13 @@ export default function CalendarPage({ events, isAdmin = false }: { events: Cale
     return EVENT_DISCIPLINES.filter((d) => present.has(d.id));
   }, [events]);
 
+  const clubNameById = useMemo(() => new Map(clubs.map((c) => [c.id, c.name])), [clubs]);
+
+  const visibleClubs = useMemo(() => {
+    const present = new Set(events.map((e) => e.clubId).filter((id): id is string => id !== null));
+    return clubs.filter((c) => present.has(c.id)).sort((a, b) => a.name.localeCompare(b.name));
+  }, [events, clubs]);
+
   const toggleDisc = (id: DisciplineId) =>
     setActiveDisc((prev) => {
       const n = new Set(prev);
@@ -34,17 +42,18 @@ export default function CalendarPage({ events, isAdmin = false }: { events: Cale
       return n;
     });
 
-  const activeFilterCount = (region !== "all" ? 1 : 0) + (search ? 1 : 0) + activeDisc.size;
+  const activeFilterCount = (region !== "all" ? 1 : 0) + (clubFilter !== "all" ? 1 : 0) + (search ? 1 : 0) + activeDisc.size;
 
   const filtered = useMemo(
     () =>
       events.filter((e) => {
         if (activeDisc.size > 0 && !activeDisc.has(e.discipline)) return false;
         if (region !== "all" && e.region !== region && e.region !== "both") return false;
+        if (clubFilter !== "all" && e.clubId !== clubFilter) return false;
         if (search && !`${e.title} ${e.venue}`.toLowerCase().includes(search.toLowerCase())) return false;
         return true;
       }).sort((a, b) => a.date.localeCompare(b.date)),
-    [events, activeDisc, region, search]
+    [events, activeDisc, region, clubFilter, search]
   );
 
   const grouped = useMemo(() => {
@@ -148,6 +157,20 @@ export default function CalendarPage({ events, isAdmin = false }: { events: Cale
                   <button onClick={() => setActiveDisc(new Set())} className="mono" style={{ fontSize: 11, color: "#6B6B66", background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}>CLEAR</button>
                 )}
               </div>
+
+              {visibleClubs.length > 0 && (
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                  <span className="mono" style={{ fontSize: 10.5, color: "#6B6B66", marginRight: 2 }}>CLUB</span>
+                  <select
+                    value={clubFilter}
+                    onChange={(e) => { setClubFilter(e.target.value); trackEvent("filter_club", { club_id: e.target.value }); }}
+                    style={{ background: "#FFFFFF", border: "1px solid #D8D6D0", color: "#111111", padding: "6px 10px", fontSize: 12 }}
+                  >
+                    <option value="all">All clubs</option>
+                    {visibleClubs.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                </div>
+              )}
             </>
           )}
         </div>
@@ -206,6 +229,11 @@ export default function CalendarPage({ events, isAdmin = false }: { events: Cale
                         <span className="mono" style={{ color: "#6B6B66", fontSize: 10.5 }}>· {e.ages.map(ageLabel).join(", ")}</span>
                         {e.status === "provisional" && <span className="mono" style={{ color: "#C77F17", fontSize: 10.5 }}>· PROVISIONAL</span>}
                         {e.status === "cancelled" && <span className="mono" style={{ color: "#A13A2A", fontSize: 10.5 }}>· CANCELLED</span>}
+                        {e.clubId && clubNameById.has(e.clubId) && (
+                          <span className="mono" style={{ fontSize: 10, fontWeight: 700, padding: "3px 8px", letterSpacing: "0.03em", background: "#F3F2EE", color: "#6B6B66" }}>
+                            {clubNameById.get(e.clubId)}
+                          </span>
+                        )}
                         <span className="mono" style={{
                           fontSize: 10, fontWeight: 700, padding: "3px 8px", letterSpacing: "0.03em",
                           background: "#F3F2EE", color: "#6B6B66",
@@ -267,7 +295,7 @@ export default function CalendarPage({ events, isAdmin = false }: { events: Cale
         </div>
       </main>
 
-      {isAdmin && <EditEventPanel eventId={editingId} onClose={() => setEditingId(null)} />}
+      {isAdmin && <EditEventPanel eventId={editingId} clubs={clubs} onClose={() => setEditingId(null)} />}
       {!isAdmin && <SuggestChangePanel eventId={suggestingId} onClose={() => setSuggestingId(null)} />}
     </>
   );

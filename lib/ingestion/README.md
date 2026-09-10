@@ -41,6 +41,12 @@ save-candidates.ts — saveCandidates()
   queued — a watched source re-scanning the same unchanged page shouldn't
   put the same already-approved event back in front of an admin, even if
   the extraction is uncertain about a field again (candidateDiffersFromLive()).
+  Also resolves club_id here: extract-events.ts never sets it (the model has
+  no access to the clubs table), so it's matched from the extracted
+  organiser_name against known club names (matchClubByName(), lib/club-match.ts)
+  — only an exact, unambiguous match counts, otherwise it's left null for a
+  human to set. The public structured form's explicit club pick (passed
+  through as candidate.club_id) always takes priority over this match.
 ```
 
 ## Extraction rules worth knowing

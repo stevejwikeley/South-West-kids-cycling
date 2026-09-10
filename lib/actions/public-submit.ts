@@ -101,6 +101,7 @@ export async function submitPublicEventForm(_prevState: PublicSubmitState, formD
     organiser_url: parsed.values.organiser_url,
     organiser_name: parsed.values.organiser_name,
     organiser_contact: parsed.values.organiser_contact,
+    club_id: parsed.values.club_id,
     confidence: 1,
     low_confidence_fields: [],
   };

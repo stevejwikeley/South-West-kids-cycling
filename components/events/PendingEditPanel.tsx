@@ -13,6 +13,7 @@ import type {
   EventStatus,
   RegionType,
 } from "@/lib/supabase/types";
+import type { Club } from "@/lib/types";
 
 const AGE_OPTIONS: AgeCategory[] = ["u8", "u10", "u12", "u14", "u16"];
 const REGION_OPTIONS = [
@@ -51,6 +52,7 @@ interface FormValues {
   organiser_contact: string;
   bookable: boolean;
   booking_capacity: number | null;
+  club_id: string;
 }
 
 type Diff = Record<string, { from: unknown; to: unknown }>;
@@ -89,6 +91,7 @@ function computeInitial(row: EventPendingRow, liveEvent: EventRow | null): FormV
     organiser_contact: (resolveField(row, liveEvent, "organiser_contact") as string) ?? "",
     bookable: (resolveField(row, liveEvent, "bookable") as boolean) ?? false,
     booking_capacity: (resolveField(row, liveEvent, "booking_capacity") as number | null) ?? null,
+    club_id: (resolveField(row, liveEvent, "club_id") as string) ?? "",
   };
 }
 
@@ -132,11 +135,13 @@ function LiveHint({ liveValue, onUse }: { liveValue: string; onUse: () => void }
 export default function PendingEditPanel({
   row,
   liveEvent,
+  clubs,
   onClose,
   onSaved,
 }: {
   row: EventPendingRow;
   liveEvent: EventRow | null;
+  clubs: Club[];
   onClose: () => void;
   onSaved: () => void;
 }) {
@@ -176,6 +181,7 @@ export default function PendingEditPanel({
     formData.set("organiser_url", values.organiser_url);
     formData.set("organiser_name", values.organiser_name);
     formData.set("organiser_contact", values.organiser_contact);
+    formData.set("club_id", values.club_id);
     if (values.bookable) formData.set("bookable", "on");
     formData.set("booking_capacity", values.booking_capacity != null ? String(values.booking_capacity) : "");
 
@@ -331,6 +337,14 @@ export default function PendingEditPanel({
             <label className="mono" style={labelStyle}>ORGANISER CONTACT</label>
             <input style={inputStyle} value={values.organiser_contact} onChange={(e) => set("organiser_contact", e.target.value)} />
           </div>
+        </div>
+
+        <div style={fieldStyle}>
+          <label className="mono" style={labelStyle}>CLUB (OPTIONAL)</label>
+          <select style={inputStyle} value={values.club_id} onChange={(e) => set("club_id", e.target.value)}>
+            <option value="">None</option>
+            {clubs.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
         </div>
 
         <div style={{ background: "#F3F2EE", border: "1px solid #E4E2DD", padding: "16px 18px", marginBottom: 20 }}>

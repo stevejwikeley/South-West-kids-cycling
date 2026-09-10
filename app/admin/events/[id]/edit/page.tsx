@@ -1,10 +1,10 @@
 import { notFound } from "next/navigation";
 import EventForm from "@/components/events/EventForm";
-import { getEventRowById } from "@/lib/data";
+import { getClubs, getEventRowById } from "@/lib/data";
 
 export default async function EditAdminEventPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const event = await getEventRowById(id);
+  const [event, clubs] = await Promise.all([getEventRowById(id), getClubs()]);
   if (!event) notFound();
 
   return (
@@ -13,7 +13,7 @@ export default async function EditAdminEventPage({ params }: { params: Promise<{
       <h1 className="disp" style={{ fontSize: "clamp(28px, 4.5vw, 40px)", lineHeight: 1.05, margin: 0, marginBottom: 28, letterSpacing: "-0.01em" }}>
         Edit event.
       </h1>
-      <EventForm event={event} redirectTo="/admin" />
+      <EventForm event={event} clubs={clubs} redirectTo="/admin" />
     </header>
   );
 }

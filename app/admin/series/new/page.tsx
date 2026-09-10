@@ -1,5 +1,5 @@
 import SeriesForm from "@/components/events/SeriesForm";
-import { getEventRowById } from "@/lib/data";
+import { getClubs, getEventRowById } from "@/lib/data";
 import { eventRowToSeriesPrefill } from "@/lib/actions/parse-series-form";
 
 export default async function NewAdminSeriesPage({
@@ -8,7 +8,7 @@ export default async function NewAdminSeriesPage({
   searchParams: Promise<{ from?: string }>;
 }) {
   const { from } = await searchParams;
-  const fromEvent = from ? await getEventRowById(from) : null;
+  const [fromEvent, clubs] = await Promise.all([from ? getEventRowById(from) : Promise.resolve(null), getClubs()]);
 
   return (
     <header style={{ maxWidth: 1100, margin: "0 auto", padding: "56px 24px 120px" }}>
@@ -20,6 +20,7 @@ export default async function NewAdminSeriesPage({
         redirectTo="/admin"
         prefill={fromEvent ? eventRowToSeriesPrefill(fromEvent) : undefined}
         fromEventId={fromEvent?.id}
+        clubs={clubs}
       />
     </header>
   );

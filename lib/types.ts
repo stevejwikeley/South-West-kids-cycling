@@ -30,6 +30,7 @@ export interface CalendarEvent {
   organiserUrl: string;
   seriesId: string | null;
   bookable: boolean;
+  clubId: string | null;
 }
 
 export interface Club {

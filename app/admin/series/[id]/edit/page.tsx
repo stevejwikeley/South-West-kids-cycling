@@ -1,10 +1,10 @@
 import { notFound } from "next/navigation";
 import SeriesForm from "@/components/events/SeriesForm";
-import { getSeriesRowById } from "@/lib/data";
+import { getClubs, getSeriesRowById } from "@/lib/data";
 
 export default async function EditAdminSeriesPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const series = await getSeriesRowById(id);
+  const [series, clubs] = await Promise.all([getSeriesRowById(id), getClubs()]);
   if (!series) notFound();
 
   return (
@@ -13,7 +13,7 @@ export default async function EditAdminSeriesPage({ params }: { params: Promise<
       <h1 className="disp" style={{ fontSize: "clamp(28px, 4.5vw, 40px)", lineHeight: 1.05, margin: 0, marginBottom: 28, letterSpacing: "-0.01em" }}>
         Edit recurring event.
       </h1>
-      <SeriesForm series={series} redirectTo="/admin" />
+      <SeriesForm series={series} redirectTo="/admin" clubs={clubs} />
     </header>
   );
 }

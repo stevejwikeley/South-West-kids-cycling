@@ -3,8 +3,9 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { findDuplicate } from "./dedup";
 import { bookingLinkTitleMismatch, LINK_TITLE_MISMATCH_FLAG } from "./link-check";
 import { normalizePostcode } from "@/lib/postcode";
+import { matchClubByName } from "@/lib/club-match";
 import type { ExtractedEvent } from "./extract-events";
-import type { Database, EventRow, EventPendingRow, SourceTypeEnum } from "@/lib/supabase/types";
+import type { Database, EventRow, EventPendingRow, SourceTypeEnum, ClubRow } from "@/lib/supabase/types";
 
 // Shared by the admin "paste URL/text" flow, the nightly watched-source
 // cron, and the public submit-an-event page — one save path so dedup
@@ -20,12 +21,16 @@ export async function saveCandidates(
   watchedSourceId?: string,
   sourceType: SourceTypeEnum = "smart_ingest"
 ): Promise<number> {
-  const [{ data: liveEvents, error: liveError }, { data: pendingRows, error: pendingError }] = await Promise.all([
+  const [{ data: liveEvents, error: liveError }, { data: pendingRows, error: pendingError }, { data: clubRows, error: clubsError }] = await Promise.all([
     supabase.from("events").select("*"),
     supabase.from("events_pending").select("*").in("source_type", ["smart_ingest", "public_submission"]),
+    supabase.from("clubs").select("id, name"),
   ]);
   if (liveError) throw new Error(liveError.message);
   if (pendingError) throw new Error(pendingError.message);
+  if (clubsError) throw new Error(clubsError.message);
+
+  const clubs = (clubRows as Pick<ClubRow, "id" | "name">[]) ?? [];
 
   const liveIds = new Set(((liveEvents as EventRow[]) ?? []).map((e) => e.id));
 
@@ -76,6 +81,10 @@ export async function saveCandidates(
       organiser_url: candidate.organiser_url ?? sourceUrl ?? null,
       organiser_name: candidate.organiser_name,
       organiser_contact: candidate.organiser_contact,
+      // An explicit pick (the public structured form's club dropdown) wins;
+      // otherwise fall back to matching the extracted organiser name against
+      // a known club, since the AI extraction itself never sets club_id.
+      club_id: candidate.club_id ?? matchClubByName(candidate.organiser_name, clubs),
     };
 
     // A re-scan that matches a live event and agrees with it on everything

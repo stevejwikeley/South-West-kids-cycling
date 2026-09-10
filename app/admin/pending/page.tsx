@@ -1,8 +1,8 @@
-import { getAllEventRows, getPendingChangeRows } from "@/lib/data";
+import { getAllEventRows, getClubs, getPendingChangeRows } from "@/lib/data";
 import PendingQueue from "@/components/events/PendingQueue";
 
 export default async function AdminPendingPage() {
-  const [pending, liveEvents] = await Promise.all([getPendingChangeRows(), getAllEventRows()]);
+  const [pending, liveEvents, clubs] = await Promise.all([getPendingChangeRows(), getAllEventRows(), getClubs()]);
 
   return (
     <header style={{ maxWidth: 1100, margin: "0 auto", padding: "56px 24px 120px" }}>
@@ -15,7 +15,7 @@ export default async function AdminPendingPage() {
       </p>
 
       <div style={{ marginTop: 36 }}>
-        <PendingQueue pending={pending} liveEvents={liveEvents} redirectTo="/admin/pending" />
+        <PendingQueue pending={pending} liveEvents={liveEvents} clubs={clubs} redirectTo="/admin/pending" />
       </div>
     </header>
   );

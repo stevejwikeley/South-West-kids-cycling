@@ -3,6 +3,7 @@
 import { useState } from "react";
 import EventForm from "@/components/events/EventForm";
 import SeriesForm from "@/components/events/SeriesForm";
+import type { Club } from "@/lib/types";
 
 const tabBtn = (active: boolean): React.CSSProperties => ({
   padding: "8px 16px",
@@ -18,7 +19,7 @@ const tabBtn = (active: boolean): React.CSSProperties => ({
 // Only used on the create-new pages — converting an existing event into a
 // series (or vice versa) after the fact is out of scope, so the edit pages
 // render EventForm/SeriesForm directly instead of this toggle.
-export default function EventOrSeriesForm({ redirectTo }: { redirectTo: string }) {
+export default function EventOrSeriesForm({ redirectTo, clubs = [] }: { redirectTo: string; clubs?: Club[] }) {
   const [mode, setMode] = useState<"single" | "series">("single");
 
   return (
@@ -31,7 +32,7 @@ export default function EventOrSeriesForm({ redirectTo }: { redirectTo: string }
           Repeating event
         </button>
       </div>
-      {mode === "single" ? <EventForm redirectTo={redirectTo} /> : <SeriesForm redirectTo={redirectTo} />}
+      {mode === "single" ? <EventForm redirectTo={redirectTo} clubs={clubs} /> : <SeriesForm redirectTo={redirectTo} clubs={clubs} />}
     </div>
   );
 }

@@ -9,7 +9,7 @@ import { getBookingCountForConfirm } from "@/lib/actions/bookings";
 import { utcIsoToUkLocalParts } from "@/lib/uk-time";
 import { EVENT_DISCIPLINES } from "@/lib/mock-data";
 import type { EventRow } from "@/lib/supabase/types";
-import type { AgeCategory } from "@/lib/types";
+import type { AgeCategory, Club } from "@/lib/types";
 
 const AGE_OPTIONS: AgeCategory[] = ["u8", "u10", "u12", "u14", "u16"];
 const REGION_OPTIONS = [
@@ -35,10 +35,12 @@ const col: React.CSSProperties = { flex: "1 1 140px" };
 
 export default function EventForm({
   event,
+  clubs = [],
   redirectTo,
   onSuccess,
 }: {
   event?: EventRow;
+  clubs?: Club[];
   redirectTo: string | null;
   onSuccess?: () => void;
 }) {
@@ -250,6 +252,14 @@ export default function EventForm({
           <label className="mono" style={label}>ORGANISER CONTACT (OPTIONAL)</label>
           <input style={input} name="organiser_contact" defaultValue={event?.organiser_contact ?? ""} />
         </div>
+      </div>
+
+      <div style={field}>
+        <label className="mono" style={label}>CLUB (OPTIONAL)</label>
+        <select style={input} name="club_id" defaultValue={event?.club_id ?? ""}>
+          <option value="">None</option>
+          {clubs.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+        </select>
       </div>
 
       <div style={{ background: "#F3F2EE", border: "1px solid #E4E2DD", padding: "16px 18px", marginBottom: 20 }}>

@@ -1,12 +1,12 @@
 import CalendarPage from "@/components/CalendarPage";
-import { getEvents } from "@/lib/data";
+import { getClubs, getEvents } from "@/lib/data";
 import { eventsToJsonLd } from "@/lib/structured-data";
 import { getCurrentProfile, isAdminRole } from "@/lib/auth";
 
 export const revalidate = 60;
 
 export default async function Page() {
-  const [events, profile] = await Promise.all([getEvents(), getCurrentProfile()]);
+  const [events, profile, clubs] = await Promise.all([getEvents(), getCurrentProfile(), getClubs()]);
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -21,7 +21,7 @@ export default async function Page() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
       />
-      <CalendarPage events={events} isAdmin={isAdminRole(profile)} />
+      <CalendarPage events={events} clubs={clubs} isAdmin={isAdminRole(profile)} />
     </>
   );
 }

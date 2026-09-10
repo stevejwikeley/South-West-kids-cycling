@@ -9,13 +9,13 @@ export const revalidate = 60;
 // the pathname checks in TopNav/Footer/FeedbackPopup — since this route is
 // meant to be dropped into a club's own website via <iframe>, not browsed
 // directly. Query params let a club scope it to what's relevant to them:
-// ?region=devon|cornwall|somerset, ?discipline=cx,xc,..., ?limit=10 (default 15).
+// ?region=devon|cornwall|somerset, ?discipline=cx,xc,..., ?club=<clubId>, ?limit=10 (default 15).
 export default async function EmbedPage({
   searchParams,
 }: {
-  searchParams: Promise<{ region?: string; discipline?: string; limit?: string }>;
+  searchParams: Promise<{ region?: string; discipline?: string; club?: string; limit?: string }>;
 }) {
-  const { region, discipline, limit } = await searchParams;
+  const { region, discipline, club, limit } = await searchParams;
   const events = await getEvents();
 
   const disciplineFilter = discipline ? new Set(discipline.split(",") as DisciplineId[]) : null;
@@ -25,6 +25,7 @@ export default async function EmbedPage({
   const filtered = events
     .filter((e) => !regionFilter || e.region === regionFilter || e.region === "both")
     .filter((e) => !disciplineFilter || disciplineFilter.has(e.discipline))
+    .filter((e) => !club || e.clubId === club)
     .slice(0, max);
 
   return (

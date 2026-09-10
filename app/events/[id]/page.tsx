@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { getEventRowById, getEventSpacesLeft } from "@/lib/data";
+import { getClubById, getEventRowById, getEventSpacesLeft } from "@/lib/data";
 import { eventDisc } from "@/lib/mock-data";
 import { fmtDay } from "@/lib/format";
 import SignupForm from "@/components/events/SignupForm";
@@ -8,6 +8,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
   const { id } = await params;
   const event = await getEventRowById(id);
   if (!event || !event.approved) notFound();
+  const club = event.club_id ? await getClubById(event.club_id) : null;
 
   const d = eventDisc(event.discipline);
   const f = fmtDay(event.start_datetime.slice(0, 10));
@@ -25,6 +26,7 @@ export default async function EventDetailPage({ params }: { params: Promise<{ id
         <p><strong>Ages:</strong> {event.age_categories.map((a) => a.toUpperCase()).join(", ") || "All ages"}</p>
         {event.kids_only && <p>Kids only — no adults racing alongside.</p>}
         {event.organiser_name && <p><strong>Organiser:</strong> {event.organiser_name}</p>}
+        {club && <p><strong>Club:</strong> {club.name}</p>}
       </div>
 
       {event.bookable ? (
