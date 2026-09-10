@@ -27,9 +27,12 @@ export default async function OrganiserPage() {
         Signed in as {profile?.email}. Events you add here publish straight to the public calendar.
       </p>
 
-      <div style={{ marginTop: 28 }}>
+      <div style={{ marginTop: 28, display: "flex", gap: 12, flexWrap: "wrap" }}>
         <Link href="/organiser/events/new" style={{ display: "inline-block", background: "#111111", color: "#FAFAF8", border: "none", padding: "11px 20px", fontWeight: 700, fontSize: 13 }}>
           + Add event
+        </Link>
+        <Link href="/organiser/clubs" className="mono" style={{ display: "inline-block", background: "none", color: "#111111", border: "1px solid #111111", padding: "11px 20px", fontWeight: 700, fontSize: 13 }}>
+          Manage clubs
         </Link>
       </div>
 

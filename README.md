@@ -32,7 +32,7 @@ Open [http://localhost:3000](http://localhost:3000). You'll need a `.env.local` 
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes | Supabase anon/public key — used by the browser and by server-side reads that respect RLS. |
 | `SUPABASE_SERVICE_ROLE_KEY` | Yes | Bypasses RLS — used only in trusted server contexts (cron jobs, admin actions). Never expose to the client. |
 | `NEXT_PUBLIC_SITE_URL` | Yes | Canonical site URL, used for absolute links (ICS feed, emails, OG tags). |
-| `ANTHROPIC_API_KEY` | Yes | Powers the smart-ingestion event extraction (`lib/ingestion/extract-events.ts`). |
+| `ANTHROPIC_API_KEY` | Yes | Powers the smart-ingestion event extraction (`lib/ingestion/extract-events.ts`) and the club "Look up online" web-search lookup (`lib/club-research.ts`). |
 | `RESEND_API_KEY` | Yes | Sends transactional email via Resend. |
 | `RESEND_FROM_EMAIL` | Yes | From-address for outgoing email. |
 | `ADMIN_NOTIFICATION_EMAIL` | Yes | Where contact-form submissions and the pending-approval digest are sent. |
@@ -59,6 +59,7 @@ npm run traffic-report  # append a weekly Vercel Web Analytics summary to docs/t
 app/                    Routes (App Router)
   page.tsx                Public calendar (home page)
   clubs/                   Public club directory
+  admin/clubs/, organiser/clubs/   Create/edit/delete clubs — see "Clubs" below
   getting-started/         New-to-racing guide
   contact/                 Contact form (general enquiry / organiser account request)
   subscribe/               Calendar subscription instructions (email digest + ICS feed)
@@ -76,8 +77,10 @@ app/                    Routes (App Router)
   admin/                   Admin-only: events, pending queue, watched sources, add events
                              (formerly "smart ingestion" — paste/upload/manual are all here now);
                              events/[id]/attendees/ manages/messages one event's bookings
-  organiser/               Organiser-only: manage their own events; events/[id]/attendees/
-                             is the organiser-scoped equivalent of the admin attendees page
+  organiser/               Signed-in (admin or organiser): manage their own events;
+                             events/[id]/attendees/ is the organiser-scoped equivalent of the
+                             admin attendees page. clubs/ is NOT scoped to "own" — clubs are
+                             shared reference data any organiser can create/edit
   api/cron/                Vercel Cron endpoints (see below)
   api/mcp/                 MCP server for weekly event discovery (see below)
 
@@ -89,7 +92,10 @@ components/              Shared UI. components/admin and components/events hold
                           has the display-oriented CalendarEvent shape to start from.
                           SeriesForm / SeriesList are the recurring-event equivalents of
                           EventForm / EventList; EventOrSeriesForm is the one-off/repeating
-                          toggle shown on the "add event" pages.
+                          toggle shown on the "add event" pages. components/clubs/ holds the
+                          club CRUD form/list plus ClubSelect (the "CLUB" field embedded in
+                          EventForm/SeriesForm/PendingEditPanel, which owns the inline
+                          "+ Add new club…" quick-add) and ClubQuickAdd/ClubFields it's built from.
 
 lib/
   actions/                 Server Actions ("use server"), one file per feature
@@ -125,7 +131,7 @@ Three roles, stored in `profiles.role`: `super_admin`, `admin`, and `organiser`.
 
 - **Super admins** have every admin capability below, plus the exclusive ability to invite someone directly as an admin, and to promote an organiser to admin or demote an admin back to organiser (`/admin/team`). This is the only functional difference from a regular admin — it exists so that granting admin access is deliberately a smaller, more trusted set of people than "everyone who can review events." `isAdminRole()` (`lib/auth.ts`) is `true` for both `admin` and `super_admin` and is what almost every admin-gated check should use; the literal `role === "super_admin"` check is reserved for the invite-as-admin and promote/demote actions themselves.
 - **Admins** manage all events, review the pending-change queue, run smart ingestion, manage watched sources, can invite organisers, and can see the full `/admin/team` roster (just without the promote/demote/invite-as-admin controls).
-- **Organisers** manage only their own events (`created_by` scoping), and can be invited by an admin.
+- **Organisers** manage only their own events (`created_by` scoping), and can be invited by an admin. Clubs are the one exception to "own events only" — any admin or organiser can create/edit/delete any club (see "Clubs" below), since clubs are shared reference data rather than something one organiser owns.
 - **Inviting someone directly as admin or organiser** (`/admin/team`, `inviteTeamMember` in `app/admin/actions.ts`) sends a Supabase Auth invite email with the intended role baked into `raw_user_meta_data`. `handle_new_user()` (`0014_invite_role_metadata.sql`) reads that metadata when creating the new `profiles` row, so the person lands with the correct role from their very first sign-in — no separate "sign up, then get promoted" step. That metadata is only ever set server-side by the super_admin-gated invite action and is consumed synchronously at signup, before the invited person has ever authenticated, so they can't influence their own starting role.
 
 **Attendees** are a separate, public self-signup identity, not a fourth entry in the role hierarchy above — anyone can become one by booking an event, no invite needed. They authenticate the same way as the three roles above (Supabase Auth magic link), but `handle_new_user()`'s role-metadata branch (extended in `0018_event_booking.sql`) routes `role: 'attendee'` into a separate `attendees` table instead of `profiles`, so they never gain admin/organiser access of any kind. `getCurrentAttendee()` (`lib/auth.ts`) is their equivalent of `getCurrentProfile()`, and `/my-events` is their equivalent of the admin/organiser dashboards.
@@ -147,9 +153,13 @@ Smart-ingestion candidates can carry `field_flags` — fields the extraction pip
 
 `/embed` renders a compact, nav/footer/feedback-bubble-free events list meant for `<iframe>`-ing into a club's own site (`TopNav`/`Footer`/`FeedbackPopup`/`ChatWidget` all check the pathname and render nothing under `/embed`). Supports `?region=`, `?discipline=`, `?club=`, `?limit=` to scope what's shown, and always links back to `/subscribe`. `/embed-builder` (`components/EmbedBuilderPage.tsx`) is the point-and-click UI for constructing that query string and copying the resulting `<iframe>` snippet — useful for a club that wants to show only its own events. The Clubs page also has a copyable generic `<iframe>` snippet (`components/EmbedSnippet.tsx`) linking to the builder.
 
-## Clubs on events
+## Clubs
 
 Every event can optionally be linked to one club (`events.club_id`, nullable, `on delete set null`) — the "CLUB" select on the admin/organiser event and series forms, the pending-queue edit panel, and the public `/submit-event` structured form all share this. It's purely descriptive: unlike organiser scoping, it has no effect on RLS or who can edit an event. A club's name shows as a badge on the calendar and in the pending-queue diff view, and as a "Club:" line on the event detail page; the calendar and `/embed` can both filter down to one club (`?club=<id>` on the embed route). When an event comes in through AI extraction (smart ingestion or the public paste-a-link path), `saveCandidates()` (`lib/ingestion/save-candidates.ts`) tries to match the extracted `organiser_name` against a club name (`lib/club-match.ts`) — only an exact, unambiguous match sets `club_id` automatically; anything less certain is left for an admin to set by hand during review.
+
+**Managing clubs.** `/admin/clubs` and `/organiser/clubs` (`lib/actions/clubs.ts`, `components/clubs/ClubForm.tsx`) are full create/edit/delete pages for the `clubs` table — any signed-in admin or organiser can manage any club, since clubs are shared reference data, not owned per-organiser (`0020_club_write_access.sql` adds the `is_staff()`-gated write policies this needs; `clubs` originally shipped with only a public-read policy). The same "CLUB" field embedded in the event/series/pending forms (`components/clubs/ClubSelect.tsx`) has a trailing "+ Add new club…" option that opens an inline quick-add (`ClubQuickAdd.tsx`) instead of navigating away — creating a club there calls `createClub()` directly (not through `useActionState`, since the caller needs the new row back synchronously to select it) and selects the new club immediately.
+
+**AI-assisted lookup.** Both the full club form and the quick-add have a "Look up online" button next to the name field, calling `researchClubAction()` → `researchClub()` (`lib/club-research.ts`). This uses the same Claude + structured-output pattern as `extract-events.ts`, but with Anthropic's `web_search` tool so the model can actually search for the named club and return its location, website, disciplines, age range, founding year and a short summary — same "propose, don't auto-save" posture as AI-ingested events: it only prefills the form's fields, which are then still reviewed and submitted by a human.
 
 ## Chat assistant
 

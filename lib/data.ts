@@ -26,7 +26,7 @@ function toCalendarEvent(row: EventRow): CalendarEvent {
   };
 }
 
-function toClub(row: ClubRow): Club {
+export function toClub(row: ClubRow): Club {
   return {
     id: row.id,
     name: row.name,

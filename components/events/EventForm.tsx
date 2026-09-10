@@ -8,6 +8,7 @@ import { skipSeriesOccurrences } from "@/lib/actions/event-series";
 import { getBookingCountForConfirm } from "@/lib/actions/bookings";
 import { utcIsoToUkLocalParts } from "@/lib/uk-time";
 import { EVENT_DISCIPLINES } from "@/lib/mock-data";
+import ClubSelect from "@/components/clubs/ClubSelect";
 import type { EventRow } from "@/lib/supabase/types";
 import type { AgeCategory, Club } from "@/lib/types";
 
@@ -49,6 +50,7 @@ export default function EventForm({
   const [state, formAction, pending] = useActionState<EventFormState, FormData>(boundSave, {});
   const [bookingStatus, setBookingStatus] = useState(event?.booking_status ?? "planned");
   const [bookable, setBookable] = useState(event?.bookable ?? false);
+  const [clubId, setClubId] = useState(event?.club_id ?? "");
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState("");
   const [skipping, setSkipping] = useState(false);
@@ -254,13 +256,7 @@ export default function EventForm({
         </div>
       </div>
 
-      <div style={field}>
-        <label className="mono" style={label}>CLUB (OPTIONAL)</label>
-        <select style={input} name="club_id" defaultValue={event?.club_id ?? ""}>
-          <option value="">None</option>
-          {clubs.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-        </select>
-      </div>
+      <ClubSelect clubs={clubs} value={clubId} onChange={setClubId} />
 
       <div style={{ background: "#F3F2EE", border: "1px solid #E4E2DD", padding: "16px 18px", marginBottom: 20 }}>
         <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, marginBottom: bookable ? 14 : 0 }}>

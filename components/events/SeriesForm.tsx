@@ -4,6 +4,7 @@ import { useActionState, useState } from "react";
 import { useRouter } from "next/navigation";
 import { saveSeries, deleteSeries, type SeriesFormState } from "@/lib/actions/event-series";
 import { EVENT_DISCIPLINES } from "@/lib/mock-data";
+import ClubSelect from "@/components/clubs/ClubSelect";
 import type { EventSeriesRow } from "@/lib/supabase/types";
 import type { SeriesPrefill } from "@/lib/actions/parse-series-form";
 import type { AgeCategory, Club } from "@/lib/types";
@@ -56,6 +57,7 @@ export default function SeriesForm({
   // recurring) only applies when creating brand new.
   const base = series ?? prefill;
   const [bookingStatus, setBookingStatus] = useState(base?.booking_status ?? "planned");
+  const [clubId, setClubId] = useState(base?.club_id ?? "");
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState("");
 
@@ -202,13 +204,7 @@ export default function SeriesForm({
         </div>
       </div>
 
-      <div style={field}>
-        <label className="mono" style={label}>CLUB (OPTIONAL)</label>
-        <select style={input} name="club_id" defaultValue={base?.club_id ?? ""}>
-          <option value="">None</option>
-          {clubs.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-        </select>
-      </div>
+      <ClubSelect clubs={clubs} value={clubId} onChange={setClubId} />
 
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
         <button

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { updatePending } from "@/lib/actions/pending";
 import { utcIsoToUkLocalParts } from "@/lib/uk-time";
 import { EVENT_DISCIPLINES } from "@/lib/mock-data";
+import ClubSelect from "@/components/clubs/ClubSelect";
 import type {
   AgeCategory,
   BookingStatusType,
@@ -339,13 +340,7 @@ export default function PendingEditPanel({
           </div>
         </div>
 
-        <div style={fieldStyle}>
-          <label className="mono" style={labelStyle}>CLUB (OPTIONAL)</label>
-          <select style={inputStyle} value={values.club_id} onChange={(e) => set("club_id", e.target.value)}>
-            <option value="">None</option>
-            {clubs.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
-        </div>
+        <ClubSelect clubs={clubs} value={values.club_id} onChange={(v) => set("club_id", v)} />
 
         <div style={{ background: "#F3F2EE", border: "1px solid #E4E2DD", padding: "16px 18px", marginBottom: 20 }}>
           <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, marginBottom: values.bookable ? 14 : 0 }}>
