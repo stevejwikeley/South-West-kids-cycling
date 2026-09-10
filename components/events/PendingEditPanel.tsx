@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { updatePending } from "@/lib/actions/pending";
 import { generateDescriptionAction } from "@/lib/actions/event-description";
+import { resolvePendingField } from "@/lib/pending-fields";
 import { utcIsoToUkLocalParts } from "@/lib/uk-time";
 import { EVENT_DISCIPLINES } from "@/lib/mock-data";
 import ClubSelect from "@/components/clubs/ClubSelect";
@@ -58,44 +60,30 @@ interface FormValues {
   description: string;
 }
 
-type Diff = Record<string, { from: unknown; to: unknown }>;
-
-// A change_request row only stores fields that differ from the live event
-// (in diff_against); a smart_ingest row stores every field directly. Either
-// way, this resolves "what should the form show right now" to one shape.
-function resolveField(row: EventPendingRow, liveEvent: EventRow | null, key: string): unknown {
-  if (row.source_type === "change_request") {
-    const diff = (row.diff_against as Diff | null) ?? {};
-    if (key in diff) return diff[key].to;
-    return liveEvent ? (liveEvent as unknown as Record<string, unknown>)[key] : null;
-  }
-  return (row as unknown as Record<string, unknown>)[key] ?? null;
-}
-
 function computeInitial(row: EventPendingRow, liveEvent: EventRow | null): FormValues {
-  const startDatetime = resolveField(row, liveEvent, "start_datetime") as string | null;
+  const startDatetime = resolvePendingField(row, liveEvent, "start_datetime") as string | null;
   const startParts = startDatetime ? utcIsoToUkLocalParts(startDatetime) : null;
 
   return {
-    title: (resolveField(row, liveEvent, "title") as string) ?? "",
-    discipline: (resolveField(row, liveEvent, "discipline") as DisciplineType) ?? "",
-    status: (resolveField(row, liveEvent, "status") as EventStatus) ?? "confirmed",
+    title: (resolvePendingField(row, liveEvent, "title") as string) ?? "",
+    discipline: (resolvePendingField(row, liveEvent, "discipline") as DisciplineType) ?? "",
+    status: (resolvePendingField(row, liveEvent, "status") as EventStatus) ?? "confirmed",
     date: startParts?.date ?? "",
-    venue_name: (resolveField(row, liveEvent, "venue_name") as string) ?? "",
-    address: (resolveField(row, liveEvent, "address") as string) ?? "",
-    postcode: (resolveField(row, liveEvent, "postcode") as string) ?? "",
-    region: (resolveField(row, liveEvent, "region") as RegionType) ?? "",
-    age_categories: (resolveField(row, liveEvent, "age_categories") as AgeCategory[]) ?? [],
-    kids_only: (resolveField(row, liveEvent, "kids_only") as boolean) ?? false,
-    booking_status: (resolveField(row, liveEvent, "booking_status") as BookingStatusType) ?? "planned",
-    booking_link: (resolveField(row, liveEvent, "booking_link") as string) ?? "",
-    organiser_url: (resolveField(row, liveEvent, "organiser_url") as string) ?? "",
-    organiser_name: (resolveField(row, liveEvent, "organiser_name") as string) ?? "",
-    organiser_contact: (resolveField(row, liveEvent, "organiser_contact") as string) ?? "",
-    bookable: (resolveField(row, liveEvent, "bookable") as boolean) ?? false,
-    booking_capacity: (resolveField(row, liveEvent, "booking_capacity") as number | null) ?? null,
-    club_id: (resolveField(row, liveEvent, "club_id") as string) ?? "",
-    description: (resolveField(row, liveEvent, "description") as string) ?? "",
+    venue_name: (resolvePendingField(row, liveEvent, "venue_name") as string) ?? "",
+    address: (resolvePendingField(row, liveEvent, "address") as string) ?? "",
+    postcode: (resolvePendingField(row, liveEvent, "postcode") as string) ?? "",
+    region: (resolvePendingField(row, liveEvent, "region") as RegionType) ?? "",
+    age_categories: (resolvePendingField(row, liveEvent, "age_categories") as AgeCategory[]) ?? [],
+    kids_only: (resolvePendingField(row, liveEvent, "kids_only") as boolean) ?? false,
+    booking_status: (resolvePendingField(row, liveEvent, "booking_status") as BookingStatusType) ?? "planned",
+    booking_link: (resolvePendingField(row, liveEvent, "booking_link") as string) ?? "",
+    organiser_url: (resolvePendingField(row, liveEvent, "organiser_url") as string) ?? "",
+    organiser_name: (resolvePendingField(row, liveEvent, "organiser_name") as string) ?? "",
+    organiser_contact: (resolvePendingField(row, liveEvent, "organiser_contact") as string) ?? "",
+    bookable: (resolvePendingField(row, liveEvent, "bookable") as boolean) ?? false,
+    booking_capacity: (resolvePendingField(row, liveEvent, "booking_capacity") as number | null) ?? null,
+    club_id: (resolvePendingField(row, liveEvent, "club_id") as string) ?? "",
+    description: (resolvePendingField(row, liveEvent, "description") as string) ?? "",
   };
 }
 
@@ -149,8 +137,10 @@ export default function PendingEditPanel({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const router = useRouter();
   const [values, setValues] = useState<FormValues>(() => computeInitial(row, liveEvent));
   const [saving, setSaving] = useState(false);
+  const [converting, setConverting] = useState(false);
   const [error, setError] = useState("");
   const [generating, setGenerating] = useState(false);
   const [generateNote, setGenerateNote] = useState("");
@@ -179,10 +169,7 @@ export default function PendingEditPanel({
     return formatted && formatted !== current ? formatted : "";
   }
 
-  async function handleSave() {
-    setSaving(true);
-    setError("");
-
+  function buildFormData(): FormData {
     const formData = new FormData();
     formData.set("title", values.title);
     formData.set("discipline", values.discipline);
@@ -204,13 +191,36 @@ export default function PendingEditPanel({
     if (values.bookable) formData.set("bookable", "on");
     formData.set("booking_capacity", values.booking_capacity != null ? String(values.booking_capacity) : "");
 
-    const result = await updatePending(row.id, formData);
+    return formData;
+  }
+
+  async function handleSave() {
+    setSaving(true);
+    setError("");
+    const result = await updatePending(row.id, buildFormData());
     setSaving(false);
     if (result.error) {
       setError(result.error);
       return;
     }
     onSaved();
+  }
+
+  // Converting hands off to the same series form the one-off event edit pages
+  // use, prefilled from this pending row. The in-panel edits are persisted
+  // first so the form picks them up — that page reads the stored row, not
+  // this component's state. The pending queue is admin-only (RLS on
+  // events_pending), so /admin is the right base path here.
+  async function handleConvert() {
+    setConverting(true);
+    setError("");
+    const result = await updatePending(row.id, buildFormData());
+    if (result.error) {
+      setConverting(false);
+      setError(result.error);
+      return;
+    }
+    router.push(`/admin/series/new?fromPending=${row.id}`);
   }
 
   return (
@@ -400,13 +410,25 @@ export default function PendingEditPanel({
 
         <button
           type="button"
-          disabled={saving}
+          disabled={saving || converting}
           onClick={handleSave}
-          style={{ background: "#111111", color: "#FAFAF8", border: "none", padding: "12px 24px", fontWeight: 700, fontSize: 13.5, cursor: saving ? "default" : "pointer", opacity: saving ? 0.6 : 1 }}
+          style={{ background: "#111111", color: "#FAFAF8", border: "none", padding: "12px 24px", fontWeight: 700, fontSize: 13.5, cursor: saving || converting ? "default" : "pointer", opacity: saving || converting ? 0.6 : 1 }}
         >
           {saving ? "Saving…" : "Save changes"}
         </button>
         {error && <p style={{ color: "#A13A2A", fontSize: 12.5, marginTop: 14 }}>{error}</p>}
+
+        <p style={{ marginTop: 14 }}>
+          <button
+            type="button"
+            disabled={saving || converting}
+            onClick={handleConvert}
+            className="mono"
+            style={{ fontSize: 11.5, color: "#6B6B66", background: "none", border: "none", padding: 0, textDecoration: "underline", cursor: saving || converting ? "default" : "pointer", opacity: saving || converting ? 0.6 : 1 }}
+          >
+            {converting ? "Opening…" : "Does this repeat? Convert to a recurring event →"}
+          </button>
+        </p>
       </div>
     </>
   );

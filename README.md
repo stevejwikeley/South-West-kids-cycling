@@ -102,7 +102,8 @@ lib/
                              (event-series.ts creates/edits/deletes recurring series and
                              their generated occurrences, parse-series-form.ts validates the
                              series form and builds prefill values when converting an existing
-                             event to a series — see "Event publishing paths"; bookings.ts
+                             event or a pending-queue item to a series — see "Event publishing
+                             paths"; bookings.ts
                              creates/cancels a booking and promotes off the waitlist when a
                              confirmed spot frees up)
   ingestion/                AI event-extraction pipeline — see its own README
@@ -113,6 +114,10 @@ lib/
   auth.ts                   getCurrentProfile() / isAdminRole() — the one place role checks
                              originate
   data.ts                   Read helpers that map DB rows to the app's CalendarEvent/Club types
+  pending-fields.ts         Resolves "what is this pending row proposing for field X" across
+                             both pending shapes (a change_request's diff over the live event
+                             vs. an ingested row's own columns) — shared by the pending edit
+                             panel and the pending-to-series conversion
   mock-data.ts              Discipline definitions (labels, colors) — not actually mock data,
                              this is the canonical discipline list despite the filename
   recurrence.ts             Pure weekly-occurrence-date generation for recurring series, no
@@ -140,7 +145,7 @@ Three roles, stored in `profiles.role`: `super_admin`, `admin`, and `organiser`.
 
 There are four ways an event reaches the `events_pending` review queue (or, for organisers, straight into `events`):
 
-1. **Manual** — an admin or organiser fills in the event form directly. This includes recurring events (e.g. weekly club training): the "add event" pages offer a "Repeating event" mode (`EventOrSeriesForm` → `SeriesForm`) that picks a set of weekdays and a required end date, then generates one `events` row per occurrence up front (`lib/actions/event-series.ts`, `lib/recurrence.ts`) — bounded, so there's no background job involved. A date can be skipped individually, and editing one occurrence's own fields detaches it from the series (`series_detached`) so a later series-wide edit never overwrites that customization. An existing one-off event can also be turned into a series after the fact — its edit page has a "Convert to a recurring event" link (`?from=<eventId>` on `/admin|organiser/series/new`) that prefills the new-series form from that event (`eventRowToSeriesPrefill()`, `lib/actions/parse-series-form.ts`) and replaces the original standalone event with the generated occurrences once saved.
+1. **Manual** — an admin or organiser fills in the event form directly. This includes recurring events (e.g. weekly club training): the "add event" pages offer a "Repeating event" mode (`EventOrSeriesForm` → `SeriesForm`) that picks a set of weekdays and a required end date, then generates one `events` row per occurrence up front (`lib/actions/event-series.ts`, `lib/recurrence.ts`) — bounded, so there's no background job involved. A date can be skipped individually, and editing one occurrence's own fields detaches it from the series (`series_detached`) so a later series-wide edit never overwrites that customization. An existing one-off event can also be turned into a series after the fact — its edit page has a "Convert to a recurring event" link (`?from=<eventId>` on `/admin|organiser/series/new`) that prefills the new-series form from that event (`eventRowToSeriesPrefill()`, `lib/actions/parse-series-form.ts`) and replaces the original standalone event with the generated occurrences once saved. The same conversion is available one step earlier, from the pending queue: the edit panel on any pending item has a "Convert to a recurring event" action (`?fromPending=<pendingId>`) that saves the in-panel edits, prefills the series form from the row's resolved values (`pendingRowToSeriesPrefill()`), and on save clears the item from the queue — replacing the live event it was matched to, if it had one, so the series occurrence for that date isn't duplicated. That path is admin-only in three places: the `/admin` layout, an `isAdminRole()` check in `saveSeries()`, and RLS on `events_pending`.
 2. **Change request** — anyone can submit a correction to an existing event via `/events/[id]/suggest-change`, no login required.
 3. **Smart ingestion** — an admin pastes a URL, pastes text, or uploads a file/image on `/admin/ingest` ("Add events" in the nav — the page also has a manual-entry option that skips extraction entirely and publishes straight away, see item 1), or a **watched source** gets checked automatically overnight. Either way, extraction goes through `lib/ingestion/extract-events.ts` (Claude does the extraction) before landing in the pending queue for a human to approve. See [`lib/ingestion/README.md`](lib/ingestion/README.md) for the full pipeline.
 4. **Public submission** — anyone can submit a brand-new event via `/submit-event` (linked from the footer), either by pasting a link/text (same AI-extraction pipeline as smart ingestion) or filling in a structured form. Tagged `source_type: "public_submission"` rather than `"smart_ingest"` purely so admins can see where a candidate came from — otherwise it's the exact same pending-queue/approval path (`lib/actions/public-submit.ts`, `saveCandidates()`'s `sourceType` param).

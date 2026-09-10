@@ -43,12 +43,16 @@ export default function SeriesForm({
   prefill,
   clubs = [],
   fromEventId,
+  fromPendingId,
+  pendingReplacesEventTitle = null,
   redirectTo,
 }: {
   series?: EventSeriesRow;
   prefill?: SeriesPrefill;
   clubs?: Club[];
   fromEventId?: string;
+  fromPendingId?: string;
+  pendingReplacesEventTitle?: string | null;
   redirectTo: string;
 }) {
   const router = useRouter();
@@ -101,10 +105,24 @@ export default function SeriesForm({
     <form ref={formRef} action={formAction} style={{ maxWidth: 480 }}>
       {series && <input type="hidden" name="id" value={series.id} />}
       {fromEventId && <input type="hidden" name="from_event_id" value={fromEventId} />}
+      {fromPendingId && <input type="hidden" name="from_pending_id" value={fromPendingId} />}
 
       {fromEventId && (
         <div style={{ background: "#F3F2EE", border: "1px solid #E4E2DD", padding: "12px 14px", marginBottom: 20, fontSize: 12.5, color: "#4A4A46", lineHeight: 1.5 }}>
           Converting this event to a recurring series. Pick the days it repeats on and an end date below — saving will replace the original one-off event with the new series.
+        </div>
+      )}
+
+      {fromPendingId && (
+        <div style={{ background: "#F3F2EE", border: "1px solid #E4E2DD", padding: "12px 14px", marginBottom: 20, fontSize: 12.5, color: "#4A4A46", lineHeight: 1.5 }}>
+          Converting a pending-queue item to a recurring series. Pick the days it repeats on and an end date below — saving creates the series and clears the item from the queue
+          {pendingReplacesEventTitle ? (
+            <>
+              , replacing the live event it was matched to (<strong>{pendingReplacesEventTitle}</strong>).
+            </>
+          ) : (
+            "."
+          )}
         </div>
       )}
 

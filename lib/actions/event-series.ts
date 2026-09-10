@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentProfile, isAdminRole } from "@/lib/auth";
 import { parseSeriesForm, type EventSeriesFormValues } from "./parse-series-form";
 import { geocodeLocation } from "@/lib/geocode";
 import { generateOccurrenceDates } from "@/lib/recurrence";
@@ -85,10 +86,20 @@ export async function saveSeries(
 
   const seriesId = String(formData.get("id") ?? "").trim() || null;
   const fromEventId = String(formData.get("from_event_id") ?? "").trim() || null;
+  const fromPendingId = String(formData.get("from_pending_id") ?? "").trim() || null;
+
+  // Checked up front, before anything is created: consuming a pending row
+  // deletes from events_pending (and possibly the live event it matched),
+  // which RLS already restricts to admins — but an RLS-blocked delete is a
+  // silent no-op, so an organiser would otherwise get a series plus an
+  // orphaned queue item and no indication anything went wrong.
+  if (fromPendingId && !isAdminRole(await getCurrentProfile())) {
+    return { error: "Only admins can convert a pending-queue item." };
+  }
 
   const result = seriesId
     ? await updateExistingSeries(supabase, user.id, seriesId, values)
-    : await createNewSeries(supabase, user.id, values, fromEventId);
+    : await createNewSeries(supabase, user.id, values, fromEventId, fromPendingId);
 
   if (result.error) return result;
   if (redirectTo) redirect(redirectTo);
@@ -99,7 +110,8 @@ async function createNewSeries(
   supabase: SupabaseServerClient,
   userId: string,
   values: EventSeriesFormValues & { lat: number | null; lng: number | null },
-  fromEventId: string | null
+  fromEventId: string | null,
+  fromPendingId: string | null
 ): Promise<SeriesFormState> {
   const occurrences = generateOccurrenceDates({
     startDate: values.start_date,
@@ -158,6 +170,24 @@ async function createNewSeries(
   // a failure of the save itself.
   if (fromEventId) {
     await supabase.from("events").delete().eq("id", fromEventId);
+  }
+
+  // Same idea from the pending queue (PendingEditPanel's "Convert to a
+  // recurring event"): the series now covers what the queue item proposed,
+  // so the item is cleared. A row matched to a live event replaces that
+  // event too — leaving it would put a duplicate on the calendar alongside
+  // the series occurrence for the same date. Best-effort for the same
+  // reason as fromEventId above: the series already exists by this point.
+  if (fromPendingId) {
+    const { data: pendingRow } = await supabase
+      .from("events_pending")
+      .select("duplicate_of")
+      .eq("id", fromPendingId)
+      .single();
+    if (pendingRow?.duplicate_of) {
+      await supabase.from("events").delete().eq("id", pendingRow.duplicate_of);
+    }
+    await supabase.from("events_pending").delete().eq("id", fromPendingId);
   }
 
   return {};

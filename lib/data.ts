@@ -142,6 +142,17 @@ export async function getPendingChangeRows(): Promise<EventPendingRow[]> {
   return data as EventPendingRow[];
 }
 
+// Single pending row, for the convert-a-pending-item-to-a-series page.
+// Returns null rather than throwing on a missing/unreadable row: RLS makes
+// events_pending admin-only, so a non-admin hitting ?fromPending= gets the
+// plain "add a recurring event" form instead of an error page.
+export async function getPendingRowById(id: string): Promise<EventPendingRow | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("events_pending").select("*").eq("id", id).single();
+  if (error) return null;
+  return data as EventPendingRow;
+}
+
 // Every profile is a super_admin, admin, or organiser — this is the full
 // team roster for /admin/team, ordered so the people with the most access
 // show up first rather than alphabetically-by-role (which would put

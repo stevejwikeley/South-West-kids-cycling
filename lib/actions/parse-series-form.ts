@@ -1,8 +1,10 @@
 import { utcIsoToUkLocalParts } from "@/lib/uk-time";
+import { resolvePendingField } from "@/lib/pending-fields";
 import type {
   AgeCategory,
   BookingStatusType,
   DisciplineType,
+  EventPendingRow,
   EventRow,
   EventSeriesRow,
   EventStatus,
@@ -58,6 +60,40 @@ export function eventRowToSeriesPrefill(event: EventRow): SeriesPrefill {
     organiser_contact: event.organiser_contact,
     club_id: event.club_id,
     description: event.description,
+  };
+}
+
+// The same conversion starting from a pending-queue row instead of a live
+// event (PendingEditPanel's "Convert to a recurring event" action). A
+// change_request row only carries a diff, so liveEvent supplies the fields
+// the suggestion didn't touch — exactly what the edit panel shows.
+export function pendingRowToSeriesPrefill(
+  row: EventPendingRow,
+  liveEvent: EventRow | null
+): SeriesPrefill {
+  const field = (key: string) => resolvePendingField(row, liveEvent, key);
+  const startDatetime = field("start_datetime") as string | null;
+
+  return {
+    title: (field("title") as string) ?? "",
+    discipline: field("discipline") as SeriesPrefill["discipline"],
+    status: (field("status") as SeriesPrefill["status"]) ?? "confirmed",
+    // An extraction with no usable date leaves this blank rather than
+    // guessing — "starts on" is required, so the admin has to fill it in.
+    start_date: startDatetime ? utcIsoToUkLocalParts(startDatetime).date : "",
+    venue_name: (field("venue_name") as string) ?? "",
+    address: (field("address") as string) ?? null,
+    postcode: (field("postcode") as string) ?? null,
+    region: field("region") as SeriesPrefill["region"],
+    age_categories: (field("age_categories") as AgeCategory[]) ?? [],
+    kids_only: (field("kids_only") as boolean) ?? false,
+    booking_status: (field("booking_status") as BookingStatusType) ?? "planned",
+    booking_link: (field("booking_link") as string) ?? null,
+    organiser_url: (field("organiser_url") as string) ?? "",
+    organiser_name: (field("organiser_name") as string) ?? null,
+    organiser_contact: (field("organiser_contact") as string) ?? null,
+    club_id: (field("club_id") as string) ?? null,
+    description: (field("description") as string) ?? null,
   };
 }
 
