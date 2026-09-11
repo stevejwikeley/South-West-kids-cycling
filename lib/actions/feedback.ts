@@ -74,9 +74,15 @@ export async function submitFeedback(_prevState: FeedbackFormState, formData: Fo
         subject: buildFeedbackSubject(fields),
         html: buildFeedbackEmailHtml(fields),
       });
+      console.info("Sent feedback notification email to admin.");
     } catch (err) {
       console.error("Failed to send feedback notification email:", err);
     }
+  } else {
+    // Logged rather than passed over in silence: without this, a missing
+    // variable and a successful send look identical from the outside — which
+    // is exactly what made the first production run impossible to diagnose.
+    console.warn("ADMIN_NOTIFICATION_EMAIL not configured — skipping feedback notification email.");
   }
 
   return { success: true };
