@@ -10,7 +10,7 @@ const feedLink = (page: Page) => page.getByRole("textbox", { name: "Calendar fee
 test.describe("Subscribe page feed builder", () => {
   test("defaults to the unfiltered feed link", async ({ page }) => {
     await page.goto("/subscribe");
-    await expect(page.getByText(/You'll get:/)).toContainText("All events");
+    await expect(page.getByText(/You'll get:/)).toContainText("Races and events");
 
     await page.getByRole("button", { name: /Google Calendar/ }).click();
     await expect(feedLink(page)).toHaveValue("https://www.southwestkidscycling.uk/calendar.ics");

@@ -96,7 +96,7 @@ export default function SubscribeSelector({
         : "Club training sessions (every club)"
       : disciplines.size > 0
         ? `${[...disciplines].map((id) => EVENT_DISCIPLINES.find((d) => d.id === id)?.label ?? id).join(", ")} events`
-        : "All events";
+        : "Races and events";
 
     return [
       discPart,
@@ -197,11 +197,6 @@ export default function SubscribeSelector({
               : "On with no club chosen — you'll get every club's training sessions. Pick a club above to narrow it down."
             : "The club filter narrows races by club. Turn on Club training above for training sessions instead of races."}
         </p>
-      </div>
-
-      <div style={{ marginBottom: 28 }}>
-        <label className="mono" style={labelStyle}>YOUR FEED LINK</label>
-        <CopyLink url={feedUrl} testId="feed-url" />
       </div>
 
       <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", padding: "12px 14px", background: "#F3F2EE", border: "1px solid #E4E2DD", marginBottom: 32 }}>

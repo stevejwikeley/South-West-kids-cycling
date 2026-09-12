@@ -142,6 +142,7 @@ test.describe("Subscribe page", () => {
   test("choosing club training builds a kind=training feed url", async ({ page }) => {
     await page.goto("/subscribe");
     await page.getByRole("button", { name: /club training/i }).click();
-    await expect(page.getByTestId("feed-url")).toContainText("kind=training");
+    await page.getByRole("button", { name: /Google Calendar/ }).click();
+    await expect(page.getByRole("textbox", { name: "Calendar feed link" })).toHaveValue(/kind=training/);
   });
 });
