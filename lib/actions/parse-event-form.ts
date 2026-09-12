@@ -40,7 +40,7 @@ export type EventFormValues = Pick<
 // midnight UTC on the given date and end_datetime is always null.
 export function parseEventForm(
   formData: FormData,
-  // Defaults to enforcing the same rule as the events_training_requires_club
+  // Defaults to enforcing the same rule as the training_requires_club
   // DB constraint. public-submit.ts's structured form passes false: a member
   // of the public has no club_id field to fill in (it's an internal id), and
   // their submission lands in events_pending — which, like the rest of the
@@ -83,7 +83,7 @@ export function parseEventForm(
   if (!organiserUrl) return { ok: false, error: "Organiser URL is required." };
   if (bookingStatus === "open" && !bookingLink) return { ok: false, error: "Booking link is required when entries are open." };
 
-  // Mirrors the events_training_requires_club DB constraint, so the form
+  // Mirrors the training_requires_club DB constraint, so the form
   // shows a sentence rather than a Postgres error.
   if (requireClubForTraining && kind === "training" && !clubId) {
     return { ok: false, error: "Pick the club that runs this training session." };

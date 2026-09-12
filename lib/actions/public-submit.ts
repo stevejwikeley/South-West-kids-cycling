@@ -7,6 +7,7 @@ import { saveCandidates } from "@/lib/ingestion/save-candidates";
 import { htmlToText, isLikelyUrl } from "@/lib/ingestion/html-to-text";
 import { assertPublicHttpUrl } from "@/lib/ingestion/url-guard";
 import { parseEventForm } from "./parse-event-form";
+import type { EventKind } from "@/lib/supabase/types";
 
 export interface PublicSubmitState {
   error?: string;
@@ -88,7 +89,7 @@ export async function submitPublicEventForm(_prevState: PublicSubmitState, formD
   const parsed = parseEventForm(formData, { requireClubForTraining: false });
   if (!parsed.ok) return { error: parsed.error };
 
-  const candidate = {
+  const candidate: ExtractedEvent & { kind: EventKind } = {
     title: parsed.values.title,
     discipline: parsed.values.discipline,
     status: parsed.values.status,
