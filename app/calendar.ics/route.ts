@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { createEvents, type DateArray, type EventAttributes } from "ics";
 import { createClient } from "@/lib/supabase/server";
-import type { DisciplineType, EventRow, RegionType } from "@/lib/supabase/types";
+import type { DisciplineType, EventKind, EventRow, RegionType } from "@/lib/supabase/types";
 
 // Generated live on every request from the approved events table (spec
 // section 9), not a batch job — a new approval shows up on the subscriber's
@@ -27,6 +27,20 @@ const REGION_LABELS: Record<RegionType, string> = { devon: "Devon", cornwall: "C
 // id would otherwise fail the whole request with a 22P02 cast error rather
 // than degrading like the other filters do.
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export type KindFilter = "race" | "training" | "all";
+
+// Races by default. Training reaches a subscriber only when they ask for it
+// — and naming discipline=clusters counts as asking, so the training-only
+// subscriptions people already hold keep delivering instead of silently
+// emptying. A calendar that goes blank reads as a bug to its owner and is
+// invisible to us.
+function parseKind(searchParams: URLSearchParams, disciplines: DisciplineType[]): KindFilter {
+  const raw = searchParams.get("kind");
+  if (raw === "training" || raw === "all" || raw === "race") return raw;
+  if (disciplines.includes("clusters")) return "all";
+  return "race";
+}
 
 function dateOnly(iso: string): DateArray {
   const [y, m, d] = iso.slice(0, 10).split("-").map(Number);
@@ -90,7 +104,8 @@ function parseFilters(searchParams: URLSearchParams) {
     .split(",")
     .map((s) => s.trim())
     .filter((s) => UUID_RE.test(s));
-  return { disciplines, regions, clubs };
+  const kind = parseKind(searchParams, disciplines);
+  return { disciplines, regions, clubs, kind };
 }
 
 // "both" means Devon & Cornwall, so an event stored that way belongs in
@@ -106,9 +121,15 @@ function regionsToMatch(regions: RegionType[]): RegionType[] {
 // Subscribers commonly add more than one of these feeds, and the calendar
 // name is all their app shows to tell them apart — so it spells out the
 // filters, club names included (a raw uuid would be useless there).
-function feedName(disciplines: DisciplineType[], regions: RegionType[], clubNames: string[]): string {
+function feedName(
+  disciplines: DisciplineType[],
+  regions: RegionType[],
+  clubNames: string[],
+  kind: KindFilter
+): string {
   const parts = [
     clubNames.length ? clubNames.join("/") : null,
+    kind === "training" ? "Club training" : null,
     disciplines.length ? disciplines.map((d) => DISCIPLINE_LABELS[d]).join("/") : null,
     regions.length ? regions.map((r) => REGION_LABELS[r]).join("/") : null,
   ].filter(Boolean);
@@ -116,10 +137,11 @@ function feedName(disciplines: DisciplineType[], regions: RegionType[], clubName
 }
 
 export async function GET(request: NextRequest) {
-  const { disciplines, regions, clubs } = parseFilters(request.nextUrl.searchParams);
+  const { disciplines, regions, clubs, kind } = parseFilters(request.nextUrl.searchParams);
 
   const supabase = await createClient();
   let query = supabase.from("events").select("*").eq("approved", true).neq("status", "cancelled");
+  if (kind !== "all") query = query.eq("kind", kind satisfies EventKind);
   if (disciplines.length) query = query.in("discipline", disciplines);
   if (regions.length) query = query.in("region", regionsToMatch(regions));
   if (clubs.length) query = query.in("club_id", clubs);
@@ -139,7 +161,7 @@ export async function GET(request: NextRequest) {
     : [];
 
   const { error: icsError, value } = createEvents((data as EventRow[]).map(toIcsEvent), {
-    calName: feedName(disciplines, regions, clubNames),
+    calName: feedName(disciplines, regions, clubNames, kind),
     productId: "-//South West Kids Cycling//Calendar//EN",
   });
 
