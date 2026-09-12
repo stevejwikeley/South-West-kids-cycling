@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import type { CalendarEvent, Club } from "@/lib/types";
 import type { EventRow, ClubRow, EventPendingRow, WatchedSourceRow, ProfileRow, EventSeriesRow, SignupStatus, BookingPersonRow } from "@/lib/supabase/types";
+import type { TrainingSession } from "@/lib/training";
 
 function toCalendarEvent(row: EventRow): CalendarEvent {
   return {
@@ -60,6 +61,16 @@ export async function getEvents(kind: "race" | "training" | "all" = "race"): Pro
 
   if (error) throw error;
   return (data as EventRow[]).map(toCalendarEvent);
+}
+
+// Upcoming training as the shape lib/training.ts works in. Rows without a
+// club are dropped — the DB constraint makes that impossible for new data,
+// and a clubless session has nowhere to appear anyway.
+export async function getUpcomingTraining(): Promise<TrainingSession[]> {
+  const events = await getEvents("training");
+  return events
+    .filter((e): e is CalendarEvent & { clubId: string } => e.clubId !== null)
+    .map((e) => ({ id: e.id, title: e.title, date: e.date, venue: e.venue, clubId: e.clubId }));
 }
 
 export async function getClubs(): Promise<Club[]> {

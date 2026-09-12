@@ -11,8 +11,10 @@ import { eventsToCsv, downloadCsv } from "@/lib/csv";
 import { mapsUrl } from "@/lib/maps";
 import EditEventPanel from "@/components/admin/EditEventPanel";
 import SuggestChangePanel from "@/components/events/SuggestChangePanel";
+import TrainingThisWeek from "@/components/TrainingThisWeek";
+import type { TrainingSession } from "@/lib/training";
 
-export default function CalendarPage({ events, clubs = [], isAdmin = false }: { events: CalendarEvent[]; clubs?: Club[]; isAdmin?: boolean }) {
+export default function CalendarPage({ events, clubs = [], training = [], isAdmin = false }: { events: CalendarEvent[]; clubs?: Club[]; training?: TrainingSession[]; isAdmin?: boolean }) {
   const [activeDisc, setActiveDisc] = useState<Set<DisciplineId>>(new Set());
   const [region, setRegion] = useState("all");
   const [clubFilter, setClubFilter] = useState("all");
@@ -102,6 +104,7 @@ export default function CalendarPage({ events, clubs = [], isAdmin = false }: { 
             <Calendar size={15} /> {subscribeLabel}
           </Link>
         </div>
+        <TrainingThisWeek sessions={training} clubs={clubs} />
       </header>
 
       <div style={{ position: "sticky", top: 0, zIndex: 20, background: "#FAFAF8", borderTop: "1px solid #E4E2DD", borderBottom: "1px solid #E4E2DD" }}>

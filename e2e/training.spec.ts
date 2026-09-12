@@ -58,3 +58,12 @@ test.describe("Calendar page", () => {
     await expect(page.getByRole("button", { name: "Training session" })).toHaveCount(0);
   });
 });
+
+test.describe("Training this week strip", () => {
+  test("lists club training for the coming week and links to the clubs page", async ({ page }) => {
+    await page.goto("/");
+    const strip = page.getByTestId("training-this-week");
+    await expect(strip).toBeVisible();
+    await expect(strip.getByRole("link", { name: /all club training/i })).toBeVisible();
+  });
+});
