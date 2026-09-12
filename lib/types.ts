@@ -4,6 +4,7 @@ export type AgeCategory = "u8" | "u10" | "u12" | "u14" | "u16";
 export type BookingStatus = "open" | "planned";
 export type EventStatus = "confirmed" | "provisional" | "cancelled";
 export type ClubDisciplineId = "road" | "xc" | "cx";
+export type EventKind = "race" | "training";
 
 export interface Discipline {
   id: DisciplineId;
@@ -15,6 +16,7 @@ export interface CalendarEvent {
   id: string;
   title: string;
   discipline: DisciplineId;
+  kind: EventKind;
   date: string;
   venue: string;
   address: string | null;
@@ -43,4 +45,5 @@ export interface Club {
   kidsOnly: boolean;
   founded: string | null;
   summary: string | null;
+  trainingNote: string | null;
 }

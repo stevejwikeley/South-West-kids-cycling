@@ -7,6 +7,7 @@ function toCalendarEvent(row: EventRow): CalendarEvent {
     id: row.id,
     title: row.title,
     discipline: row.discipline,
+    kind: row.kind,
     date: row.start_datetime.slice(0, 10),
     venue: row.venue_name,
     address: row.address,
@@ -37,6 +38,7 @@ export function toClub(row: ClubRow): Club {
     kidsOnly: row.kids_only,
     founded: row.founded,
     summary: row.summary,
+    trainingNote: row.training_note,
   };
 }
 

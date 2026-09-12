@@ -12,10 +12,15 @@ export type PublishedViaType = "auto" | "reviewed";
 export type UserRole = "admin" | "organiser" | "super_admin";
 export type ClubDiscipline = "road" | "xc" | "cx";
 
+// Races vs club training. Training also keeps discipline 'clusters' — kind
+// is what every read path filters on; discipline stayed put to avoid churn.
+export type EventKind = "race" | "training";
+
 export interface EventRow {
   id: string;
   title: string;
   discipline: DisciplineType;
+  kind: EventKind;
   status: EventStatus;
   start_datetime: string;
   end_datetime: string | null;
@@ -67,6 +72,7 @@ export interface EventSeriesRow {
   id: string;
   title: string;
   discipline: DisciplineType;
+  kind: EventKind;
   status: EventStatus;
   weekdays: Weekday[];
   start_date: string;
@@ -140,6 +146,7 @@ export interface ClubRow {
   kids_only: boolean;
   founded: string | null;
   summary: string | null;
+  training_note: string | null;
   verified_at: string | null;
   created_at: string;
   updated_at: string;
@@ -154,6 +161,7 @@ export interface EventPendingRow {
   id: string;
   title: string | null;
   discipline: DisciplineType | null;
+  kind: EventKind;
   status: EventStatus | null;
   start_datetime: string | null;
   end_datetime: string | null;
