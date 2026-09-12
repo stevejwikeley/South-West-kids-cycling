@@ -53,14 +53,14 @@ test("nextSessions returns an empty list when nothing is upcoming", () => {
 });
 
 test("groupByClub keys sessions by club id", () => {
-  const grouped = groupByClub([s("a", "2026-09-12", "x"), s("b", "2026-09-19", "y"), s("c", "2026-09-26", "x")]);
+  const grouped = groupByClub([s("c", "2026-09-26", "x"), s("b", "2026-09-19", "y"), s("a", "2026-09-12", "x")]);
   assert.deepEqual(grouped.get("x")?.map((v) => v.id), ["a", "c"]);
   assert.deepEqual(grouped.get("y")?.map((v) => v.id), ["b"]);
 });
 
 test("sessionsInNextDays covers today through the last day inclusive", () => {
   const out = sessionsInNextDays(
-    [s("today", "2026-09-12"), s("last", "2026-09-18"), s("past", "2026-09-11"), s("after", "2026-09-19")],
+    [s("last", "2026-09-18"), s("after", "2026-09-19"), s("today", "2026-09-12"), s("past", "2026-09-11")],
     "2026-09-12",
     7
   );
