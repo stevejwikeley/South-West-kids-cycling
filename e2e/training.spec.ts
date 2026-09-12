@@ -43,12 +43,18 @@ test.describe("Calendar page", () => {
   test("shows no training sessions", async ({ page }) => {
     await page.goto("/");
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    // Races ARE present
+    await expect(page.locator("main .row-hover").first()).toBeVisible();
+    // Training is NOT present
     await expect(page.locator("main").getByText("TRAINING SESSION")).toHaveCount(0);
   });
 
   test("the discipline filters offer no training chip", async ({ page }) => {
     await page.goto("/");
     await page.getByRole("button", { name: "Toggle filters" }).click();
+    // At least one discipline chip IS present
+    await expect(page.locator('div:has(> span:text("DISCIPLINE")) button').first()).toBeVisible();
+    // Training chip is NOT present
     await expect(page.getByRole("button", { name: "Training session" })).toHaveCount(0);
   });
 });
