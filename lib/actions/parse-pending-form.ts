@@ -33,6 +33,11 @@ export interface PendingFormValues {
   organiser_contact: string | null;
   bookable: boolean;
   booking_capacity: number | null;
+  // Even though events_pending is unconstrained in the database, a pending row
+  // carries a club because this edit panel is where a human attaches one to an
+  // AI-ingested training candidate before it can satisfy the training_requires_club
+  // constraint during approval.
+  club_id: string | null;
 }
 
 // Every event is all-day — there is no time-of-day concept anywhere in this
@@ -62,6 +67,7 @@ export function parsePendingForm(formData: FormData): PendingFormValues {
   // just falls back to null rather than blocking the save.
   const bookingCapacityNumber = bookingCapacityRaw ? Number(bookingCapacityRaw) : null;
   const bookingCapacity = bookingCapacityNumber && bookingCapacityNumber > 0 ? bookingCapacityNumber : null;
+  const clubId = String(formData.get("club_id") ?? "").trim() || null;
 
   // No club-required-for-training validation here (unlike parseEventForm and
   // parseSeriesForm) — events_pending is deliberately unconstrained in the
@@ -89,5 +95,6 @@ export function parsePendingForm(formData: FormData): PendingFormValues {
     organiser_contact: organiserContact,
     bookable,
     booking_capacity: bookingCapacity,
+    club_id: clubId,
   };
 }
