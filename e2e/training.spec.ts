@@ -67,3 +67,24 @@ test.describe("Training this week strip", () => {
     await expect(strip.getByRole("link", { name: /all club training/i })).toBeVisible();
   });
 });
+
+test.describe("Clubs page training", () => {
+  test("a club that trains shows its next session and a subscribe link", async ({ page }) => {
+    await page.goto("/clubs");
+    const band = page.getByTestId("club-training").first();
+    await expect(band).toBeVisible();
+    await expect(band).toContainText(/Next:/);
+    const feed = band.getByRole("link", { name: /add this club's training/i });
+    await expect(feed).toHaveAttribute("href", /\/calendar\.ics\?club=[0-9a-f-]{36}&kind=training/);
+  });
+
+  test("a club with no training listed is prompted for", async ({ page }) => {
+    await page.goto("/clubs");
+    await expect(page.getByText("No training sessions listed").first()).toBeVisible();
+  });
+
+  test("each club row carries an anchor the calendar strip can target", async ({ page }) => {
+    await page.goto("/clubs");
+    await expect(page.locator('main [id^="club-"]').first()).toBeAttached();
+  });
+});

@@ -1,5 +1,5 @@
 import ClubsPage from "@/components/ClubsPage";
-import { getClubs } from "@/lib/data";
+import { getClubs, getUpcomingTraining } from "@/lib/data";
 
 export const revalidate = 60;
 
@@ -9,6 +9,6 @@ export const metadata = {
 };
 
 export default async function Page() {
-  const clubs = await getClubs();
-  return <ClubsPage clubs={clubs} />;
+  const [clubs, training] = await Promise.all([getClubs(), getUpcomingTraining()]);
+  return <ClubsPage clubs={clubs} training={training} />;
 }

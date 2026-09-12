@@ -7,10 +7,14 @@ import type { Club } from "@/lib/types";
 import { trackEvent } from "@/lib/analytics";
 import { clubMapsUrl } from "@/lib/maps";
 import EmbedSnippet from "@/components/EmbedSnippet";
+import ClubTrainingBand from "@/components/clubs/ClubTrainingBand";
+import { groupByClub, type TrainingSession } from "@/lib/training";
 
-export default function ClubsPage({ clubs }: { clubs: Club[] }) {
+export default function ClubsPage({ clubs, training = [] }: { clubs: Club[]; training?: TrainingSession[] }) {
   const [activeDisc, setActiveDisc] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
+
+  const trainingByClub = useMemo(() => groupByClub(training), [training]);
 
   const toggleDisc = (id: string) =>
     setActiveDisc((prev) => {
@@ -40,6 +44,9 @@ export default function ClubsPage({ clubs }: { clubs: Club[] }) {
         </h1>
         <p style={{ maxWidth: 480, fontSize: 16, lineHeight: 1.6, color: "#4A4A46", marginTop: 22 }}>
           Youth sections, Go-Ride clubs and junior academies from Exeter and Plymouth to Truro, Falmouth and Somerset — road, cross country mountain biking, cyclocross and triathlon.
+        </p>
+        <p style={{ maxWidth: 480, fontSize: 13, lineHeight: 1.6, color: "#946A0E", background: "#FDF3E4", border: "1px solid #E9C98A", padding: "10px 12px", marginTop: 16 }}>
+          Training times can change at short notice — always check with the club before turning up.
         </p>
       </header>
 
@@ -79,7 +86,7 @@ export default function ClubsPage({ clubs }: { clubs: Club[] }) {
         {filtered.length > 0 && (
           <div style={{ borderTop: "2px solid #111111" }}>
             {filtered.map((c) => (
-              <div key={c.id} className="row-hover" style={{ display: "flex", alignItems: "flex-start", gap: 20, padding: "18px 6px", borderBottom: "1px solid #E4E2DD", flexWrap: "wrap" }}>
+              <div id={`club-${c.id}`} key={c.id} className="row-hover" style={{ display: "flex", alignItems: "flex-start", gap: 20, padding: "18px 6px", borderBottom: "1px solid #E4E2DD", flexWrap: "wrap" }}>
                 <div style={{ flex: "1 1 260px", minWidth: 220 }}>
                   <div style={{ fontWeight: 700, fontSize: 15.5 }}>{c.name}</div>
                   <div style={{ display: "flex", alignItems: "center", gap: 6, color: "#6B6B66", fontSize: 12.5, marginTop: 3, flexWrap: "wrap" }}>
@@ -95,6 +102,7 @@ export default function ClubsPage({ clubs }: { clubs: Club[] }) {
                     {c.founded && <span className="mono" style={{ color: "#6B6B66", fontSize: 10.5, marginLeft: 4 }}>· EST. {c.founded}</span>}
                   </div>
                   <p style={{ fontSize: 12.5, lineHeight: 1.6, color: "#4A4A46", marginTop: 8, maxWidth: 480 }}>{c.summary}</p>
+                  <ClubTrainingBand club={c} sessions={trainingByClub.get(c.id) ?? []} />
                 </div>
                 <div style={{ flex: "0 0 170px", minWidth: 150 }}>
                   <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 8 }}>
