@@ -64,6 +64,7 @@ export async function saveCandidates(
     const values = {
       title: candidate.title,
       discipline: candidate.discipline,
+      kind: candidate.kind ?? "race",
       status: candidate.status ?? "confirmed",
       start_datetime: candidate.date ? `${candidate.date}T00:00:00.000Z` : null,
       venue_name: candidate.venue_name,

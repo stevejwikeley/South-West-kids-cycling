@@ -42,7 +42,7 @@ const handler = createMcpHandler(
         ]);
 
         const context = {
-          scope: "Youth cycling events (ages 5-16) in Devon, Cornwall & Somerset, England — races, series rounds, and club coaching/training sessions.",
+          scope: "Youth cycling events (ages 5-16) in Devon, Cornwall & Somerset, England — races, series rounds, and open events. Club coaching/training sessions are also in scope, but are listed per club on the clubs page rather than on the main calendar.",
           disciplines: EVENT_DISCIPLINES.map((d) => d.id),
           regions: ["devon", "cornwall", "somerset", "both"],
           age_categories: ["u8", "u10", "u12", "u14", "u16"],
@@ -82,7 +82,13 @@ const handler = createMcpHandler(
         description:
           "Queues one event you found for human review on the admin pending page — it does not publish directly. Call get_search_context first so you know what's already covered. Duplicates of a live or already-queued event are silently skipped (checked by title/date/venue similarity), so it's safe to submit anything that looks like a plausible match.",
         inputSchema: z.object({
-          event: ExtractedEventSchema,
+          // kind is required on ExtractedEventSchema itself (the AI
+          // extraction path always sets it) but optional here, defaulting
+          // to "race", so existing callers built before training sessions
+          // existed keep working without changes.
+          event: ExtractedEventSchema.extend({
+            kind: z.enum(["race", "training"]).optional().default("race"),
+          }),
           source_url: z.string().describe("The page you found this event on — used as a fallback organiser link if the event itself has none.").optional(),
         }),
       },
