@@ -3,7 +3,7 @@ import { createMcpHandler, withMcpAuth } from "mcp-handler";
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { saveCandidates } from "@/lib/ingestion/save-candidates";
-import { ExtractedEventSchema } from "@/lib/ingestion/extract-events";
+import { ExtractedEventSchema, KIND_DESCRIPTION } from "@/lib/ingestion/extract-events";
 import { EVENT_DISCIPLINES } from "@/lib/mock-data";
 import type { EventRow, EventPendingRow } from "@/lib/supabase/types";
 
@@ -87,7 +87,7 @@ const handler = createMcpHandler(
           // to "race", so existing callers built before training sessions
           // existed keep working without changes.
           event: ExtractedEventSchema.extend({
-            kind: z.enum(["race", "training"]).optional().default("race"),
+            kind: z.enum(["race", "training"]).optional().default("race").describe(KIND_DESCRIPTION),
           }),
           source_url: z.string().describe("The page you found this event on — used as a fallback organiser link if the event itself has none.").optional(),
         }),

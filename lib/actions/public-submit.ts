@@ -7,7 +7,6 @@ import { saveCandidates } from "@/lib/ingestion/save-candidates";
 import { htmlToText, isLikelyUrl } from "@/lib/ingestion/html-to-text";
 import { assertPublicHttpUrl } from "@/lib/ingestion/url-guard";
 import { parseEventForm } from "./parse-event-form";
-import type { EventKind } from "@/lib/supabase/types";
 
 export interface PublicSubmitState {
   error?: string;
@@ -89,7 +88,7 @@ export async function submitPublicEventForm(_prevState: PublicSubmitState, formD
   const parsed = parseEventForm(formData, { requireClubForTraining: false });
   if (!parsed.ok) return { error: parsed.error };
 
-  const candidate: ExtractedEvent & { kind: EventKind } = {
+  const candidate: ExtractedEvent = {
     title: parsed.values.title,
     discipline: parsed.values.discipline,
     status: parsed.values.status,
@@ -107,12 +106,9 @@ export async function submitPublicEventForm(_prevState: PublicSubmitState, formD
     organiser_contact: parsed.values.organiser_contact,
     club_id: parsed.values.club_id,
     description: parsed.values.description,
-    // Not (yet) a field on ExtractedEvent — that schema is Task 10's to
-    // extend, since it also covers AI extraction. Carried here so the kind
-    // the submitter picked isn't dropped on the floor; saveCandidates
-    // ignores unknown properties today, so this is a no-op until Task 10's
-    // save-candidates.ts change reads it (defaulting to "race" otherwise,
-    // same as the DB column default).
+    // kind is now a required field on ExtractedEvent, populated from
+    // the form's kind selection by parseEventForm. It's persisted like
+    // all other fields by saveCandidates.
     kind: parsed.values.kind,
     confidence: 1,
     low_confidence_fields: [],

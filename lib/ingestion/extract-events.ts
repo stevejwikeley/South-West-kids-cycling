@@ -17,14 +17,15 @@ const AGE_CATEGORIES = ["u8", "u10", "u12", "u14", "u16"] as const;
 const BOOKING_STATUSES = ["open", "planned"] as const;
 const KINDS = ["race", "training"] as const;
 
+const KIND_DESCRIPTION =
+  "\"training\" for a club's own coaching or academy session (usually weekly, \"Go-Ride\" style, members or sign-up only); \"race\" for everything else, including series rounds and open events. A training session almost always names the club that runs it — put that club in organiser_name so a human can attach it in the queue.";
+
 const ExtractedEventSchema = z.object({
   title: z.string(),
   discipline: z.enum(DISCIPLINES).nullable(),
   kind: z
     .enum(KINDS)
-    .describe(
-      "\"training\" for a club's own coaching or academy session (usually weekly, \"Go-Ride\" style, members or sign-up only); \"race\" for everything else, including series rounds and open events. A training session almost always names the club that runs it — put that club in organiser_name so a human can attach it in the queue."
-    ),
+    .describe(KIND_DESCRIPTION),
   status: z.enum(STATUSES).nullable(),
   date: z.string().nullable().describe("ISO date YYYY-MM-DD. Null if no date is legible."),
   venue_name: z.string().nullable(),
@@ -59,7 +60,7 @@ const ExtractionResultSchema = z.object({
 });
 
 export type ExtractedEvent = z.infer<typeof ExtractedEventSchema>;
-export { ExtractedEventSchema };
+export { ExtractedEventSchema, KIND_DESCRIPTION };
 
 function buildSystemPrompt(): string {
   const today = new Date().toISOString().slice(0, 10);
