@@ -3,6 +3,7 @@ import type {
   AgeCategory,
   BookingStatusType,
   DisciplineType,
+  EventKind,
   EventRow,
   EventStatus,
   RegionType,
@@ -13,6 +14,7 @@ export type EventFormValues = Pick<
   | "title"
   | "discipline"
   | "status"
+  | "kind"
   | "all_day"
   | "start_datetime"
   | "end_datetime"
@@ -37,11 +39,19 @@ export type EventFormValues = Pick<
 // app (extraction, display, or editing), so start_datetime is always
 // midnight UTC on the given date and end_datetime is always null.
 export function parseEventForm(
-  formData: FormData
+  formData: FormData,
+  // Defaults to enforcing the same rule as the events_training_requires_club
+  // DB constraint. public-submit.ts's structured form passes false: a member
+  // of the public has no club_id field to fill in (it's an internal id), and
+  // their submission lands in events_pending — which, like the rest of the
+  // pending queue, is deliberately unconstrained — not straight into events.
+  options: { requireClubForTraining?: boolean } = {}
 ): { ok: false; error: string } | { ok: true; values: EventFormValues } {
+  const { requireClubForTraining = true } = options;
   const title = String(formData.get("title") ?? "").trim();
   const discipline = String(formData.get("discipline") ?? "") as DisciplineType;
   const status = String(formData.get("status") ?? "confirmed") as EventStatus;
+  const kind = (String(formData.get("kind") ?? "race") === "training" ? "training" : "race") as EventKind;
   const date = String(formData.get("date") ?? "");
   const venueName = String(formData.get("venue_name") ?? "").trim();
   const address = String(formData.get("address") ?? "").trim() || null;
@@ -73,12 +83,19 @@ export function parseEventForm(
   if (!organiserUrl) return { ok: false, error: "Organiser URL is required." };
   if (bookingStatus === "open" && !bookingLink) return { ok: false, error: "Booking link is required when entries are open." };
 
+  // Mirrors the events_training_requires_club DB constraint, so the form
+  // shows a sentence rather than a Postgres error.
+  if (requireClubForTraining && kind === "training" && !clubId) {
+    return { ok: false, error: "Pick the club that runs this training session." };
+  }
+
   return {
     ok: true,
     values: {
       title,
       discipline,
       status,
+      kind,
       all_day: true,
       start_datetime: ukMidnightUtcIso(date),
       end_datetime: null,

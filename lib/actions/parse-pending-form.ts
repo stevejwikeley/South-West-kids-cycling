@@ -3,6 +3,7 @@ import type {
   AgeCategory,
   BookingStatusType,
   DisciplineType,
+  EventKind,
   EventStatus,
   RegionType,
 } from "@/lib/supabase/types";
@@ -15,6 +16,7 @@ export interface PendingFormValues {
   title: string | null;
   discipline: DisciplineType | null;
   status: EventStatus | null;
+  kind: EventKind;
   all_day: boolean;
   start_datetime: string | null;
   end_datetime: string | null;
@@ -40,6 +42,7 @@ export function parsePendingForm(formData: FormData): PendingFormValues {
   const title = String(formData.get("title") ?? "").trim() || null;
   const discipline = (String(formData.get("discipline") ?? "").trim() || null) as DisciplineType | null;
   const status = (String(formData.get("status") ?? "").trim() || null) as EventStatus | null;
+  const kind = (String(formData.get("kind") ?? "race") === "training" ? "training" : "race") as EventKind;
   const date = String(formData.get("date") ?? "").trim();
   const venueName = String(formData.get("venue_name") ?? "").trim() || null;
   const address = String(formData.get("address") ?? "").trim() || null;
@@ -60,10 +63,16 @@ export function parsePendingForm(formData: FormData): PendingFormValues {
   const bookingCapacityNumber = bookingCapacityRaw ? Number(bookingCapacityRaw) : null;
   const bookingCapacity = bookingCapacityNumber && bookingCapacityNumber > 0 ? bookingCapacityNumber : null;
 
+  // No club-required-for-training validation here (unlike parseEventForm and
+  // parseSeriesForm) — events_pending is deliberately unconstrained in the
+  // database. An AI-ingested candidate may legitimately arrive as training
+  // before anyone has identified its club, and this pending-queue edit is
+  // exactly where a human attaches one before approval.
   return {
     title,
     discipline,
     status,
+    kind,
     all_day: true,
     start_datetime: date ? ukMidnightUtcIso(date) : null,
     end_datetime: null,

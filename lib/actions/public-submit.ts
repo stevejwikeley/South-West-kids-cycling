@@ -82,10 +82,13 @@ export async function submitPublicUrlOrText(_prevState: PublicSubmitState, formD
 // since the fields are already typed in directly. confidence: 1 reflects
 // that this is a human-entered, not machine-guessed, record.
 export async function submitPublicEventForm(_prevState: PublicSubmitState, formData: FormData): Promise<PublicSubmitState> {
-  const parsed = parseEventForm(formData);
+  // requireClubForTraining: false — a member of the public has no club_id
+  // field to fill in (it's an internal id), and this submission lands in
+  // events_pending, which is deliberately unconstrained.
+  const parsed = parseEventForm(formData, { requireClubForTraining: false });
   if (!parsed.ok) return { error: parsed.error };
 
-  const candidate: ExtractedEvent = {
+  const candidate = {
     title: parsed.values.title,
     discipline: parsed.values.discipline,
     status: parsed.values.status,
@@ -103,6 +106,13 @@ export async function submitPublicEventForm(_prevState: PublicSubmitState, formD
     organiser_contact: parsed.values.organiser_contact,
     club_id: parsed.values.club_id,
     description: parsed.values.description,
+    // Not (yet) a field on ExtractedEvent — that schema is Task 10's to
+    // extend, since it also covers AI extraction. Carried here so the kind
+    // the submitter picked isn't dropped on the floor; saveCandidates
+    // ignores unknown properties today, so this is a no-op until Task 10's
+    // save-candidates.ts change reads it (defaulting to "race" otherwise,
+    // same as the DB column default).
+    kind: parsed.values.kind,
     confidence: 1,
     low_confidence_fields: [],
   };

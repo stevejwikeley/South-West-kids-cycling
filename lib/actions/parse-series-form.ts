@@ -4,6 +4,7 @@ import type {
   AgeCategory,
   BookingStatusType,
   DisciplineType,
+  EventKind,
   EventPendingRow,
   EventRow,
   EventSeriesRow,
@@ -17,6 +18,7 @@ export type EventSeriesFormValues = Pick<
   | "title"
   | "discipline"
   | "status"
+  | "kind"
   | "weekdays"
   | "start_date"
   | "until_date"
@@ -46,6 +48,7 @@ export function eventRowToSeriesPrefill(event: EventRow): SeriesPrefill {
     title: event.title,
     discipline: event.discipline,
     status: event.status,
+    kind: event.kind,
     start_date: utcIsoToUkLocalParts(event.start_datetime).date,
     venue_name: event.venue_name,
     address: event.address,
@@ -78,6 +81,7 @@ export function pendingRowToSeriesPrefill(
     title: (field("title") as string) ?? "",
     discipline: field("discipline") as SeriesPrefill["discipline"],
     status: (field("status") as SeriesPrefill["status"]) ?? "confirmed",
+    kind: (field("kind") as SeriesPrefill["kind"]) ?? "race",
     // An extraction with no usable date leaves this blank rather than
     // guessing — "starts on" is required, so the admin has to fill it in.
     start_date: startDatetime ? utcIsoToUkLocalParts(startDatetime).date : "",
@@ -105,6 +109,7 @@ export function parseSeriesForm(
   const title = String(formData.get("title") ?? "").trim();
   const discipline = String(formData.get("discipline") ?? "") as DisciplineType;
   const status = String(formData.get("status") ?? "confirmed") as EventStatus;
+  const kind = (String(formData.get("kind") ?? "race") === "training" ? "training" : "race") as EventKind;
   const weekdays = formData
     .getAll("weekdays")
     .map(Number)
@@ -137,12 +142,19 @@ export function parseSeriesForm(
   if (!organiserUrl) return { ok: false, error: "Organiser URL is required." };
   if (bookingStatus === "open" && !bookingLink) return { ok: false, error: "Booking link is required when entries are open." };
 
+  // Mirrors the series_training_requires_club DB constraint, so the form
+  // shows a sentence rather than a Postgres error.
+  if (kind === "training" && !clubId) {
+    return { ok: false, error: "Pick the club that runs this training session." };
+  }
+
   return {
     ok: true,
     values: {
       title,
       discipline,
       status,
+      kind,
       weekdays,
       start_date: startDate,
       until_date: untilDate,
