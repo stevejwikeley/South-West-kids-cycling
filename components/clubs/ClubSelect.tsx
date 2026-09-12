@@ -17,7 +17,17 @@ const NEW_CLUB_VALUE = "__new__";
 // <select> so EventForm/SeriesForm's native form submission picks it up
 // directly; PendingEditPanel ignores the name and reads `value`/`onChange`
 // instead, since it builds its own FormData by hand.
-export default function ClubSelect({ clubs, value, onChange }: { clubs: Club[]; value: string; onChange: (clubId: string) => void }) {
+export default function ClubSelect({
+  clubs,
+  value,
+  onChange,
+  required = false,
+}: {
+  clubs: Club[];
+  value: string;
+  onChange: (clubId: string) => void;
+  required?: boolean;
+}) {
   const [extraClubs, setExtraClubs] = useState<Club[]>([]);
   const [adding, setAdding] = useState(false);
 
@@ -41,11 +51,12 @@ export default function ClubSelect({ clubs, value, onChange }: { clubs: Club[]; 
 
   return (
     <div style={field}>
-      <label className="mono" style={label}>CLUB (OPTIONAL)</label>
+      <label className="mono" style={label}>{required ? "CLUB" : "CLUB (OPTIONAL)"}</label>
       <select
         style={input}
         name="club_id"
         value={value}
+        required={required}
         onChange={(e) => {
           if (e.target.value === NEW_CLUB_VALUE) {
             setAdding(true);

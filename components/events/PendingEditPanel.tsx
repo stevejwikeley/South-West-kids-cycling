@@ -12,6 +12,7 @@ import type {
   AgeCategory,
   BookingStatusType,
   DisciplineType,
+  EventKind,
   EventPendingRow,
   EventRow,
   EventStatus,
@@ -42,6 +43,7 @@ interface FormValues {
   title: string;
   discipline: DisciplineType | "";
   status: EventStatus;
+  kind: EventKind;
   date: string;
   venue_name: string;
   address: string;
@@ -68,6 +70,7 @@ function computeInitial(row: EventPendingRow, liveEvent: EventRow | null): FormV
     title: (resolvePendingField(row, liveEvent, "title") as string) ?? "",
     discipline: (resolvePendingField(row, liveEvent, "discipline") as DisciplineType) ?? "",
     status: (resolvePendingField(row, liveEvent, "status") as EventStatus) ?? "confirmed",
+    kind: (resolvePendingField(row, liveEvent, "kind") as EventKind) ?? "race",
     date: startParts?.date ?? "",
     venue_name: (resolvePendingField(row, liveEvent, "venue_name") as string) ?? "",
     address: (resolvePendingField(row, liveEvent, "address") as string) ?? "",
@@ -174,6 +177,7 @@ export default function PendingEditPanel({
     formData.set("title", values.title);
     formData.set("discipline", values.discipline);
     formData.set("status", values.status);
+    formData.set("kind", values.kind);
     formData.set("date", values.date);
     formData.set("venue_name", values.venue_name);
     formData.set("address", values.address);
@@ -257,6 +261,36 @@ export default function PendingEditPanel({
           <label className="mono" style={labelStyle}>TITLE</label>
           <input style={inputStyle} value={values.title} onChange={(e) => set("title", e.target.value)} />
           <LiveHint liveValue={liveFor("title")} onUse={() => set("title", liveFor("title"))} />
+        </div>
+
+        <div style={fieldStyle}>
+          <label style={labelStyle}>TYPE</label>
+          <div style={{ display: "flex", gap: 8 }}>
+            {(["race", "training"] as const).map((k) => (
+              <button
+                key={k}
+                type="button"
+                onClick={() => set("kind", k)}
+                style={{
+                  padding: "7px 14px",
+                  fontSize: 12.5,
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  border: `1px solid ${values.kind === k ? "#111111" : "#D8D6D0"}`,
+                  background: values.kind === k ? "#111111" : "transparent",
+                  color: values.kind === k ? "#FAFAF8" : "#4A4A46",
+                }}
+              >
+                {k === "race" ? "Race or event" : "Club training"}
+              </button>
+            ))}
+          </div>
+          {values.kind === "training" && (
+            <p style={{ fontSize: 11, color: "#6B6B66", marginTop: 6 }}>
+              Training is kept off the main calendar and shown on the clubs page. events_pending doesn&apos;t require a
+              club, but one must be attached before this can be approved into a live event.
+            </p>
+          )}
         </div>
 
         <div style={rowStyle}>

@@ -64,6 +64,7 @@ export default function SeriesForm({
   const base = series ?? prefill;
   const [bookingStatus, setBookingStatus] = useState(base?.booking_status ?? "planned");
   const [clubId, setClubId] = useState(base?.club_id ?? "");
+  const [kind, setKind] = useState<"race" | "training">(base?.kind ?? "race");
   const [description, setDescription] = useState(base?.description ?? "");
   const [generating, setGenerating] = useState(false);
   const [generateNote, setGenerateNote] = useState("");
@@ -129,6 +130,36 @@ export default function SeriesForm({
       <div style={field}>
         <label className="mono" style={label}>TITLE</label>
         <input style={input} name="title" defaultValue={base?.title} required />
+      </div>
+
+      <div style={field}>
+        <label style={label}>TYPE</label>
+        <div style={{ display: "flex", gap: 8 }}>
+          {(["race", "training"] as const).map((k) => (
+            <button
+              key={k}
+              type="button"
+              onClick={() => setKind(k)}
+              style={{
+                padding: "7px 14px",
+                fontSize: 12.5,
+                fontWeight: 700,
+                cursor: "pointer",
+                border: `1px solid ${kind === k ? "#111111" : "#D8D6D0"}`,
+                background: kind === k ? "#111111" : "transparent",
+                color: kind === k ? "#FAFAF8" : "#4A4A46",
+              }}
+            >
+              {k === "race" ? "Race or event" : "Club training"}
+            </button>
+          ))}
+        </div>
+        <input type="hidden" name="kind" value={kind} />
+        {kind === "training" && (
+          <p style={{ fontSize: 11, color: "#6B6B66", marginTop: 6 }}>
+            Training is kept off the main calendar and shown on the clubs page, so a club is required.
+          </p>
+        )}
       </div>
 
       <div style={row}>
@@ -243,7 +274,7 @@ export default function SeriesForm({
         </div>
       </div>
 
-      <ClubSelect clubs={clubs} value={clubId} onChange={setClubId} />
+      <ClubSelect clubs={clubs} value={clubId} onChange={setClubId} required={kind === "training"} />
 
       <div style={field}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>

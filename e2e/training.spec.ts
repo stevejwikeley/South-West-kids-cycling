@@ -88,3 +88,47 @@ test.describe("Clubs page training", () => {
     await expect(page.locator('main [id^="club-"]').first()).toBeAttached();
   });
 });
+
+// The Race/Training toggle also appears in the admin/organiser EventForm,
+// SeriesForm and PendingEditPanel, and it's only there that the club-required
+// validation (parseEventForm / parseSeriesForm, requireClubForTraining: true)
+// actually runs — the negative-path scenario this section was meant to prove
+// ("select Training, leave the club blank, submit, see 'Pick the club that
+// runs this training session.'") needs one of those forms.
+//
+// All three live behind /admin or /organiser, which auth-gate.spec.ts already
+// shows redirect straight to /login for a logged-out session, and this suite
+// has no authenticated fixture anywhere: no storageState, and the one test
+// that exercises sign-in (my-events-auth.spec.ts) only gets as far as "a
+// magic link was sent" — it never completes a real login. So that exact
+// negative-path test cannot be driven through this e2e suite as it stands.
+//
+// The closest reachable check is the toggle's one unauthenticated instance,
+// SubmitEventForm's structured mode — where the club is deliberately NOT
+// required (a member of the public has no way to know an internal club id;
+// see public-submit.ts's requireClubForTraining: false). This sticks to
+// rendering/state assertions and never actually submits the structured form,
+// matching submit-event.spec.ts's existing pattern — a real submit would
+// insert a live row into events_pending on the real dev Supabase project.
+test.describe("Race/Training toggle on the public submit form", () => {
+  test("defaults to Race or event, and selecting Club training does not require a club", async ({ page }) => {
+    await page.goto("/submit-event");
+    await page.getByRole("button", { name: /fill in a form/i }).click();
+
+    const raceButton = page.getByRole("button", { name: "Race or event" });
+    const trainingButton = page.getByRole("button", { name: "Club training" });
+    await expect(raceButton).toBeVisible();
+    await expect(trainingButton).toBeVisible();
+
+    // Defaults to race — submit-event.spec.ts's existing tests depend on
+    // this staying true (no newly-required field on first load).
+    await expect(page.locator('input[name="kind"]')).toHaveValue("race");
+
+    await trainingButton.click();
+    await expect(page.locator('input[name="kind"]')).toHaveValue("training");
+
+    // Unlike the admin/organiser forms, the public club <select> must never
+    // gain a `required` attribute.
+    await expect(page.locator('select[name="club_id"]')).not.toHaveAttribute("required");
+  });
+});
