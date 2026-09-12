@@ -44,9 +44,14 @@ export async function GET(request: NextRequest) {
   const today = new Date().toISOString().slice(0, 10);
   const in31Days = new Date(Date.now() + 31 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
 
+  // Races only — the digest pushes to inboxes rather than waiting to be
+  // asked, so it follows the same races-by-default rule as the calendar
+  // and the .ics feed rather than emailing subscribers a list of club
+  // training sessions.
   const { data: eventRows, error: eventsError } = await supabase
     .from("events")
     .select("*")
+    .eq("kind", "race")
     .gte("start_datetime", today)
     .lte("start_datetime", in31Days)
     .order("start_datetime", { ascending: true });

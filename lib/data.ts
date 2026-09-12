@@ -42,14 +42,21 @@ export function toClub(row: ClubRow): Club {
   };
 }
 
-export async function getEvents(): Promise<CalendarEvent[]> {
+// Races by default — every current caller (the calendar, the embed, the
+// structured data) wants races. Training is opt-in, the same rule the .ics
+// feed follows.
+export async function getEvents(kind: "race" | "training" | "all" = "race"): Promise<CalendarEvent[]> {
   const supabase = await createClient();
   const today = new Date().toISOString().slice(0, 10);
-  const { data, error } = await supabase
+  let query = supabase
     .from("events")
     .select("*")
     .gte("start_datetime", today)
     .order("start_datetime", { ascending: true });
+
+  if (kind !== "all") query = query.eq("kind", kind);
+
+  const { data, error } = await query;
 
   if (error) throw error;
   return (data as EventRow[]).map(toCalendarEvent);

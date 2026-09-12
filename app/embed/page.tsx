@@ -13,10 +13,11 @@ export const revalidate = 60;
 export default async function EmbedPage({
   searchParams,
 }: {
-  searchParams: Promise<{ region?: string; discipline?: string; club?: string; limit?: string }>;
+  searchParams: Promise<{ region?: string; discipline?: string; club?: string; limit?: string; kind?: string }>;
 }) {
-  const { region, discipline, club, limit } = await searchParams;
-  const events = await getEvents();
+  const { region, discipline, club, limit, kind } = await searchParams;
+  const kindFilter = kind === "training" || kind === "all" ? kind : "race";
+  const events = await getEvents(kindFilter);
 
   const disciplineFilter = discipline ? new Set(discipline.split(",") as DisciplineId[]) : null;
   const regionFilter = region as Region | undefined;

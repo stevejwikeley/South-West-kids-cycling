@@ -38,3 +38,17 @@ test.describe("calendar.ics training filtering", () => {
     expect(await res.text()).not.toContain("Discipline: CLUSTERS");
   });
 });
+
+test.describe("Calendar page", () => {
+  test("shows no training sessions", async ({ page }) => {
+    await page.goto("/");
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    await expect(page.locator("main").getByText("TRAINING SESSION")).toHaveCount(0);
+  });
+
+  test("the discipline filters offer no training chip", async ({ page }) => {
+    await page.goto("/");
+    await page.getByRole("button", { name: "Toggle filters" }).click();
+    await expect(page.getByRole("button", { name: "Training session" })).toHaveCount(0);
+  });
+});
