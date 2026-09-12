@@ -143,6 +143,20 @@ export default function ClubFields({
           onChange={(e) => onChange("summary", e.target.value)}
         />
       </div>
+
+      <div style={field}>
+        <label className="mono" style={label}>TRAINING NOTE (OPTIONAL)</label>
+        <textarea
+          style={{ ...input, minHeight: 64 }}
+          name={withNames ? "training_note" : undefined}
+          value={values.trainingNote}
+          onChange={(e) => onChange("trainingNote", e.target.value)}
+          placeholder="e.g. Junior Academy, Saturdays 10:00–11:30 at Wheal Jane, term time only — message Dave before a first visit."
+        />
+        <p style={{ fontSize: 11, color: "#6B6B66", marginTop: 5 }}>
+          Shown on the clubs page beside the next session. Session times live here, because event rows carry a date but no time.
+        </p>
+      </div>
     </>
   );
 }

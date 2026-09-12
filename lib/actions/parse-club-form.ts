@@ -2,7 +2,7 @@ import type { ClubDiscipline, ClubRow } from "@/lib/supabase/types";
 
 export type ClubFormValues = Pick<
   ClubRow,
-  "name" | "location" | "website" | "disciplines" | "age_note" | "kids_only" | "founded" | "summary"
+  "name" | "location" | "website" | "disciplines" | "age_note" | "kids_only" | "founded" | "summary" | "training_note"
 >;
 
 export function parseClubForm(formData: FormData): { ok: false; error: string } | { ok: true; values: ClubFormValues } {
@@ -14,6 +14,7 @@ export function parseClubForm(formData: FormData): { ok: false; error: string } 
   const kidsOnly = formData.get("kids_only") === "on";
   const founded = String(formData.get("founded") ?? "").trim() || null;
   const summary = String(formData.get("summary") ?? "").trim() || null;
+  const trainingNote = String(formData.get("training_note") ?? "").trim() || null;
 
   if (!name) return { ok: false, error: "Name is required." };
   if (!location) return { ok: false, error: "Location is required." };
@@ -30,6 +31,7 @@ export function parseClubForm(formData: FormData): { ok: false; error: string } 
       kids_only: kidsOnly,
       founded,
       summary,
+      training_note: trainingNote,
     },
   };
 }

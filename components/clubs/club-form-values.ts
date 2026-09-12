@@ -9,6 +9,7 @@ export interface ClubFieldValues {
   kidsOnly: boolean;
   founded: string;
   summary: string;
+  trainingNote: string;
 }
 
 export function clubToValues(club?: Club): ClubFieldValues {
@@ -21,6 +22,7 @@ export function clubToValues(club?: Club): ClubFieldValues {
     kidsOnly: club?.kidsOnly ?? false,
     founded: club?.founded ?? "",
     summary: club?.summary ?? "",
+    trainingNote: club?.trainingNote ?? "",
   };
 }
 
@@ -37,5 +39,6 @@ export function clubValuesToFormData(values: ClubFieldValues): FormData {
   if (values.kidsOnly) formData.set("kids_only", "on");
   formData.set("founded", values.founded);
   formData.set("summary", values.summary);
+  formData.set("training_note", values.trainingNote);
   return formData;
 }
