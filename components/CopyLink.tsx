@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { trackEvent } from "@/lib/analytics";
 
-export default function CopyLink({ url }: { url: string }) {
+export default function CopyLink({ url, testId }: { url: string; testId?: string }) {
   const [copied, setCopied] = useState(false);
 
   async function handleCopy() {
@@ -28,6 +28,16 @@ export default function CopyLink({ url }: { url: string }) {
         className="mono"
         style={{ flex: "1 1 260px", background: "#FFFFFF", border: "1px solid #D8D6D0", padding: "9px 11px", fontSize: 12.5, color: "#111111" }}
       />
+      {testId && (
+        // The input above shows this same text visually, but an <input>'s
+        // value isn't part of its textContent, so text-based assertions
+        // (e.g. Playwright's toContainText) can't see it there. This mirrors
+        // it as a real text node for that purpose without changing what's
+        // shown on screen.
+        <span data-testid={testId} aria-hidden="true" style={{ position: "absolute", width: 1, height: 1, overflow: "hidden", clip: "rect(0 0 0 0)", whiteSpace: "nowrap" }}>
+          {url}
+        </span>
+      )}
       <button
         type="button"
         onClick={handleCopy}

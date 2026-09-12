@@ -26,6 +26,10 @@ const REGION_OPTIONS: [Region | "all", string][] = [
   ["somerset", "Somerset"],
 ];
 
+// Training is not a discipline you subscribe to here — it is per-club, and
+// has its own control below.
+const SUBSCRIBABLE_DISCIPLINES = EVENT_DISCIPLINES.filter((d) => d.id !== "clusters");
+
 const stepStyle: React.CSSProperties = { fontSize: 14, lineHeight: 1.6, color: "#4A4A46", marginBottom: 10 };
 const stepNumStyle: React.CSSProperties = { fontWeight: 700, color: "#111111" };
 const subheadStyle: React.CSSProperties = { fontWeight: 700, fontSize: 14.5, marginBottom: 10, marginTop: 24 };
@@ -54,6 +58,7 @@ export default function SubscribeSelector({
   const [disciplines, setDisciplines] = useState<Set<DisciplineId>>(new Set(initialDisciplines));
   const [region, setRegion] = useState<Region | "all">(initialRegion);
   const [club, setClub] = useState(initialClub);
+  const [trainingOnly, setTrainingOnly] = useState(false);
 
   function toggleDiscipline(id: DisciplineId) {
     setDisciplines((prev) => {
@@ -70,34 +75,43 @@ export default function SubscribeSelector({
     if (disciplines.size > 0) params.set("discipline", [...disciplines].join(","));
     if (region !== "all") params.set("region", region);
     if (club !== "all") params.set("club", club);
+    if (trainingOnly) params.set("kind", "training");
     const query = params.toString();
     return `${SITE_URL}/calendar.ics${query ? `?${query}` : ""}`;
-  }, [disciplines, region, club]);
+  }, [disciplines, region, club, trainingOnly]);
 
-  const isFiltered = disciplines.size > 0 || region !== "all" || club !== "all";
+  const isFiltered = disciplines.size > 0 || region !== "all" || club !== "all" || trainingOnly;
 
   // Plain-English echo of the filters, so it's obvious what you're about to
   // put in your calendar without decoding the query string.
   const summary = useMemo(() => {
-    const discPart =
-      disciplines.size > 0
-        ? [...disciplines].map((id) => EVENT_DISCIPLINES.find((d) => d.id === id)?.label ?? id).join(", ")
-        : "All";
     const clubName = club !== "all" ? clubs.find((c) => c.id === club)?.name : null;
     const regionPart = region !== "all" ? REGION_OPTIONS.find(([v]) => v === region)?.[1] : null;
+
+    // Training is a separate kind, not one of the disciplines, so it gets
+    // its own summary phrasing rather than being folded into "discPart".
+    const discPart = trainingOnly
+      ? clubName
+        ? `${clubName} training sessions`
+        : "Club training sessions (every club)"
+      : disciplines.size > 0
+        ? `${[...disciplines].map((id) => EVENT_DISCIPLINES.find((d) => d.id === id)?.label ?? id).join(", ")} events`
+        : "All events";
+
     return [
-      `${discPart} events`,
-      clubName ? `from ${clubName}` : null,
+      discPart,
+      !trainingOnly && clubName ? `from ${clubName}` : null,
       regionPart ? `in ${regionPart}` : null,
     ]
       .filter(Boolean)
       .join(" ");
-  }, [disciplines, region, club, clubs]);
+  }, [disciplines, region, club, clubs, trainingOnly]);
 
   function reset() {
     setDisciplines(new Set());
     setRegion("all");
     setClub("all");
+    setTrainingOnly(false);
     trackEvent("subscribe_filter_reset", {});
   }
 
@@ -113,7 +127,7 @@ export default function SubscribeSelector({
       <div style={{ marginBottom: 22 }}>
         <label className="mono" style={labelStyle}>DISCIPLINE</label>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          {EVENT_DISCIPLINES.map((d) => {
+          {SUBSCRIBABLE_DISCIPLINES.map((d) => {
             const active = disciplines.has(d.id);
             return (
               <button
@@ -149,20 +163,46 @@ export default function SubscribeSelector({
         </div>
       </div>
 
-      {clubs.length > 0 && (
-        <div style={{ marginBottom: 22 }}>
-          <label className="mono" style={labelStyle} htmlFor="subscribe-club">CLUB</label>
-          <select
-            id="subscribe-club"
-            value={club}
-            onChange={(e) => { setClub(e.target.value); trackEvent("subscribe_filter_club", { club_id: e.target.value }); }}
-            style={{ width: "100%", maxWidth: 360, background: "#FFFFFF", border: "1px solid #D8D6D0", color: "#111111", padding: "9px 11px", fontSize: 13.5 }}
+      <div style={{ marginBottom: 22 }}>
+        <label className="mono" style={labelStyle} htmlFor={clubs.length > 0 ? "subscribe-club" : undefined}>CLUB</label>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+          {clubs.length > 0 && (
+            <select
+              id="subscribe-club"
+              value={club}
+              onChange={(e) => { setClub(e.target.value); trackEvent("subscribe_filter_club", { club_id: e.target.value }); }}
+              style={{ flex: "1 1 220px", maxWidth: 360, background: "#FFFFFF", border: "1px solid #D8D6D0", color: "#111111", padding: "9px 11px", fontSize: 13.5 }}
+            >
+              <option value="all">All clubs</option>
+              {clubs.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+          )}
+          <button
+            type="button"
+            aria-pressed={trainingOnly}
+            onClick={() => {
+              setTrainingOnly((v) => !v);
+              trackEvent("subscribe_filter_training", { active: !trainingOnly });
+            }}
+            className="mono"
+            style={{ padding: "8px 15px", fontSize: 11, fontWeight: 700, letterSpacing: "0.03em", background: trainingOnly ? "#111111" : "transparent", color: trainingOnly ? "#FAFAF8" : "#6B6B66", border: "1px solid #D8D6D0", cursor: "pointer" }}
           >
-            <option value="all">All clubs</option>
-            {clubs.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
+            Club training
+          </button>
         </div>
-      )}
+        <p style={{ fontSize: 12, color: "#6B6B66", marginTop: 8, maxWidth: 420 }}>
+          {trainingOnly
+            ? club !== "all"
+              ? "You'll get this club's training sessions, not races."
+              : "On with no club chosen — you'll get every club's training sessions. Pick a club above to narrow it down."
+            : "The club filter narrows races by club. Turn on Club training above for training sessions instead of races."}
+        </p>
+      </div>
+
+      <div style={{ marginBottom: 28 }}>
+        <label className="mono" style={labelStyle}>YOUR FEED LINK</label>
+        <CopyLink url={feedUrl} testId="feed-url" />
+      </div>
 
       <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", padding: "12px 14px", background: "#F3F2EE", border: "1px solid #E4E2DD", marginBottom: 32 }}>
         <span style={{ fontSize: 13.5, color: "#4A4A46" }}>

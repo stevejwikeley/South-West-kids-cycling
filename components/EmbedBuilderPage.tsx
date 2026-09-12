@@ -9,6 +9,10 @@ import type { Club, DisciplineId, Region } from "@/lib/types";
 // onto their own site should never end up embedding a staging URL.
 const SITE_URL = "https://www.southwestkidscycling.uk";
 
+// Training is not a discipline here either — it is per-club, and has its own
+// toggle below, same as the subscribe builder.
+const SUBSCRIBABLE_DISCIPLINES = EVENT_DISCIPLINES.filter((d) => d.id !== "clusters");
+
 const REGION_OPTIONS: [Region | "all", string][] = [
   ["all", "All"],
   ["devon", "Devon"],
@@ -21,6 +25,7 @@ export default function EmbedBuilderPage({ clubs }: { clubs: Club[] }) {
   const [disciplines, setDisciplines] = useState<Set<DisciplineId>>(new Set());
   const [club, setClub] = useState("all");
   const [limit, setLimit] = useState(15);
+  const [trainingOnly, setTrainingOnly] = useState(false);
   const [copied, setCopied] = useState(false);
 
   function toggleDiscipline(id: DisciplineId) {
@@ -37,9 +42,10 @@ export default function EmbedBuilderPage({ clubs }: { clubs: Club[] }) {
     if (disciplines.size > 0) params.set("discipline", [...disciplines].join(","));
     if (club !== "all") params.set("club", club);
     if (limit !== 15) params.set("limit", String(limit));
+    if (trainingOnly) params.set("kind", "training");
     const query = params.toString();
     return `${SITE_URL}/embed${query ? `?${query}` : ""}`;
-  }, [region, disciplines, club, limit]);
+  }, [region, disciplines, club, limit, trainingOnly]);
 
   const snippet = `<iframe src="${src}" style="width:100%;max-width:640px;height:600px;border:0;" title="South West Kids Cycling events"></iframe>`;
 
@@ -81,7 +87,7 @@ export default function EmbedBuilderPage({ clubs }: { clubs: Club[] }) {
           <div style={{ marginBottom: 24 }}>
             <label className="mono" style={{ fontSize: 10.5, color: "#6B6B66", display: "block", marginBottom: 8, letterSpacing: "0.03em" }}>DISCIPLINE (LEAVE BLANK FOR ALL)</label>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              {EVENT_DISCIPLINES.map((d) => {
+              {SUBSCRIBABLE_DISCIPLINES.map((d) => {
                 const active = disciplines.has(d.id);
                 return (
                   <button
@@ -111,6 +117,22 @@ export default function EmbedBuilderPage({ clubs }: { clubs: Club[] }) {
               </select>
             </div>
           )}
+
+          <div style={{ marginBottom: 24 }}>
+            <label className="mono" style={{ fontSize: 10.5, color: "#6B6B66", display: "block", marginBottom: 8, letterSpacing: "0.03em" }}>SESSIONS</label>
+            <button
+              type="button"
+              aria-pressed={trainingOnly}
+              onClick={() => setTrainingOnly((v) => !v)}
+              className="mono"
+              style={{ padding: "8px 15px", fontSize: 11, fontWeight: 700, letterSpacing: "0.03em", background: trainingOnly ? "#111111" : "transparent", color: trainingOnly ? "#FAFAF8" : "#6B6B66", border: "1px solid #D8D6D0", cursor: "pointer" }}
+            >
+              Club training
+            </button>
+            <p style={{ fontSize: 12, color: "#6B6B66", marginTop: 8, maxWidth: 340 }}>
+              A club can turn this on (with its own club picked above) to show its own training sessions, instead of races, on its own site.
+            </p>
+          </div>
 
           <div style={{ marginBottom: 32 }}>
             <label className="mono" style={{ fontSize: 10.5, color: "#6B6B66", display: "block", marginBottom: 8, letterSpacing: "0.03em" }}>MAX EVENTS SHOWN</label>

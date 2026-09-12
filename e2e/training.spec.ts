@@ -132,3 +132,16 @@ test.describe("Race/Training toggle on the public submit form", () => {
     await expect(page.locator('select[name="club_id"]')).not.toHaveAttribute("required");
   });
 });
+
+test.describe("Subscribe page", () => {
+  test("offers no training discipline chip", async ({ page }) => {
+    await page.goto("/subscribe");
+    await expect(page.getByRole("button", { name: "Training session" })).toHaveCount(0);
+  });
+
+  test("choosing club training builds a kind=training feed url", async ({ page }) => {
+    await page.goto("/subscribe");
+    await page.getByRole("button", { name: /club training/i }).click();
+    await expect(page.getByTestId("feed-url")).toContainText("kind=training");
+  });
+});
