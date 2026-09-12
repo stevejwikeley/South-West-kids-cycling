@@ -50,6 +50,7 @@ npm run build       # production build
 npm run start        # run a production build locally
 npm run lint         # eslint
 npm run test:e2e     # Playwright end-to-end tests
+npm run test:unit    # Node's built-in test runner, for pure lib/ logic (no browser, no Supabase)
 npm run traffic-report  # append a weekly Vercel Web Analytics summary to docs/traffic-reports.md
 ```
 
@@ -57,14 +58,17 @@ npm run traffic-report  # append a weekly Vercel Web Analytics summary to docs/t
 
 ```
 app/                    Routes (App Router)
-  page.tsx                Public calendar (home page)
-  clubs/                   Public club directory
+  page.tsx                Public calendar (home page) — races only, plus a "training this
+                             week" strip (TrainingThisWeek, renders nothing when the coming
+                             week has none); club training itself lives on /clubs, see "Clubs"
+  clubs/                   Public club directory — includes each club's training band, see "Clubs"
   admin/clubs/, organiser/clubs/   Create/edit/delete clubs — see "Clubs" below
   getting-started/         New-to-racing guide
   contact/                 Contact form (general enquiry / organiser account request)
   subscribe/               Calendar subscription instructions (email digest + ICS feed)
-  calendar.ics/            Live ICS feed — supports ?discipline=, ?region= and ?club= filters
-  embed/                   Chrome-free events widget meant for <iframe> on other sites
+  calendar.ics/            Live ICS feed — supports ?discipline=, ?region=, ?club= and ?kind= filters
+  embed/                   Chrome-free events widget meant for <iframe> on other sites (also
+                             takes ?kind=)
   events/[id]/            Public event detail page — shows the signup form when the event
                              is bookable (`bookable` column + capacity/waitlist state)
   events/[id]/suggest-change/   Public "suggest a change" form's standalone fallback route —
@@ -164,7 +168,9 @@ Every event has an optional `description` (`events.description`, also on `events
 
 ## Subscribing to a filtered feed
 
-`/subscribe` is a feed builder, not just a set of instructions. `components/SubscribeSelector.tsx` offers the same three axes the feed itself understands — discipline (multi-select), county, and club — composes them into a `/calendar.ics?discipline=…&region=…&club=…` URL, and feeds that URL into the per-platform (Google/Apple/Outlook) setup steps, so the link someone copies is already scoped to what they picked. Leaving everything untouched yields the plain full-calendar URL, exactly as before.
+`/subscribe` is a feed builder, not just a set of instructions. `components/SubscribeSelector.tsx` offers the same three filter axes the feed itself understands — discipline (multi-select), county, and club — plus a "training only" toggle, composes them into a `/calendar.ics?discipline=…&region=…&club=…&kind=training` URL, and feeds that URL into the per-platform (Google/Apple/Outlook) setup steps, so the link someone copies is already scoped to what they picked. Leaving everything untouched yields the plain full-calendar URL, exactly as before.
+
+**`kind` (`app/calendar.ics/route.ts`, `events.kind`/`events_pending.kind`/`event_series.kind`):** every event is a race or a training session (`event_kind` enum), and the default feed — no `?kind` at all — is races only, matching the public calendar. Training reaches a subscriber three ways: `?kind=training` (that club/region/discipline's training only), `?kind=all` (races and training together), or naming `?discipline=clusters` explicitly — that last one is a deliberate carve-out so training-only subscriptions people already hold (from before this split existed) keep delivering rather than silently going empty. A per-club training feed is `?club=<uuid>&kind=training`; `ClubTrainingBand` (`components/clubs/ClubTrainingBand.tsx`) on `/clubs` links directly to this shape for each club.
 
 The feed URL is always built against the production origin, never the origin the page is served from — a subscription lives in someone's calendar app for years, so a preview or localhost URL there would be a slow-burning bug. `components/EmbedBuilderPage.tsx` hardcodes production for the same reason.
 
@@ -174,7 +180,7 @@ On the feed route itself (`app/calendar.ics/route.ts`): unrecognised filter valu
 
 ## Embeddable widget
 
-`/embed` renders a compact, nav/footer/feedback-bubble-free events list meant for `<iframe>`-ing into a club's own site (`TopNav`/`Footer`/`FeedbackPopup`/`ChatWidget` all check the pathname and render nothing under `/embed`). Supports `?region=`, `?discipline=`, `?club=`, `?limit=` to scope what's shown, and always links back to `/subscribe`. `/embed-builder` (`components/EmbedBuilderPage.tsx`) is the point-and-click UI for constructing that query string and copying the resulting `<iframe>` snippet — useful for a club that wants to show only its own events. The Clubs page also has a copyable generic `<iframe>` snippet (`components/EmbedSnippet.tsx`) linking to the builder.
+`/embed` renders a compact, nav/footer/feedback-bubble-free events list meant for `<iframe>`-ing into a club's own site (`TopNav`/`Footer`/`FeedbackPopup`/`ChatWidget` all check the pathname and render nothing under `/embed`). Supports `?region=`, `?discipline=`, `?club=`, `?limit=`, `?kind=` (same three values and same races-by-default as `/calendar.ics`) to scope what's shown, and always links back to `/subscribe`. `/embed-builder` (`components/EmbedBuilderPage.tsx`) is the point-and-click UI for constructing that query string and copying the resulting `<iframe>` snippet — useful for a club that wants to show only its own events. The Clubs page also has a copyable generic `<iframe>` snippet (`components/EmbedSnippet.tsx`) linking to the builder.
 
 ## Clubs
 
@@ -184,9 +190,13 @@ Every event can optionally be linked to one club (`events.club_id`, nullable, `o
 
 **AI-assisted lookup.** Both the full club form and the quick-add have a "Look up online" button next to the name field, calling `researchClubAction()` → `researchClub()` (`lib/club-research.ts`). This uses the same Claude + structured-output pattern as `extract-events.ts`, but with Anthropic's `web_search` tool so the model can actually search for the named club and return its location, website, disciplines, age range, founding year and a short summary — same "propose, don't auto-save" posture as AI-ingested events: it only prefills the form's fields, which are then still reviewed and submitted by a human.
 
+**Club training.** Every event row is either a race or a training session (`events.kind`, `event_kind` enum — also on `events_pending` and `event_series`), and it's a real event row either way: bookings, the detail page and "suggest a change" all still key on `events.id`. The public calendar and the default `/calendar.ics` feed show races only (see "Subscribing to a filtered feed" below); training lives on `/clubs` instead, one band per club (`ClubTrainingBand`, `components/clubs/ClubTrainingBand.tsx`) built from `getUpcomingTraining()` (`lib/training.ts`'s pure `weekdayPattern`/`nextSessions` helpers) — the derived weekday pattern (e.g. "Trains Thursdays & Saturdays", falling back to a plain date list once a club's sessions stop forming a weekly rhythm), the club's own `training_note`, the next session plus the two after, and a per-club subscribe link (`/calendar.ics?club=<id>&kind=training`). No event row carries a time of day (every event is all-day at midnight UTC), so `clubs.training_note` is the one place a club states when its sessions actually start — free text, edited on the same club form as everything else, deliberately not a structured field since "6pm, but 6:30 in winter, check WhatsApp before a first visit" doesn't fit one. Because of that, both the band and the per-club subscribe flow carry a caveat that times can change at short notice.
+
+A training event **requires** a club: `training_requires_club` on `events` and `series_training_requires_club` on `event_series` (`check (kind <> 'training' or club_id is not null)`) enforce this at the database level, and the Race/Training toggle on the admin/organiser event and series forms makes the "CLUB" field required the moment "Training" is selected. `events_pending` is deliberately left unconstrained — an AI-ingested or publicly-submitted training candidate can arrive before anyone has identified its club, same as any other under-confident field, and a human attaches one during review.
+
 ## Chat assistant
 
-A floating "Ask a question" widget (`components/ChatWidget.tsx`, bottom-left on every public page except `/admin`, `/organiser`, `/login`, `/auth`, `/oauth` and `/embed`) answers questions about disciplines, subscribing, clubs, and specific events. `lib/actions/chat.ts` grounds each reply in a system prompt built from live data (`getEvents()`, `getClubs()`) plus a hand-written FAQ (disciplines, subscribing, getting started, event submission) — it's told never to invent a date, venue, or booking link. If it doesn't know the answer or the user needs a real person, it points them to WhatsApp (`lib/whatsapp.ts`), whose link is also always shown under the message input.
+A floating "Ask a question" widget (`components/ChatWidget.tsx`, bottom-left on every public page except `/admin`, `/organiser`, `/login`, `/auth`, `/oauth` and `/embed`) answers questions about disciplines, subscribing, clubs, and specific events. `lib/actions/chat.ts` grounds each reply in a system prompt built from live data (`getEvents("all")` — races and training both, unlike the calendar's own default — plus `getClubs()`) and a hand-written FAQ (disciplines, subscribing, getting started, event submission) — it's told never to invent a date, venue, or booking link, and, on training specifically, to point to `/clubs` rather than the main calendar (that's where training moved once `kind` split it off — see "Clubs" above). If it doesn't know the answer or the user needs a real person, it points them to WhatsApp (`lib/whatsapp.ts`), whose link is also always shown under the message input.
 
 ## Cron jobs (`vercel.json`)
 
@@ -213,6 +223,10 @@ A weekly scheduled Claude task (in the site owner's own claude.ai account, not p
 ## Testing
 
 `npm run test:e2e` runs the Playwright suite (`e2e/`) against a local dev server — desktop Chromium plus a Pixel 7 mobile-emulation project. Covers the calendar, clubs page, contact form, feedback popup, suggest-change flow, and the admin/organiser auth gate. Note that the suite runs against the live Supabase project rather than a seeded test database, so the submission tests write real rows.
+
+**Known limitation — run Playwright with `--workers=1`.** The default parallel run can report false failures that are dev-server contention, not a real regression: Next compiles routes on first hit, and two workers hammering a cold route at once can time out. `npx playwright test --workers=1` passes reliably (51/51 across both projects at the time of writing); if a parallel run shows red, re-run with `--workers=1` before assuming something broke.
+
+`npm run test:unit` runs `lib/training.test.ts` (and any other `*.test.ts` under `lib/`) via Node's built-in test runner (`node --test --experimental-strip-types`) — no Playwright, no dev server, no Supabase. `lib/training.ts`'s derivation functions (`weekdayPattern`, `nextSessions`, `groupByClub`, `sessionsInNextDays`) are covered here rather than in `e2e/` since they're pure and don't need a browser.
 
 ## Monitoring
 
