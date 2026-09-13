@@ -9,7 +9,7 @@ test.describe("calendar.ics training filtering", () => {
     expect(res.status()).toBe(200);
     const body = await res.text();
     expect(body).toContain("BEGIN:VCALENDAR");
-    expect(body).not.toContain("Discipline: CLUSTERS");
+    expect(body).not.toContain("Discipline: TRAINING");
   });
 
   test("?kind=training returns training and names the feed for it", async ({ request }) => {
@@ -17,25 +17,31 @@ test.describe("calendar.ics training filtering", () => {
     expect(res.status()).toBe(200);
     const body = await res.text();
     expect(body).toContain("X-WR-CALNAME:South West Kids Cycling — Club training");
-    expect(body).toContain("Discipline: CLUSTERS");
+    expect(body).toContain("Discipline: TRAINING");
   });
 
   test("?kind=all returns both races and training", async ({ request }) => {
     const body = await (await request.get("/calendar.ics?kind=all")).text();
-    expect(body).toContain("Discipline: CLUSTERS");
-    const races = body.match(/Discipline: (?!CLUSTERS)[A-Z]+/g) ?? [];
+    expect(body).toContain("Discipline: TRAINING");
+    const races = body.match(/Discipline: (?!TRAINING)[A-Z]+/g) ?? [];
     expect(races.length).toBeGreaterThan(0);
   });
 
-  test("an existing ?discipline=clusters subscription still delivers training", async ({ request }) => {
-    const body = await (await request.get("/calendar.ics?discipline=clusters")).text();
-    expect(body).toContain("Discipline: CLUSTERS");
+  // Clusters is now a real event discipline (a cluster session — several
+  // clubs training together, a few times a year) rather than a stand-in for
+  // club training, so this must NOT return club training rows.
+  test("?discipline=clusters does not return club training", async ({ request }) => {
+    const res = await request.get("/calendar.ics?discipline=clusters");
+    expect(res.status()).toBe(200);
+    const body = await res.text();
+    expect(body).toContain("BEGIN:VCALENDAR");
+    expect(body).not.toContain("Discipline: TRAINING");
   });
 
   test("an unknown kind degrades to races rather than erroring", async ({ request }) => {
     const res = await request.get("/calendar.ics?kind=banana");
     expect(res.status()).toBe(200);
-    expect(await res.text()).not.toContain("Discipline: CLUSTERS");
+    expect(await res.text()).not.toContain("Discipline: TRAINING");
   });
 });
 

@@ -10,8 +10,10 @@ import type { Club, DisciplineId, Region } from "@/lib/types";
 const SITE_URL = "https://www.southwestkidscycling.uk";
 
 // Training is not a discipline here either — it is per-club, and has its own
-// toggle below, same as the subscribe builder.
-const SUBSCRIBABLE_DISCIPLINES = EVENT_DISCIPLINES.filter((d) => d.id !== "clusters");
+// toggle below, same as the subscribe builder. A cluster session (several
+// clubs training together, a few times a year) is a real event discipline,
+// so it stays in this list like any other race discipline.
+const SUBSCRIBABLE_DISCIPLINES = EVENT_DISCIPLINES.filter((d) => d.id !== "training");
 
 const REGION_OPTIONS: [Region | "all", string][] = [
   ["all", "All"],
@@ -50,11 +52,11 @@ export default function EmbedBuilderPage({ clubs }: { clubs: Club[] }) {
     if (kind === null) return null;
     const params = new URLSearchParams();
     if (region !== "all") params.set("region", region);
-    // Training rows carry discipline "clusters" — if chips are narrowing
-    // the discipline list and training is included, "clusters" has to be
+    // Training rows carry discipline "training" — if chips are narrowing
+    // the discipline list and training is included, "training" has to be
     // added too, or the training half of the widget shows nothing.
     const disciplineList = [...disciplines];
-    if (showTraining && disciplineList.length > 0) disciplineList.push("clusters");
+    if (showTraining && disciplineList.length > 0) disciplineList.push("training");
     if (disciplineList.length > 0) params.set("discipline", disciplineList.join(","));
     if (club !== "all") params.set("club", club);
     if (limit !== 15) params.set("limit", String(limit));

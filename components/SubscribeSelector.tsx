@@ -27,8 +27,10 @@ const REGION_OPTIONS: [Region | "all", string][] = [
 ];
 
 // Training is not a discipline you subscribe to here — it is per-club, and
-// has its own control below.
-const SUBSCRIBABLE_DISCIPLINES = EVENT_DISCIPLINES.filter((d) => d.id !== "clusters");
+// has its own control below. A cluster session (several clubs training
+// together, a few times a year) is a real event discipline, so it stays in
+// this list like any other race discipline.
+const SUBSCRIBABLE_DISCIPLINES = EVENT_DISCIPLINES.filter((d) => d.id !== "training");
 
 const stepStyle: React.CSSProperties = { fontSize: 14, lineHeight: 1.6, color: "#4A4A46", marginBottom: 10 };
 const stepNumStyle: React.CSSProperties = { fontWeight: 700, color: "#111111" };
@@ -76,11 +78,11 @@ export default function SubscribeSelector({
 
   const feedUrl = useMemo(() => {
     const params = new URLSearchParams();
-    // Training rows carry discipline "clusters". If chips are narrowing the
-    // discipline list, training-on has to add "clusters" to that list too,
+    // Training rows carry discipline "training". If chips are narrowing the
+    // discipline list, training-on has to add "training" to that list too,
     // or ?discipline=cx&kind=all silently returns no training at all.
     const disciplineList = [...disciplines];
-    if (includeTraining && disciplineList.length > 0) disciplineList.push("clusters");
+    if (includeTraining && disciplineList.length > 0) disciplineList.push("training");
     if (disciplineList.length > 0) params.set("discipline", disciplineList.join(","));
     if (region !== "all") params.set("region", region);
     if (club !== "all") params.set("club", club);

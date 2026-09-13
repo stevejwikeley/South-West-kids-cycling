@@ -10,7 +10,7 @@ import * as Sentry from "@sentry/nextjs";
 // before reaching this single function; there is no per-source parsing logic
 // beyond that normalization.
 
-const DISCIPLINES = ["cx", "xc", "road", "tri", "gravel", "duathlon", "clusters", "other"] as const;
+const DISCIPLINES = ["cx", "xc", "road", "tri", "gravel", "duathlon", "clusters", "training", "other"] as const;
 const STATUSES = ["confirmed", "provisional", "cancelled"] as const;
 const REGIONS = ["devon", "cornwall", "somerset", "both"] as const;
 const AGE_CATEGORIES = ["u8", "u10", "u12", "u14", "u16"] as const;
@@ -18,7 +18,7 @@ const BOOKING_STATUSES = ["open", "planned"] as const;
 const KINDS = ["race", "training"] as const;
 
 const KIND_DESCRIPTION =
-  "\"training\" for a club's own coaching or academy session (usually weekly, \"Go-Ride\" style, members or sign-up only); \"race\" for everything else, including series rounds and open events. A training session almost always names the club that runs it — put that club in organiser_name so a human can attach it in the queue.";
+  "\"training\" for a single club's own coaching or academy session (usually weekly, \"Go-Ride\" style, members or sign-up only, discipline should be \"training\"); \"race\" for everything else, including series rounds, open events, and cluster sessions (several clubs training together, a few times a year — a real event even though it isn't a race, discipline \"clusters\"). A club training session almost always names the club that runs it — put that club in organiser_name so a human can attach it in the queue.";
 
 const ExtractedEventSchema = z.object({
   title: z.string(),
@@ -74,8 +74,8 @@ Rules:
 - Only extract youth/junior cycling events, club coaching sessions, or events that clearly include age-group categories for under-16s. Skip adult-only road racing, enduro, and anything outside Devon/Cornwall/Somerset.
 - Leave a field null rather than guessing. A poster rarely states exact time, address, or a booking link — leave those null for a human reviewer rather than inventing plausible-looking values.
 - Links extracted from a web page appear inline right after their link text, as "text (URL)" — e.g. a listing page with a "VIEW EVENT" button per row shows up as "…Woodbury Common VIEW EVENT (https://example.com/events/devon-grit/)". Match each link to the event it's positioned next to (by proximity/order in the text, not by the link text itself, which is often identical and generic across every row, like "VIEW EVENT" or "Book now"). Use it as booking_link if it goes to a registration/entry page, otherwise organiser_url.
-- Disciplines: cx (cyclocross), xc (cross country mountain biking), road, tri (triathlon), gravel (gravel racing), duathlon (run-bike-run), clusters (club coaching/training sessions, "Go-Ride" style), other. Skip events with no cycling leg at all (a pure running race, swim event, etc.) — this calendar only covers cycling and cycling-adjacent multisport.
-- kind: "training" for a club's own coaching or academy session (usually weekly, "Go-Ride" style, members or sign-up only); "race" for everything else, including series rounds and open events. A training session almost always names the club that runs it — put that club in organiser_name so a human can attach it in the queue.
+- Disciplines: cx (cyclocross), xc (cross country mountain biking), road, tri (triathlon), gravel (gravel racing), duathlon (run-bike-run), clusters (a cluster session — several clubs training together, a few times a year; kind should be "race", since this is a genuine event for the main calendar, not a single club's own coaching), training (a single club's own recurring coaching or academy session, "Go-Ride" style; kind should be "training"), other. Skip events with no cycling leg at all (a pure running race, swim event, etc.) — this calendar only covers cycling and cycling-adjacent multisport.
+- kind: "training" for a single club's own coaching or academy session (usually weekly, "Go-Ride" style, members or sign-up only) — discipline should be "training". "race" for everything else, including series rounds, open events, and cluster sessions (several clubs training together, a few times a year) — discipline "clusters". A club training session almost always names the club that runs it — put that club in organiser_name so a human can attach it in the queue.
 - Age categories are u8/u10/u12/u14/u16. If the source states or clearly implies specific ages, use those (e.g. "Under 10s and Under 12s" → ["u10","u12"]). If it's a kids/youth race with no age information at all, default to every category (["u8","u10","u12","u14","u16"]) — except gravel, which is usually unsuitable for the youngest riders given the distances involved, so default to ["u12","u14","u16"] instead.
 - Every event on this calendar is treated as all-day — don't extract or infer a start/end time even if the source states one.
 - confidence should reflect the whole event: high when title, date, venue and discipline are all clear and unambiguous; low when you had to infer significantly or the source is degraded/ambiguous.

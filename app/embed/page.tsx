@@ -17,13 +17,12 @@ export default async function EmbedPage({
 }) {
   const { region, discipline, club, limit, kind } = await searchParams;
   const disciplineFilter = discipline ? new Set(discipline.split(",") as DisciplineId[]) : null;
-  // Races by default. Training reaches an embed only when it's asked for —
-  // and naming discipline=clusters counts as asking, same carve-out as
-  // app/calendar.ics/route.ts's parseKind, so training-only embeds a club
-  // already pasted into their own site keep delivering instead of quietly
-  // going blank.
-  const kindFilter =
-    kind === "training" || kind === "all" ? kind : disciplineFilter?.has("clusters") ? "all" : "race";
+  // Races by default. Training reaches an embed only when it's explicitly
+  // asked for via ?kind=training or ?kind=all — discipline=clusters is a
+  // real event discipline (a cluster session, several clubs training
+  // together), not a stand-in for training, so it must not carve training
+  // into the default view the way it once did.
+  const kindFilter = kind === "training" || kind === "all" ? kind : "race";
   const events = await getEvents(kindFilter);
   const regionFilter = region as Region | undefined;
   const max = Math.max(1, Math.min(50, Number(limit) || 15));

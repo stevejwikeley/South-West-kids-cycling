@@ -73,7 +73,7 @@ export default function Page() {
         <section style={{ marginBottom: 56 }}>
           <div className="disp" style={{ fontSize: 24, marginBottom: 18, letterSpacing: "-0.01em" }}>What each discipline involves</div>
           <div style={{ borderTop: "2px solid #111111" }}>
-            {EVENT_DISCIPLINES.filter((d) => d.id !== "clusters").map((d) => {
+            {EVENT_DISCIPLINES.filter((d) => d.id in DISCIPLINE_GUIDE).map((d) => {
               const guide = DISCIPLINE_GUIDE[d.id];
               return (
                 <div key={d.id} style={{ padding: "22px 6px", borderBottom: "1px solid #E4E2DD", display: "flex", gap: 24, flexWrap: "wrap" }}>

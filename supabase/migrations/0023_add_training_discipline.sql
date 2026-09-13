@@ -1,0 +1,29 @@
+-- Adds 'training' as its own discipline_type value.
+--
+-- This corrects a conflation between two independent axes, `kind` and
+-- `discipline`, that should never have been merged:
+--
+--   * A cluster session is several clubs coming together for a shared
+--     training day, a few times a year — a genuine event, kind = 'race',
+--     that belongs on the main race & event calendar. discipline =
+--     'clusters' is its label.
+--   * Club training is one club's own recurring coaching (weekly
+--     academies, Go-Ride style) — kind = 'training', never on the main
+--     calendar, shown on the clubs page instead.
+--
+-- 0022_event_kind.sql introduced `kind` to separate races from training but
+-- left every club-training row labelled discipline = 'clusters', so
+-- 'clusters' came to mean "club training" in the data even though the two
+-- ideas are unrelated: a row's `kind` says whether it is a race or
+-- training; its `discipline` says what activity it is. Naming club
+-- training after cluster sessions made every genuine cluster session
+-- indistinguishable from ordinary club training, and would have hidden
+-- real cluster sessions from the main calendar the moment one was entered.
+--
+-- This migration only adds the new enum value. Postgres will not let a
+-- newly added enum value be used in the same transaction that adds it, so
+-- the data move (existing club-training rows off discipline = 'clusters'
+-- and onto discipline = 'training') is a separate migration:
+-- 0024_reclassify_club_training.sql.
+
+alter type discipline_type add value if not exists 'training';

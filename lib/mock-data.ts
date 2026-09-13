@@ -7,7 +7,8 @@ export const EVENT_DISCIPLINES: Discipline[] = [
   { id: "tri", label: "Triathlon", color: "#0E7C86" },
   { id: "gravel", label: "Gravel", color: "#8B5E34" },
   { id: "duathlon", label: "Duathlon", color: "#A6446E" },
-  { id: "clusters", label: "Training session", color: "#6B6B66" },
+  { id: "clusters", label: "Cluster session", color: "#B8860B" },
+  { id: "training", label: "Training", color: "#6B6B66" },
   { id: "other", label: "Other", color: "#6A3F86" },
 ];
 

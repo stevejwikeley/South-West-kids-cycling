@@ -8,7 +8,7 @@ import type { DisciplineType, EventKind, EventRow, RegionType } from "@/lib/supa
 // next refresh with no separate publish step.
 export const dynamic = "force-dynamic";
 
-const DISCIPLINE_VALUES = new Set<DisciplineType>(["cx", "xc", "road", "tri", "gravel", "duathlon", "clusters", "other"]);
+const DISCIPLINE_VALUES = new Set<DisciplineType>(["cx", "xc", "road", "tri", "gravel", "duathlon", "clusters", "training", "other"]);
 const REGION_VALUES = new Set<RegionType>(["devon", "cornwall", "somerset", "both"]);
 const DISCIPLINE_LABELS: Record<DisciplineType, string> = {
   cx: "Cyclocross",
@@ -17,7 +17,8 @@ const DISCIPLINE_LABELS: Record<DisciplineType, string> = {
   tri: "Triathlon",
   gravel: "Gravel",
   duathlon: "Duathlon",
-  clusters: "Training session",
+  clusters: "Cluster session",
+  training: "Training",
   other: "Other",
 };
 const REGION_LABELS: Record<RegionType, string> = { devon: "Devon", cornwall: "Cornwall", somerset: "Somerset", both: "Devon & Cornwall" };
@@ -30,15 +31,14 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 
 export type KindFilter = "race" | "training" | "all";
 
-// Races by default. Training reaches a subscriber only when they ask for it
-// — and naming discipline=clusters counts as asking, so the training-only
-// subscriptions people already hold keep delivering instead of silently
-// emptying. A calendar that goes blank reads as a bug to its owner and is
-// invisible to us.
-function parseKind(searchParams: URLSearchParams, disciplines: DisciplineType[]): KindFilter {
+// Races by default. Training reaches a subscriber only when they explicitly
+// ask via ?kind=training or ?kind=all — discipline=clusters is a real event
+// discipline now (a cluster session, several clubs training together, a few
+// times a year), not a stand-in for training, so it must not carve training
+// into the default feed the way it once did.
+function parseKind(searchParams: URLSearchParams): KindFilter {
   const raw = searchParams.get("kind");
   if (raw === "training" || raw === "all" || raw === "race") return raw;
-  if (disciplines.includes("clusters")) return "all";
   return "race";
 }
 
@@ -104,7 +104,7 @@ function parseFilters(searchParams: URLSearchParams) {
     .split(",")
     .map((s) => s.trim())
     .filter((s) => UUID_RE.test(s));
-  const kind = parseKind(searchParams, disciplines);
+  const kind = parseKind(searchParams);
   return { disciplines, regions, clubs, kind };
 }
 

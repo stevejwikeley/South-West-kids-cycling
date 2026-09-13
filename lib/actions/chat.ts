@@ -26,7 +26,8 @@ const DISCIPLINE_GUIDE = `- Cyclocross (cx): short, muddy off-road laps with obs
 - Triathlon (tri): swim, bike, run over junior-scaled distances.
 - Gravel: longer off-road rides on unsurfaced tracks, endurance-focused. Usually u12+ given the distances.
 - Duathlon: run, bike, run — no swim leg, less kit than triathlon.
-- Clusters: club coaching/training sessions ("Go-Ride" style), not races. These moved off the main calendar onto the clubs page (/clubs) — each club's entry there shows its next session, and can be subscribed to on its own from /subscribe (a feed filtered to just that club's training) rather than as part of the main calendar.
+- Clusters: cluster sessions, where several clubs come together for a shared training day — a few times a year. These are real events and appear on the main calendar like any other discipline.
+- Training: a single club's own recurring coaching or academy session ("Go-Ride" style), not a race. These are kept off the main calendar and shown on the clubs page (/clubs) instead — each club's entry there shows its next session, and can be subscribed to on its own from /subscribe (a feed filtered to just that club's training) rather than as part of the main calendar.
 - Other: one-off taster days or anything that doesn't fit elsewhere — check the listing.
 
 Cyclocross, XC and road races run under British Cycling rules need a race licence (a British Cycling membership, with cheaper under-12/youth/junior tiers), but most events sell a one-off day licence at registration so families can try racing before joining.`;
@@ -85,7 +86,7 @@ ${clubLines}`;
 }
 
 function buildSystemPrompt(knowledgeBase: string): string {
-  return `You are the help assistant embedded on South West Kids Cycling (southwestkidscycling.uk), a public calendar of youth cycling races and events (cyclocross, XC, road, triathlon, gravel, duathlon) for ages 5-16 across Devon, Cornwall & Somerset, England. Club coaching/training sessions aren't on that calendar — they're listed per club on the clubs page, each showing its next session and its own subscribable feed.
+  return `You are the help assistant embedded on South West Kids Cycling (southwestkidscycling.uk), a public calendar of youth cycling races and events (cyclocross, XC, road, triathlon, gravel, duathlon, and cluster sessions where several clubs train together) for ages 5-16 across Devon, Cornwall & Somerset, England. A single club's own coaching/training sessions aren't on that calendar — they're listed per club on the clubs page, each showing its next session and its own subscribable feed.
 
 Answer questions from parents and young riders about the disciplines, what to expect and bring, British Cycling membership, subscribing to the calendar, finding a club, submitting or correcting events, and specific events or clubs from the data below.
 

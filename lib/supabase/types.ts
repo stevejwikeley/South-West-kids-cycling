@@ -2,7 +2,7 @@
 // CLI is linked to the project, this can be regenerated with:
 //   supabase gen types typescript --project-id mpbptzacxbxadvwnqdol > lib/supabase/types.ts
 
-export type DisciplineType = "cx" | "xc" | "road" | "tri" | "gravel" | "duathlon" | "clusters" | "other";
+export type DisciplineType = "cx" | "xc" | "road" | "tri" | "gravel" | "duathlon" | "clusters" | "training" | "other";
 export type EventStatus = "confirmed" | "provisional" | "cancelled";
 export type BookingStatusType = "open" | "planned";
 export type RegionType = "devon" | "cornwall" | "somerset" | "both";
@@ -12,8 +12,12 @@ export type PublishedViaType = "auto" | "reviewed";
 export type UserRole = "admin" | "organiser" | "super_admin";
 export type ClubDiscipline = "road" | "xc" | "cx";
 
-// Races vs club training. Training also keeps discipline 'clusters' — kind
-// is what every read path filters on; discipline stayed put to avoid churn.
+// Races vs club training. `kind` and `discipline` are independent axes:
+// kind is what every read path filters on to keep training off the main
+// calendar; discipline says what activity it is. Club training rows carry
+// discipline 'training'. A cluster session — several clubs training
+// together, a few times a year — is a genuine event: kind 'race',
+// discipline 'clusters', on the main calendar like any other race.
 export type EventKind = "race" | "training";
 
 export interface EventRow {
