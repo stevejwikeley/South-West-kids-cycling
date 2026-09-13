@@ -1,6 +1,6 @@
 "use client";
 
-import { weekdayPattern, nextSessions, type TrainingSession } from "@/lib/training";
+import { weekdayPattern, nextDistinctDates, commonVenue, type TrainingSession } from "@/lib/training";
 import { fmtDay } from "@/lib/format";
 import { trackEvent } from "@/lib/analytics";
 import type { Club } from "@/lib/types";
@@ -14,9 +14,9 @@ function dateLabel(date: string) {
 
 export default function ClubTrainingBand({ club, sessions }: { club: Club; sessions: TrainingSession[] }) {
   const today = new Date().toISOString().slice(0, 10);
-  const upcoming = nextSessions(sessions, today, 3);
+  const upcomingDates = nextDistinctDates(sessions, today, 3);
 
-  if (upcoming.length === 0) {
+  if (upcomingDates.length === 0) {
     return (
       <div style={{ fontSize: 12, color: "#6B6B66", marginTop: 9 }}>
         No training sessions listed —{" "}
@@ -29,9 +29,13 @@ export default function ClubTrainingBand({ club, sessions }: { club: Club; sessi
 
   // Full session list, not just the next few dates shown below — a club
   // training on three weekdays shouldn't be described as training on two
-  // just because the soonest dates happen to omit the third.
+  // just because the soonest dates happen to omit the third. The venue is
+  // judged against that same full list: naming one when the club actually
+  // trains at two different sites would be wrong, not just imprecise, so
+  // it's only shown when every upcoming session agrees on it.
   const pattern = weekdayPattern(sessions);
-  const [next, ...rest] = upcoming;
+  const venue = commonVenue(sessions);
+  const [next, ...rest] = upcomingDates;
   const feedUrl = `/calendar.ics?club=${club.id}&kind=training`;
 
   return (
@@ -40,11 +44,11 @@ export default function ClubTrainingBand({ club, sessions }: { club: Club; sessi
       style={{ background: "#EAF3EC", borderLeft: `3px solid ${GREEN}`, padding: "8px 10px", marginTop: 9, fontSize: 12.5, color: GREEN, lineHeight: 1.55 }}
     >
       <span style={{ fontWeight: 700 }}>{pattern ? `Trains ${pattern}` : "Training sessions"}</span>
-      {next.venue ? ` · ${next.venue}` : ""}
+      {venue ? ` · ${venue}` : ""}
       {club.trainingNote && <div style={{ marginTop: 4 }}>{club.trainingNote}</div>}
       <div style={{ marginTop: 4 }}>
-        Next: <strong>{dateLabel(next.date)}</strong>
-        {rest.length > 0 && ` · then ${rest.map((s) => `${fmtDay(s.date).day} ${fmtDay(s.date).mon}`).join(", ")}`}
+        Next: <strong>{dateLabel(next)}</strong>
+        {rest.length > 0 && ` · then ${rest.map((d) => `${fmtDay(d).day} ${fmtDay(d).mon}`).join(", ")}`}
       </div>
       <a
         href={feedUrl}

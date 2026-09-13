@@ -1,6 +1,13 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { weekdayPattern, nextSessions, groupByClub, sessionsInNextDays } from "./training.ts";
+import {
+  weekdayPattern,
+  nextSessions,
+  groupByClub,
+  sessionsInNextDays,
+  nextDistinctDates,
+  commonVenue,
+} from "./training.ts";
 
 const s = (id: string, date: string, clubId = "club-a") => ({
   id,
@@ -65,4 +72,48 @@ test("sessionsInNextDays covers today through the last day inclusive", () => {
     7
   );
   assert.deepEqual(out.map((x) => x.id), ["today", "last"]);
+});
+
+test("nextDistinctDates collapses two sessions on the same date into one", () => {
+  const out = nextDistinctDates(
+    [s("a", "2026-09-17"), s("b", "2026-09-19"), s("c", "2026-09-19"), s("d", "2026-09-24")],
+    "2026-09-13",
+    3
+  );
+  assert.deepEqual(out, ["2026-09-17", "2026-09-19", "2026-09-24"]);
+});
+
+test("nextDistinctDates returns up to n distinct dates in ascending order", () => {
+  const out = nextDistinctDates(
+    [s("a", "2026-09-26"), s("b", "2026-09-12"), s("c", "2026-09-19")],
+    "2026-09-10",
+    2
+  );
+  assert.deepEqual(out, ["2026-09-12", "2026-09-19"]);
+});
+
+test("nextDistinctDates excludes dates before today", () => {
+  const out = nextDistinctDates([s("a", "2026-09-01")], "2026-09-12", 3);
+  assert.deepEqual(out, []);
+});
+
+test("nextDistinctDates returns an empty list for an empty input", () => {
+  assert.deepEqual(nextDistinctDates([], "2026-09-12", 3), []);
+});
+
+test("commonVenue returns the venue when every session shares it", () => {
+  assert.equal(
+    commonVenue([s("a", "2026-09-17", "club-a"), s("b", "2026-09-19", "club-a")]),
+    "Wheal Jane"
+  );
+});
+
+test("commonVenue returns null when venues differ", () => {
+  const clubhouse = { ...s("a", "2026-09-17"), venue: "Wheal Velocity clubhouse" };
+  const earthSciencePark = { ...s("b", "2026-09-19"), venue: "Wheal Jane Earth Science Park" };
+  assert.equal(commonVenue([clubhouse, earthSciencePark]), null);
+});
+
+test("commonVenue returns null for an empty list", () => {
+  assert.equal(commonVenue([]), null);
 });

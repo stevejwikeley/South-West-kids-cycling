@@ -61,6 +61,25 @@ export function nextSessions(
     .slice(0, n);
 }
 
+// Up to `n` distinct upcoming dates, ascending — two sessions on the same
+// day (e.g. a Saturday road ride and a Saturday Junior Academy) must not
+// make that date appear twice in a "when do they train" summary.
+export function nextDistinctDates(sessions: TrainingSession[], today: string, n: number): string[] {
+  const dates = [...new Set(sessions.filter((s) => s.date >= today).map((s) => s.date))];
+  dates.sort((a, b) => a.localeCompare(b));
+  return dates.slice(0, n);
+}
+
+// The venue only when every upcoming session shares it — never one picked
+// from an arbitrary session. A club training at two different sites has no
+// single answer to "where", and guessing (e.g. from the next session alone)
+// can send a parent to the wrong address.
+export function commonVenue(sessions: TrainingSession[]): string | null {
+  if (sessions.length === 0) return null;
+  const venues = new Set(sessions.map((s) => s.venue));
+  return venues.size === 1 ? sessions[0].venue : null;
+}
+
 export function groupByClub(sessions: TrainingSession[]): Map<string, TrainingSession[]> {
   const grouped = new Map<string, TrainingSession[]>();
   for (const s of sessions) {
