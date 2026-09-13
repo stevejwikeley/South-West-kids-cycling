@@ -27,8 +27,8 @@ export default function EmbedBuilderPage({ clubs }: { clubs: Club[] }) {
   const [disciplines, setDisciplines] = useState<Set<DisciplineId>>(new Set());
   const [club, setClub] = useState("all");
   const [limit, setLimit] = useState(15);
-  const [showRaces, setShowRaces] = useState(true);
-  const [showTraining, setShowTraining] = useState(false);
+  const [sessionsMode, setSessionsMode] = useState<"races" | "training">("races");
+  const [includeTraining, setIncludeTraining] = useState(false);
   const [copied, setCopied] = useState(false);
 
   function toggleDiscipline(id: DisciplineId) {
@@ -37,40 +37,40 @@ export default function EmbedBuilderPage({ clubs }: { clubs: Club[] }) {
       next.has(id) ? next.delete(id) : next.add(id);
       return next;
     });
-    // The two SESSIONS toggles are independent now — a discipline chip no
-    // longer needs to touch either of them.
+    // A selection made here is kept even while Club training is selected
+    // (chips are just disabled, not cleared) so switching back to Races &
+    // events restores it.
   }
 
-  // Races & events / Club training are independent toggles now, mapped onto
-  // the single ?kind= the /embed route understands. Both off would build a
-  // widget URL that returns nothing, so that combination is handled by the
-  // caller (no src is rendered/copied) rather than sent to the route.
-  const kind: "race" | "training" | "all" | null =
-    showRaces && showTraining ? "all" : showTraining ? "training" : showRaces ? "race" : null;
+  // A segmented Races & events / Club training control, mapped onto the
+  // single ?kind= the /embed route understands. Exactly one of the two is
+  // always selected, so — unlike the old pair of independent toggles — there
+  // is no "both off" state to special-case here.
+  const kind: "race" | "training" | "all" =
+    sessionsMode === "training" ? "training" : includeTraining ? "all" : "race";
 
   const src = useMemo(() => {
-    if (kind === null) return null;
     const params = new URLSearchParams();
     if (region !== "all") params.set("region", region);
-    // Training rows carry discipline "training" — if chips are narrowing
-    // the discipline list and training is included, "training" has to be
-    // added too, or the training half of the widget shows nothing.
-    const disciplineList = [...disciplines];
-    if (showTraining && disciplineList.length > 0) disciplineList.push("training");
+    // Club training carries no discipline of its own, so chips never apply
+    // there even if some are selected from a previous Races & events visit.
+    // Otherwise: training rows carry discipline "training" — if chips are
+    // narrowing the discipline list and training is included (kind=all),
+    // "training" has to be added too, or the training half of the widget
+    // shows nothing.
+    const disciplineList = sessionsMode === "training" ? [] : [...disciplines];
+    if (sessionsMode === "races" && includeTraining && disciplineList.length > 0) disciplineList.push("training");
     if (disciplineList.length > 0) params.set("discipline", disciplineList.join(","));
     if (club !== "all") params.set("club", club);
     if (limit !== 15) params.set("limit", String(limit));
     if (kind !== "race") params.set("kind", kind);
     const query = params.toString();
     return `${SITE_URL}/embed${query ? `?${query}` : ""}`;
-  }, [region, disciplines, club, limit, kind, showTraining]);
+  }, [region, disciplines, club, limit, kind, sessionsMode, includeTraining]);
 
-  const snippet = src
-    ? `<iframe src="${src}" style="width:100%;max-width:640px;height:600px;border:0;" title="South West Kids Cycling events"></iframe>`
-    : null;
+  const snippet = `<iframe src="${src}" style="width:100%;max-width:640px;height:600px;border:0;" title="South West Kids Cycling events"></iframe>`;
 
   async function copy() {
-    if (!snippet) return;
     await navigator.clipboard.writeText(snippet);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -110,19 +110,39 @@ export default function EmbedBuilderPage({ clubs }: { clubs: Club[] }) {
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               {SUBSCRIBABLE_DISCIPLINES.map((d) => {
                 const active = disciplines.has(d.id);
+                const disabled = sessionsMode === "training";
                 return (
                   <button
                     key={d.id}
                     type="button"
+                    disabled={disabled}
+                    aria-disabled={disabled}
                     onClick={() => toggleDiscipline(d.id)}
-                    style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 13px", borderRadius: 999, border: `1px solid ${active ? d.color : "#D8D6D0"}`, background: active ? d.color : "transparent", color: active ? "#FAFAF8" : "#4A4A46", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 6,
+                      padding: "6px 13px",
+                      borderRadius: 999,
+                      border: `1px solid ${disabled ? "#E4E2DD" : active ? d.color : "#D8D6D0"}`,
+                      background: disabled ? "#F3F2EE" : active ? d.color : "transparent",
+                      color: disabled ? "#B7B5AF" : active ? "#FAFAF8" : "#4A4A46",
+                      fontSize: 12,
+                      fontWeight: 600,
+                      cursor: disabled ? "not-allowed" : "pointer",
+                    }}
                   >
-                    <span style={{ width: 6, height: 6, borderRadius: "50%", background: active ? "#FAFAF8" : d.color }} />
+                    <span style={{ width: 6, height: 6, borderRadius: "50%", background: disabled ? "#CFCDC7" : active ? "#FAFAF8" : d.color }} />
                     {d.label}
                   </button>
                 );
               })}
             </div>
+            {sessionsMode === "training" && (
+              <p style={{ fontSize: 12, color: "#6B6B66", marginTop: 8 }}>
+                Training sessions aren&apos;t split by discipline.
+              </p>
+            )}
           </div>
 
           {clubs.length > 0 && (
@@ -142,29 +162,31 @@ export default function EmbedBuilderPage({ clubs }: { clubs: Club[] }) {
           <div style={{ marginBottom: 24 }}>
             <label className="mono" style={{ fontSize: 10.5, color: "#6B6B66", display: "block", marginBottom: 8, letterSpacing: "0.03em" }}>SESSIONS</label>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              <button
-                type="button"
-                aria-pressed={showRaces}
-                onClick={() => setShowRaces((v) => !v)}
-                className="mono"
-                style={{ padding: "8px 15px", fontSize: 11, fontWeight: 700, letterSpacing: "0.03em", background: showRaces ? "#111111" : "transparent", color: showRaces ? "#FAFAF8" : "#6B6B66", border: "1px solid #D8D6D0", cursor: "pointer" }}
-              >
-                Races &amp; events
-              </button>
-              <button
-                type="button"
-                aria-pressed={showTraining}
-                onClick={() => setShowTraining((v) => !v)}
-                className="mono"
-                style={{ padding: "8px 15px", fontSize: 11, fontWeight: 700, letterSpacing: "0.03em", background: showTraining ? "#111111" : "transparent", color: showTraining ? "#FAFAF8" : "#6B6B66", border: "1px solid #D8D6D0", cursor: "pointer" }}
-              >
-                Club training
-              </button>
+              {(["races", "training"] as const).map((mode) => (
+                <button
+                  key={mode}
+                  type="button"
+                  aria-pressed={sessionsMode === mode}
+                  onClick={() => setSessionsMode(mode)}
+                  className="mono"
+                  style={{ padding: "8px 15px", fontSize: 11, fontWeight: 700, letterSpacing: "0.03em", background: sessionsMode === mode ? "#111111" : "transparent", color: sessionsMode === mode ? "#FAFAF8" : "#6B6B66", border: "1px solid #D8D6D0", cursor: "pointer" }}
+                >
+                  {mode === "races" ? "Races & events" : "Club training"}
+                </button>
+              ))}
             </div>
+            {sessionsMode === "races" && (
+              <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 10, fontSize: 13, color: "#4A4A46", cursor: "pointer" }}>
+                <input
+                  type="checkbox"
+                  checked={includeTraining}
+                  onChange={(e) => setIncludeTraining(e.target.checked)}
+                />
+                Also include club training sessions
+              </label>
+            )}
             <p style={{ fontSize: 12, color: "#6B6B66", marginTop: 8, maxWidth: 340 }}>
-              {kind === null
-                ? "Pick at least one, or there's nothing for the widget to show."
-                : "A club can turn Races off and Club training on (with its own club picked above) to show only its own training sessions on its own site."}
+              A club can pick itself above and switch to Club training to show just its own sessions on its own site.
             </p>
           </div>
 
@@ -181,37 +203,23 @@ export default function EmbedBuilderPage({ clubs }: { clubs: Club[] }) {
           </div>
 
           <label className="mono" style={{ fontSize: 10.5, color: "#6B6B66", display: "block", marginBottom: 8, letterSpacing: "0.03em" }}>EMBED CODE</label>
-          {snippet ? (
-            <>
-              <pre style={{ background: "#F3F2EE", border: "1px solid #D8D6D0", padding: "10px 12px", fontSize: 11.5, overflowX: "auto", marginBottom: 10, whiteSpace: "pre-wrap", wordBreak: "break-all" }}>
-                {snippet}
-              </pre>
-              <button
-                type="button"
-                onClick={copy}
-                className="mono"
-                style={{ background: "#111111", color: "#FAFAF8", border: "none", padding: "9px 16px", fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}
-              >
-                {copied ? "Copied!" : "Copy snippet"}
-              </button>
-            </>
-          ) : (
-            <p style={{ fontSize: 13, color: "#946A0E", background: "#FDF3E4", border: "1px solid #E9C98A", padding: "10px 12px", marginBottom: 10 }}>
-              Pick at least one above — Races &amp; events, Club training, or both.
-            </p>
-          )}
+          <pre style={{ background: "#F3F2EE", border: "1px solid #D8D6D0", padding: "10px 12px", fontSize: 11.5, overflowX: "auto", marginBottom: 10, whiteSpace: "pre-wrap", wordBreak: "break-all" }}>
+            {snippet}
+          </pre>
+          <button
+            type="button"
+            onClick={copy}
+            className="mono"
+            style={{ background: "#111111", color: "#FAFAF8", border: "none", padding: "9px 16px", fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}
+          >
+            {copied ? "Copied!" : "Copy snippet"}
+          </button>
         </div>
 
         <div style={{ flex: "1 1 380px", minWidth: 320 }}>
           <label className="mono" style={{ fontSize: 10.5, color: "#6B6B66", display: "block", marginBottom: 8, letterSpacing: "0.03em" }}>LIVE PREVIEW</label>
           <div style={{ border: "1px solid #D8D6D0", background: "#FAFAF8" }}>
-            {src ? (
-              <iframe src={src} style={{ width: "100%", height: 600, border: 0, display: "block" }} title="Embed preview" />
-            ) : (
-              <div style={{ height: 600, display: "flex", alignItems: "center", justifyContent: "center", color: "#6B6B66", fontSize: 13, padding: 24, textAlign: "center" }}>
-                Pick at least one to see a preview.
-              </div>
-            )}
+            <iframe src={src} style={{ width: "100%", height: 600, border: 0, display: "block" }} title="Embed preview" />
           </div>
         </div>
       </div>

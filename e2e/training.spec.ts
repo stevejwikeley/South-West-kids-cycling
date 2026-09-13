@@ -154,29 +154,45 @@ test.describe("Subscribe page", () => {
   });
 });
 
-test.describe("Embed builder toggles", () => {
-  test("defaults to races only, with no kind param in the snippet", async ({ page }) => {
+test.describe("Embed builder segmented control", () => {
+  test("defaults to Races & events only, with no kind param in the snippet", async ({ page }) => {
     await page.goto("/embed-builder");
     await expect(page.locator("pre")).not.toContainText("kind=");
   });
 
-  test("switching on Club training alongside Races & events builds a kind=all embed", async ({ page }) => {
+  test("ticking the add-on checkbox under Races & events builds a kind=all embed", async ({ page }) => {
     await page.goto("/embed-builder");
-    await page.getByRole("button", { name: "Club training" }).click();
+    await page.getByRole("checkbox", { name: /also include club training sessions/i }).check();
     await expect(page.locator("pre")).toContainText("kind=all");
   });
 
-  test("Club training with Races & events off builds a kind=training embed", async ({ page }) => {
+  test("selecting Club training builds a kind=training embed", async ({ page }) => {
     await page.goto("/embed-builder");
-    await page.getByRole("button", { name: "Races & events" }).click();
     await page.getByRole("button", { name: "Club training" }).click();
     await expect(page.locator("pre")).toContainText("kind=training");
   });
 
-  test("both toggles off disables the snippet and shows a note", async ({ page }) => {
+  test("a discipline chip selected before the add-on is ticked still appends training to kind=all", async ({ page }) => {
     await page.goto("/embed-builder");
-    await page.getByRole("button", { name: "Races & events" }).click();
-    await expect(page.locator("pre")).toHaveCount(0);
-    await expect(page.getByText(/pick at least one above/i)).toBeVisible();
+    await page.getByRole("button", { name: "Cyclocross" }).click();
+    await page.getByRole("checkbox", { name: /also include club training sessions/i }).check();
+    await expect(page.locator("pre")).toContainText("discipline=cx%2Ctraining");
+    await expect(page.locator("pre")).toContainText("kind=all");
+  });
+
+  test("selecting Club training hides the add-on checkbox — there is nothing left to add to", async ({ page }) => {
+    await page.goto("/embed-builder");
+    await expect(page.getByRole("checkbox", { name: /also include club training sessions/i })).toBeVisible();
+    await page.getByRole("button", { name: "Club training" }).click();
+    await expect(page.getByRole("checkbox", { name: /also include club training sessions/i })).toHaveCount(0);
+  });
+
+  test("selecting Club training disables the discipline chips with an explanatory note", async ({ page }) => {
+    await page.goto("/embed-builder");
+    const chip = page.getByRole("button", { name: "Cyclocross" });
+    await expect(chip).toBeEnabled();
+    await page.getByRole("button", { name: "Club training" }).click();
+    await expect(chip).toBeDisabled();
+    await expect(page.getByText(/training sessions aren't split by discipline/i)).toBeVisible();
   });
 });
