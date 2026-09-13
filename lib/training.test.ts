@@ -2,7 +2,6 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   weekdayPattern,
-  nextSessions,
   groupByClub,
   sessionsInNextDays,
   nextDistinctDates,
@@ -41,24 +40,6 @@ test("weekdayPattern returns null for an empty list", () => {
   assert.equal(weekdayPattern([]), null);
 });
 
-test("nextSessions returns the soonest n in date order", () => {
-  const out = nextSessions(
-    [s("c", "2026-09-26"), s("a", "2026-09-12"), s("b", "2026-09-19")],
-    "2026-09-10",
-    2
-  );
-  assert.deepEqual(out.map((x) => x.id), ["a", "b"]);
-});
-
-test("nextSessions includes a session dated today", () => {
-  const out = nextSessions([s("a", "2026-09-12")], "2026-09-12", 3);
-  assert.deepEqual(out.map((x) => x.id), ["a"]);
-});
-
-test("nextSessions returns an empty list when nothing is upcoming", () => {
-  assert.deepEqual(nextSessions([s("a", "2026-09-01")], "2026-09-12", 3), []);
-});
-
 test("groupByClub keys sessions by club id", () => {
   const grouped = groupByClub([s("c", "2026-09-26", "x"), s("b", "2026-09-19", "y"), s("a", "2026-09-12", "x")]);
   assert.deepEqual(grouped.get("x")?.map((v) => v.id), ["a", "c"]);
@@ -90,6 +71,15 @@ test("nextDistinctDates returns up to n distinct dates in ascending order", () =
     2
   );
   assert.deepEqual(out, ["2026-09-12", "2026-09-19"]);
+});
+
+test("nextDistinctDates deduplicates non-adjacent dates in unsorted input", () => {
+  const out = nextDistinctDates(
+    [s("a", "2026-09-24"), s("b", "2026-09-19"), s("c", "2026-09-17"), s("d", "2026-09-19")],
+    "2026-09-13",
+    4
+  );
+  assert.deepEqual(out, ["2026-09-17", "2026-09-19", "2026-09-24"]);
 });
 
 test("nextDistinctDates excludes dates before today", () => {

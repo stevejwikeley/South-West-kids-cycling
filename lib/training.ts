@@ -48,19 +48,6 @@ export function weekdayPattern(sessions: TrainingSession[]): string | null {
     .join(" & ");
 }
 
-// A session dated today still counts as upcoming — someone checking on a
-// Saturday morning should see that morning's session, not next week's.
-export function nextSessions(
-  sessions: TrainingSession[],
-  today: string,
-  n: number
-): TrainingSession[] {
-  return sessions
-    .filter((s) => s.date >= today)
-    .sort((a, b) => a.date.localeCompare(b.date))
-    .slice(0, n);
-}
-
 // Up to `n` distinct upcoming dates, ascending — two sessions on the same
 // day (e.g. a Saturday road ride and a Saturday Junior Academy) must not
 // make that date appear twice in a "when do they train" summary.
