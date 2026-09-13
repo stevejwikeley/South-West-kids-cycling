@@ -27,7 +27,10 @@ export default function ClubTrainingBand({ club, sessions }: { club: Club; sessi
     );
   }
 
-  const pattern = weekdayPattern(upcoming);
+  // Full session list, not just the next few dates shown below — a club
+  // training on three weekdays shouldn't be described as training on two
+  // just because the soonest dates happen to omit the third.
+  const pattern = weekdayPattern(sessions);
   const [next, ...rest] = upcoming;
   const feedUrl = `/calendar.ics?club=${club.id}&kind=training`;
 

@@ -34,6 +34,10 @@ export default function EmbedBuilderPage({ clubs }: { clubs: Club[] }) {
       next.has(id) ? next.delete(id) : next.add(id);
       return next;
     });
+    // A race discipline chip plus Club training produces a widget URL that
+    // matches nothing (training always carries discipline "clusters"), so
+    // picking a discipline switches training back off.
+    if (trainingOnly) setTrainingOnly(false);
   }
 
   const src = useMemo(() => {
@@ -123,7 +127,15 @@ export default function EmbedBuilderPage({ clubs }: { clubs: Club[] }) {
             <button
               type="button"
               aria-pressed={trainingOnly}
-              onClick={() => setTrainingOnly((v) => !v)}
+              onClick={() => {
+                const next = !trainingOnly;
+                setTrainingOnly(next);
+                // Mirrors toggleDiscipline: same guaranteed-empty combination
+                // in the other direction, so switching training on clears any
+                // selected discipline chips rather than leaving them
+                // highlighted against a URL that ignores them.
+                if (next) setDisciplines(new Set());
+              }}
               className="mono"
               style={{ padding: "8px 15px", fontSize: 11, fontWeight: 700, letterSpacing: "0.03em", background: trainingOnly ? "#111111" : "transparent", color: trainingOnly ? "#FAFAF8" : "#6B6B66", border: "1px solid #D8D6D0", cursor: "pointer" }}
             >

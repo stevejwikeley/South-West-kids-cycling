@@ -68,6 +68,11 @@ export default function SubscribeSelector({
       trackEvent("subscribe_filter_discipline", { discipline: id, active: next.has(id) });
       return next;
     });
+    // Mirrors the training toggle: a race discipline and Club training
+    // together produce a feed that matches nothing, so picking a discipline
+    // switches training back off rather than leaving it on against a URL
+    // that would ignore it.
+    if (trainingOnly) setTrainingOnly(false);
   }
 
   const feedUrl = useMemo(() => {
@@ -181,8 +186,15 @@ export default function SubscribeSelector({
             type="button"
             aria-pressed={trainingOnly}
             onClick={() => {
-              setTrainingOnly((v) => !v);
-              trackEvent("subscribe_filter_training", { active: !trainingOnly });
+              const next = !trainingOnly;
+              setTrainingOnly(next);
+              // Every discipline chip means a race discipline — combined
+              // with training that's a guaranteed-empty feed (training
+              // always carries discipline "clusters"), so switching training
+              // on clears any selected chips rather than leaving them
+              // highlighted against a URL that ignores them.
+              if (next) setDisciplines(new Set());
+              trackEvent("subscribe_filter_training", { active: next });
             }}
             className="mono"
             style={{ padding: "8px 15px", fontSize: 11, fontWeight: 700, letterSpacing: "0.03em", background: trainingOnly ? "#111111" : "transparent", color: trainingOnly ? "#FAFAF8" : "#6B6B66", border: "1px solid #D8D6D0", cursor: "pointer" }}

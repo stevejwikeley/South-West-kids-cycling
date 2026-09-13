@@ -248,6 +248,13 @@ export async function approveIngested(pendingId: string): Promise<PendingActionR
       return { error: `Can't approve as a new event — missing: ${missing.join(", ")}. Reject and add it manually via the event form instead.` };
     }
 
+    // Mirrors the training_requires_club DB constraint, so approving a
+    // training candidate with no matched club shows a plain sentence
+    // instead of the raw Postgres constraint-violation message.
+    if (values.kind === "training" && !values.club_id) {
+      return { error: "Attach the club that runs this training session before approving it." };
+    }
+
     const { error } = await supabase.from("events").insert({
       ...values,
       approved: true,
