@@ -3,6 +3,19 @@ import { test, expect } from "@playwright/test";
 // The suite runs against live data with no fixtures, so these assert on the
 // feed's shape and filtering rules rather than on specific events.
 
+// Pulls every `UID:...` value out of an .ics body. UIDs are short
+// (`<event-id>@southwestkidscycling.co.uk`), well under the 75-octet fold
+// threshold, so — unlike the `Discipline: TRAINING` string these tests used
+// to grep for — they never wrap across a line fold and never depend on
+// which discipline label a row happens to carry.
+function uidsOf(body: string): Set<string> {
+  return new Set([...body.matchAll(/^UID:(.+)$/gm)].map((m) => m[1].trim()));
+}
+
+function veventCount(body: string): number {
+  return (body.match(/BEGIN:VEVENT/g) ?? []).length;
+}
+
 test.describe("calendar.ics training filtering", () => {
   test("the default feed contains no training sessions", async ({ request }) => {
     const res = await request.get("/calendar.ics");
@@ -12,19 +25,47 @@ test.describe("calendar.ics training filtering", () => {
     expect(body).not.toContain("Discipline: TRAINING");
   });
 
+  // Asserts the `kind` contract itself (feed naming + which rows a
+  // kind=training subscription includes vs. excludes), not the `discipline`
+  // value those rows happen to carry today — the coupling that broke when a
+  // migration changed training rows' discipline label out from under it.
   test("?kind=training returns training and names the feed for it", async ({ request }) => {
-    const res = await request.get("/calendar.ics?kind=training");
-    expect(res.status()).toBe(200);
-    const body = await res.text();
-    expect(body).toContain("X-WR-CALNAME:South West Kids Cycling — Club training");
-    expect(body).toContain("Discipline: TRAINING");
+    const [raceRes, trainingRes] = await Promise.all([
+      request.get("/calendar.ics"),
+      request.get("/calendar.ics?kind=training"),
+    ]);
+    expect(raceRes.status()).toBe(200);
+    expect(trainingRes.status()).toBe(200);
+    const [raceBody, trainingBody] = await Promise.all([raceRes.text(), trainingRes.text()]);
+
+    expect(trainingBody).toContain("X-WR-CALNAME:South West Kids Cycling — Club training");
+
+    // There is real, live kind=training data (that's the whole point of the
+    // feature) and none of it is also kind=race — the two feeds partition
+    // the same table by the `kind` column, so their UID sets must be
+    // disjoint and the training feed must be non-empty.
+    const trainingUids = uidsOf(trainingBody);
+    const raceUids = uidsOf(raceBody);
+    expect(trainingUids.size).toBeGreaterThan(0);
+    for (const uid of trainingUids) expect(raceUids.has(uid)).toBe(false);
   });
 
   test("?kind=all returns both races and training", async ({ request }) => {
-    const body = await (await request.get("/calendar.ics?kind=all")).text();
-    expect(body).toContain("Discipline: TRAINING");
-    const races = body.match(/Discipline: (?!TRAINING)[A-Z]+/g) ?? [];
-    expect(races.length).toBeGreaterThan(0);
+    const [raceRes, allRes] = await Promise.all([
+      request.get("/calendar.ics"),
+      request.get("/calendar.ics?kind=all"),
+    ]);
+    const [raceBody, allBody] = await Promise.all([raceRes.text(), allRes.text()]);
+
+    // kind=all is the union of the race-only and training-only feeds, so it
+    // must contain strictly more entries than the default (race) feed alone
+    // — strictly more, because it must be adding at least the live
+    // training rows, not merely as many — and every default-feed entry must
+    // still be present in it (a genuine superset, not just a bigger count).
+    const raceUids = uidsOf(raceBody);
+    const allUids = uidsOf(allBody);
+    expect(veventCount(allBody)).toBeGreaterThan(veventCount(raceBody));
+    for (const uid of raceUids) expect(allUids.has(uid)).toBe(true);
   });
 
   // Clusters is now a real event discipline (a cluster session — several

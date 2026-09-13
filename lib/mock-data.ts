@@ -12,7 +12,32 @@ export const EVENT_DISCIPLINES: Discipline[] = [
   { id: "other", label: "Other", color: "#6A3F86" },
 ];
 
-export const eventDisc = (id: DisciplineId) => EVENT_DISCIPLINES.find((d) => d.id === id)!;
+// Muted grey, deliberately distinct from every colour in EVENT_DISCIPLINES /
+// CLUB_DISCIPLINES below (including #6B6B66, already claimed by the real
+// "training" entry) — see fallbackDiscipline for why this exists.
+const FALLBACK_COLOR = "#9C9C94";
+
+// Turns a raw enum value into a readable label: "future_discipline-xyz" ->
+// "Future Discipline Xyz".
+function humanize(id: string): string {
+  return id
+    .replace(/[-_]+/g, " ")
+    .trim()
+    .replace(/\b\w/g, (c) => c.toUpperCase()) || id;
+}
+
+// `discipline`/club-discipline columns are database enums that can gain a
+// new value (via migration) before this deployment's code knows about it —
+// that's exactly what took the site down: a `.find(...)!` on an id absent
+// from the list returned undefined, and the caller's `.color` read threw,
+// 500ing every page that renders an event. An unrecognised id must degrade
+// to a neutral, labelled chip instead of crashing the page.
+function fallbackDiscipline(id: string): Discipline {
+  return { id: id as DisciplineId, label: humanize(id), color: FALLBACK_COLOR };
+}
+
+export const eventDisc = (id: DisciplineId): Discipline =>
+  EVENT_DISCIPLINES.find((d) => d.id === id) ?? fallbackDiscipline(id);
 export const ageLabel = (id: string) => id.toUpperCase();
 
 export const CLUB_DISCIPLINES: Discipline[] = [
@@ -21,4 +46,5 @@ export const CLUB_DISCIPLINES: Discipline[] = [
   { id: "cx", label: "Cyclocross", color: "#E0102A" },
 ];
 
-export const clubDisc = (id: string) => CLUB_DISCIPLINES.find((d) => d.id === id)!;
+export const clubDisc = (id: string): Discipline =>
+  CLUB_DISCIPLINES.find((d) => d.id === id) ?? fallbackDiscipline(id);
