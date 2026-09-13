@@ -139,10 +139,38 @@ test.describe("Subscribe page", () => {
     await expect(page.getByRole("button", { name: "Training session" })).toHaveCount(0);
   });
 
-  test("choosing club training builds a kind=training feed url", async ({ page }) => {
+  test("ticking the club training checkbox builds a kind=all feed url", async ({ page }) => {
     await page.goto("/subscribe");
     await page.getByRole("button", { name: /club training/i }).click();
+    await page.getByRole("checkbox", { name: /also include club training sessions/i }).check();
     await page.getByRole("button", { name: /Google Calendar/ }).click();
-    await expect(page.getByRole("textbox", { name: "Calendar feed link" })).toHaveValue(/kind=training/);
+    await expect(page.getByRole("textbox", { name: "Calendar feed link" })).toHaveValue(/kind=all/);
+  });
+});
+
+test.describe("Embed builder toggles", () => {
+  test("defaults to races only, with no kind param in the snippet", async ({ page }) => {
+    await page.goto("/embed-builder");
+    await expect(page.locator("pre")).not.toContainText("kind=");
+  });
+
+  test("switching on Club training alongside Races & events builds a kind=all embed", async ({ page }) => {
+    await page.goto("/embed-builder");
+    await page.getByRole("button", { name: "Club training" }).click();
+    await expect(page.locator("pre")).toContainText("kind=all");
+  });
+
+  test("Club training with Races & events off builds a kind=training embed", async ({ page }) => {
+    await page.goto("/embed-builder");
+    await page.getByRole("button", { name: "Races & events" }).click();
+    await page.getByRole("button", { name: "Club training" }).click();
+    await expect(page.locator("pre")).toContainText("kind=training");
+  });
+
+  test("both toggles off disables the snippet and shows a note", async ({ page }) => {
+    await page.goto("/embed-builder");
+    await page.getByRole("button", { name: "Races & events" }).click();
+    await expect(page.locator("pre")).toHaveCount(0);
+    await expect(page.getByText(/pick at least one above/i)).toBeVisible();
   });
 });

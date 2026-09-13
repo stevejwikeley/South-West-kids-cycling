@@ -25,6 +25,9 @@ export default function TrainingThisWeek({
       data-testid="training-this-week"
       style={{ border: "1px solid #E4E2DD", background: "#FFFFFF", padding: "14px 16px", marginTop: 26, maxWidth: 560 }}
     >
+      <div style={{ fontSize: 16, fontWeight: 700, color: "#111111", lineHeight: 1.3, marginBottom: 8 }}>
+        Looking for a club for your child to join?
+      </div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12, flexWrap: "wrap" }}>
         <span className="mono" style={{ fontSize: 10.5, letterSpacing: "0.08em", color: "#1F5D3A", fontWeight: 700 }}>
           CLUB TRAINING THIS WEEK

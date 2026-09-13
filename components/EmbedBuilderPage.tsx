@@ -25,7 +25,8 @@ export default function EmbedBuilderPage({ clubs }: { clubs: Club[] }) {
   const [disciplines, setDisciplines] = useState<Set<DisciplineId>>(new Set());
   const [club, setClub] = useState("all");
   const [limit, setLimit] = useState(15);
-  const [trainingOnly, setTrainingOnly] = useState(false);
+  const [showRaces, setShowRaces] = useState(true);
+  const [showTraining, setShowTraining] = useState(false);
   const [copied, setCopied] = useState(false);
 
   function toggleDiscipline(id: DisciplineId) {
@@ -34,26 +35,40 @@ export default function EmbedBuilderPage({ clubs }: { clubs: Club[] }) {
       next.has(id) ? next.delete(id) : next.add(id);
       return next;
     });
-    // A race discipline chip plus Club training produces a widget URL that
-    // matches nothing (training always carries discipline "clusters"), so
-    // picking a discipline switches training back off.
-    if (trainingOnly) setTrainingOnly(false);
+    // The two SESSIONS toggles are independent now — a discipline chip no
+    // longer needs to touch either of them.
   }
 
+  // Races & events / Club training are independent toggles now, mapped onto
+  // the single ?kind= the /embed route understands. Both off would build a
+  // widget URL that returns nothing, so that combination is handled by the
+  // caller (no src is rendered/copied) rather than sent to the route.
+  const kind: "race" | "training" | "all" | null =
+    showRaces && showTraining ? "all" : showTraining ? "training" : showRaces ? "race" : null;
+
   const src = useMemo(() => {
+    if (kind === null) return null;
     const params = new URLSearchParams();
     if (region !== "all") params.set("region", region);
-    if (disciplines.size > 0) params.set("discipline", [...disciplines].join(","));
+    // Training rows carry discipline "clusters" — if chips are narrowing
+    // the discipline list and training is included, "clusters" has to be
+    // added too, or the training half of the widget shows nothing.
+    const disciplineList = [...disciplines];
+    if (showTraining && disciplineList.length > 0) disciplineList.push("clusters");
+    if (disciplineList.length > 0) params.set("discipline", disciplineList.join(","));
     if (club !== "all") params.set("club", club);
     if (limit !== 15) params.set("limit", String(limit));
-    if (trainingOnly) params.set("kind", "training");
+    if (kind !== "race") params.set("kind", kind);
     const query = params.toString();
     return `${SITE_URL}/embed${query ? `?${query}` : ""}`;
-  }, [region, disciplines, club, limit, trainingOnly]);
+  }, [region, disciplines, club, limit, kind, showTraining]);
 
-  const snippet = `<iframe src="${src}" style="width:100%;max-width:640px;height:600px;border:0;" title="South West Kids Cycling events"></iframe>`;
+  const snippet = src
+    ? `<iframe src="${src}" style="width:100%;max-width:640px;height:600px;border:0;" title="South West Kids Cycling events"></iframe>`
+    : null;
 
   async function copy() {
+    if (!snippet) return;
     await navigator.clipboard.writeText(snippet);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -124,25 +139,30 @@ export default function EmbedBuilderPage({ clubs }: { clubs: Club[] }) {
 
           <div style={{ marginBottom: 24 }}>
             <label className="mono" style={{ fontSize: 10.5, color: "#6B6B66", display: "block", marginBottom: 8, letterSpacing: "0.03em" }}>SESSIONS</label>
-            <button
-              type="button"
-              aria-pressed={trainingOnly}
-              onClick={() => {
-                const next = !trainingOnly;
-                setTrainingOnly(next);
-                // Mirrors toggleDiscipline: same guaranteed-empty combination
-                // in the other direction, so switching training on clears any
-                // selected discipline chips rather than leaving them
-                // highlighted against a URL that ignores them.
-                if (next) setDisciplines(new Set());
-              }}
-              className="mono"
-              style={{ padding: "8px 15px", fontSize: 11, fontWeight: 700, letterSpacing: "0.03em", background: trainingOnly ? "#111111" : "transparent", color: trainingOnly ? "#FAFAF8" : "#6B6B66", border: "1px solid #D8D6D0", cursor: "pointer" }}
-            >
-              Club training
-            </button>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <button
+                type="button"
+                aria-pressed={showRaces}
+                onClick={() => setShowRaces((v) => !v)}
+                className="mono"
+                style={{ padding: "8px 15px", fontSize: 11, fontWeight: 700, letterSpacing: "0.03em", background: showRaces ? "#111111" : "transparent", color: showRaces ? "#FAFAF8" : "#6B6B66", border: "1px solid #D8D6D0", cursor: "pointer" }}
+              >
+                Races &amp; events
+              </button>
+              <button
+                type="button"
+                aria-pressed={showTraining}
+                onClick={() => setShowTraining((v) => !v)}
+                className="mono"
+                style={{ padding: "8px 15px", fontSize: 11, fontWeight: 700, letterSpacing: "0.03em", background: showTraining ? "#111111" : "transparent", color: showTraining ? "#FAFAF8" : "#6B6B66", border: "1px solid #D8D6D0", cursor: "pointer" }}
+              >
+                Club training
+              </button>
+            </div>
             <p style={{ fontSize: 12, color: "#6B6B66", marginTop: 8, maxWidth: 340 }}>
-              A club can turn this on (with its own club picked above) to show its own training sessions, instead of races, on its own site.
+              {kind === null
+                ? "Pick at least one, or there's nothing for the widget to show."
+                : "A club can turn Races off and Club training on (with its own club picked above) to show only its own training sessions on its own site."}
             </p>
           </div>
 
@@ -159,23 +179,37 @@ export default function EmbedBuilderPage({ clubs }: { clubs: Club[] }) {
           </div>
 
           <label className="mono" style={{ fontSize: 10.5, color: "#6B6B66", display: "block", marginBottom: 8, letterSpacing: "0.03em" }}>EMBED CODE</label>
-          <pre style={{ background: "#F3F2EE", border: "1px solid #D8D6D0", padding: "10px 12px", fontSize: 11.5, overflowX: "auto", marginBottom: 10, whiteSpace: "pre-wrap", wordBreak: "break-all" }}>
-            {snippet}
-          </pre>
-          <button
-            type="button"
-            onClick={copy}
-            className="mono"
-            style={{ background: "#111111", color: "#FAFAF8", border: "none", padding: "9px 16px", fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}
-          >
-            {copied ? "Copied!" : "Copy snippet"}
-          </button>
+          {snippet ? (
+            <>
+              <pre style={{ background: "#F3F2EE", border: "1px solid #D8D6D0", padding: "10px 12px", fontSize: 11.5, overflowX: "auto", marginBottom: 10, whiteSpace: "pre-wrap", wordBreak: "break-all" }}>
+                {snippet}
+              </pre>
+              <button
+                type="button"
+                onClick={copy}
+                className="mono"
+                style={{ background: "#111111", color: "#FAFAF8", border: "none", padding: "9px 16px", fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}
+              >
+                {copied ? "Copied!" : "Copy snippet"}
+              </button>
+            </>
+          ) : (
+            <p style={{ fontSize: 13, color: "#946A0E", background: "#FDF3E4", border: "1px solid #E9C98A", padding: "10px 12px", marginBottom: 10 }}>
+              Pick at least one above — Races &amp; events, Club training, or both.
+            </p>
+          )}
         </div>
 
         <div style={{ flex: "1 1 380px", minWidth: 320 }}>
           <label className="mono" style={{ fontSize: 10.5, color: "#6B6B66", display: "block", marginBottom: 8, letterSpacing: "0.03em" }}>LIVE PREVIEW</label>
           <div style={{ border: "1px solid #D8D6D0", background: "#FAFAF8" }}>
-            <iframe src={src} style={{ width: "100%", height: 600, border: 0, display: "block" }} title="Embed preview" />
+            {src ? (
+              <iframe src={src} style={{ width: "100%", height: 600, border: 0, display: "block" }} title="Embed preview" />
+            ) : (
+              <div style={{ height: 600, display: "flex", alignItems: "center", justifyContent: "center", color: "#6B6B66", fontSize: 13, padding: 24, textAlign: "center" }}>
+                Pick at least one to see a preview.
+              </div>
+            )}
           </div>
         </div>
       </div>

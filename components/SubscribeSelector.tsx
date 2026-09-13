@@ -58,7 +58,8 @@ export default function SubscribeSelector({
   const [disciplines, setDisciplines] = useState<Set<DisciplineId>>(new Set(initialDisciplines));
   const [region, setRegion] = useState<Region | "all">(initialRegion);
   const [club, setClub] = useState(initialClub);
-  const [trainingOnly, setTrainingOnly] = useState(false);
+  const [includeTraining, setIncludeTraining] = useState(false);
+  const [trainingOpen, setTrainingOpen] = useState(false);
 
   function toggleDiscipline(id: DisciplineId) {
     setDisciplines((prev) => {
@@ -68,55 +69,59 @@ export default function SubscribeSelector({
       trackEvent("subscribe_filter_discipline", { discipline: id, active: next.has(id) });
       return next;
     });
-    // Mirrors the training toggle: a race discipline and Club training
-    // together produce a feed that matches nothing, so picking a discipline
-    // switches training back off rather than leaving it on against a URL
-    // that would ignore it.
-    if (trainingOnly) setTrainingOnly(false);
+    // Training is additive now (kind=all), not a swap — a discipline chip
+    // and Club training coexist fine, so there's no reason to touch the
+    // training checkbox here any more.
   }
 
   const feedUrl = useMemo(() => {
     const params = new URLSearchParams();
-    if (disciplines.size > 0) params.set("discipline", [...disciplines].join(","));
+    // Training rows carry discipline "clusters". If chips are narrowing the
+    // discipline list, training-on has to add "clusters" to that list too,
+    // or ?discipline=cx&kind=all silently returns no training at all.
+    const disciplineList = [...disciplines];
+    if (includeTraining && disciplineList.length > 0) disciplineList.push("clusters");
+    if (disciplineList.length > 0) params.set("discipline", disciplineList.join(","));
     if (region !== "all") params.set("region", region);
     if (club !== "all") params.set("club", club);
-    if (trainingOnly) params.set("kind", "training");
+    if (includeTraining) params.set("kind", "all");
     const query = params.toString();
     return `${SITE_URL}/calendar.ics${query ? `?${query}` : ""}`;
-  }, [disciplines, region, club, trainingOnly]);
+  }, [disciplines, region, club, includeTraining]);
 
-  const isFiltered = disciplines.size > 0 || region !== "all" || club !== "all" || trainingOnly;
+  const isFiltered = disciplines.size > 0 || region !== "all" || club !== "all" || includeTraining;
 
   // Plain-English echo of the filters, so it's obvious what you're about to
-  // put in your calendar without decoding the query string.
+  // put in your calendar without decoding the query string. Training is
+  // additive to races now, never a replacement for them, so this always
+  // leads with races/events and only adds training when it's actually
+  // included — it must never claim the feed contains something it doesn't.
   const summary = useMemo(() => {
     const clubName = club !== "all" ? clubs.find((c) => c.id === club)?.name : null;
     const regionPart = region !== "all" ? REGION_OPTIONS.find(([v]) => v === region)?.[1] : null;
+    const disciplineLabels =
+      disciplines.size > 0
+        ? [...disciplines].map((id) => EVENT_DISCIPLINES.find((d) => d.id === id)?.label ?? id).join(", ")
+        : null;
 
-    // Training is a separate kind, not one of the disciplines, so it gets
-    // its own summary phrasing rather than being folded into "discPart".
-    const discPart = trainingOnly
-      ? clubName
-        ? `${clubName} training sessions`
-        : "Club training sessions (every club)"
-      : disciplines.size > 0
-        ? `${[...disciplines].map((id) => EVENT_DISCIPLINES.find((d) => d.id === id)?.label ?? id).join(", ")} events`
+    const kindPart = includeTraining
+      ? disciplineLabels
+        ? `${disciplineLabels} events and club training`
+        : "Races, events and club training"
+      : disciplineLabels
+        ? `${disciplineLabels} events`
         : "Races and events";
 
-    return [
-      discPart,
-      !trainingOnly && clubName ? `from ${clubName}` : null,
-      regionPart ? `in ${regionPart}` : null,
-    ]
+    return [kindPart, clubName ? `from ${clubName}` : null, regionPart ? `in ${regionPart}` : null]
       .filter(Boolean)
       .join(" ");
-  }, [disciplines, region, club, clubs, trainingOnly]);
+  }, [disciplines, region, club, clubs, includeTraining]);
 
   function reset() {
     setDisciplines(new Set());
     setRegion("all");
     setClub("all");
-    setTrainingOnly(false);
+    setIncludeTraining(false);
     trackEvent("subscribe_filter_reset", {});
   }
 
@@ -182,33 +187,39 @@ export default function SubscribeSelector({
               {clubs.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           )}
-          <button
-            type="button"
-            aria-pressed={trainingOnly}
-            onClick={() => {
-              const next = !trainingOnly;
-              setTrainingOnly(next);
-              // Every discipline chip means a race discipline — combined
-              // with training that's a guaranteed-empty feed (training
-              // always carries discipline "clusters"), so switching training
-              // on clears any selected chips rather than leaving them
-              // highlighted against a URL that ignores them.
-              if (next) setDisciplines(new Set());
-              trackEvent("subscribe_filter_training", { active: next });
-            }}
-            className="mono"
-            style={{ padding: "8px 15px", fontSize: 11, fontWeight: 700, letterSpacing: "0.03em", background: trainingOnly ? "#111111" : "transparent", color: trainingOnly ? "#FAFAF8" : "#6B6B66", border: "1px solid #D8D6D0", cursor: "pointer" }}
-          >
-            Club training
-          </button>
         </div>
         <p style={{ fontSize: 12, color: "#6B6B66", marginTop: 8, maxWidth: 420 }}>
-          {trainingOnly
-            ? club !== "all"
-              ? "You'll get this club's training sessions, not races."
-              : "On with no club chosen — you'll get every club's training sessions. Pick a club above to narrow it down."
-            : "The club filter narrows races by club. Turn on Club training above for training sessions instead of races."}
+          The club filter narrows the feed to just this club — races, and training too if you include it below.
         </p>
+      </div>
+
+      <div style={{ marginBottom: 22 }}>
+        <button
+          type="button"
+          aria-expanded={trainingOpen}
+          onClick={() => setTrainingOpen((o) => !o)}
+          className="mono"
+          style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", padding: 0, fontSize: 11, fontWeight: 700, letterSpacing: "0.03em", color: "#6B6B66", cursor: "pointer" }}
+        >
+          <span aria-hidden style={{ display: "inline-block", transform: trainingOpen ? "rotate(90deg)" : "none", transition: "transform 120ms" }}>
+            ▸
+          </span>
+          Club training
+        </button>
+        {trainingOpen && (
+          <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 10, fontSize: 13.5, color: "#4A4A46", cursor: "pointer" }}>
+            <input
+              type="checkbox"
+              checked={includeTraining}
+              onChange={(e) => {
+                const checked = e.target.checked;
+                setIncludeTraining(checked);
+                trackEvent("subscribe_filter_training", { active: checked });
+              }}
+            />
+            Also include club training sessions
+          </label>
+        )}
       </div>
 
       <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", padding: "12px 14px", background: "#F3F2EE", border: "1px solid #E4E2DD", marginBottom: 32 }}>

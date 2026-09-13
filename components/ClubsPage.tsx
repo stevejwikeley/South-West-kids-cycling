@@ -45,10 +45,11 @@ export default function ClubsPage({ clubs, training = [] }: { clubs: Club[]; tra
         <p style={{ maxWidth: 480, fontSize: 16, lineHeight: 1.6, color: "#4A4A46", marginTop: 22 }}>
           Youth sections, Go-Ride clubs and junior academies from Exeter and Plymouth to Truro, Falmouth and Somerset — road, cross country mountain biking, cyclocross and triathlon.
         </p>
-        <p style={{ maxWidth: 480, fontSize: 13, lineHeight: 1.6, color: "#946A0E", background: "#FDF3E4", border: "1px solid #E9C98A", padding: "10px 12px", marginTop: 16 }}>
-          Training times can change at short notice — always check with the club before turning up.
-        </p>
       </header>
+
+      <p style={{ maxWidth: 1100, margin: "16px auto 0", padding: "10px 24px", fontSize: 13, lineHeight: 1.6, color: "#946A0E", background: "#FDF3E4", border: "1px solid #E9C98A", boxSizing: "border-box" }}>
+        Training times can change at short notice — always check with the club before turning up.
+      </p>
 
       <div style={{ position: "sticky", top: 0, zIndex: 20, background: "#FAFAF8", borderTop: "1px solid #E4E2DD", borderBottom: "1px solid #E4E2DD" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto", padding: "16px 24px", display: "flex", flexDirection: "column", gap: 12 }}>
