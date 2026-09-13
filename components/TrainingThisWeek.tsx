@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { sessionsInNextDays, groupByClub, type TrainingSession } from "@/lib/training";
+import { sessionsInNextDays, groupByClub, distinctDates, type TrainingSession } from "@/lib/training";
 import { fmtDay } from "@/lib/format";
 import type { Club } from "@/lib/types";
 
@@ -43,7 +43,7 @@ export default function TrainingThisWeek({
               {clubName.get(clubId) ?? "Club"}
             </Link>
             {" — "}
-            {list.map((s) => `${fmtDay(s.date).day} ${fmtDay(s.date).mon}`).join(", ")}
+            {distinctDates(list).map((date) => `${fmtDay(date).day} ${fmtDay(date).mon}`).join(", ")}
           </div>
         ))}
       </div>

@@ -48,6 +48,16 @@ export function weekdayPattern(sessions: TrainingSession[]): string | null {
     .join(" & ");
 }
 
+// Distinct dates from a session list, in ascending order. Used when multiple
+// sessions on the same day (e.g. a Saturday road ride and a Saturday Junior
+// Academy) must not appear twice in a summary. No filtering by date; caller
+// is responsible for pre-filtering if needed.
+export function distinctDates(sessions: TrainingSession[]): string[] {
+  const dates = [...new Set(sessions.map((s) => s.date))];
+  dates.sort((a, b) => a.localeCompare(b));
+  return dates;
+}
+
 // Up to `n` distinct upcoming dates, ascending — two sessions on the same
 // day (e.g. a Saturday road ride and a Saturday Junior Academy) must not
 // make that date appear twice in a "when do they train" summary.

@@ -5,6 +5,7 @@ import {
   groupByClub,
   sessionsInNextDays,
   nextDistinctDates,
+  distinctDates,
   commonVenue,
 } from "./training.ts";
 
@@ -89,6 +90,11 @@ test("nextDistinctDates excludes dates before today", () => {
 
 test("nextDistinctDates returns an empty list for an empty input", () => {
   assert.deepEqual(nextDistinctDates([], "2026-09-12", 3), []);
+});
+
+test("distinctDates deduplicates two sessions on the same date", () => {
+  const out = distinctDates([s("a", "2026-09-17"), s("b", "2026-09-19"), s("c", "2026-09-19")]);
+  assert.deepEqual(out, ["2026-09-17", "2026-09-19"]);
 });
 
 test("commonVenue returns the venue when every session shares it", () => {
