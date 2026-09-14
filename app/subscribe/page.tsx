@@ -2,8 +2,8 @@ import Link from "next/link";
 import { Calendar, Mail } from "lucide-react";
 import SubscribeSelector from "@/components/SubscribeSelector";
 import EmailSubscribeForm from "@/components/EmailSubscribeForm";
-import { getClubs } from "@/lib/data";
-import { EVENT_DISCIPLINES } from "@/lib/mock-data";
+import { getClubs, getEvents } from "@/lib/data";
+import { visibleDisciplinesFor } from "@/lib/visible-disciplines";
 import type { DisciplineId, Region } from "@/lib/types";
 
 // "both" is a storage value (an event that counts as Devon *and* Cornwall),
@@ -24,9 +24,21 @@ export default async function SubscribePage({
   searchParams: Promise<{ discipline?: string; region?: string; club?: string }>;
 }) {
   const { discipline, region, club } = await searchParams;
-  const clubs = await getClubs();
+  const [clubs, events] = await Promise.all([getClubs(), getEvents()]);
 
-  const validDisciplines = new Set(EVENT_DISCIPLINES.map((d) => d.id));
+  // Same fix as the calendar's own filter chips (lib/visible-disciplines.ts):
+  // a discipline chip here must be built from what's actually in the data,
+  // not the hardcoded, hand-maintained EVENT_DISCIPLINES list — otherwise a
+  // discipline that reaches production ahead of a code deploy is visible on
+  // the calendar (that fix already shipped) but has no way to build a feed
+  // narrowed to it here. "training" is deliberately excluded: it isn't a
+  // discipline you subscribe to via a chip, it's per-club, with its own
+  // dedicated control below (see SubscribeSelector's includeTraining) — this
+  // is a policy choice, not an oversight, and matches SubscribeSelector's own
+  // (now-redundant) filter of the same id.
+  const disciplines = visibleDisciplinesFor(events.map((e) => e.discipline)).filter((d) => d.id !== "training");
+
+  const validDisciplines = new Set(disciplines.map((d) => d.id));
   const initialDisciplines = (discipline ?? "")
     .split(",")
     .map((s) => s.trim())
@@ -52,6 +64,7 @@ export default async function SubscribePage({
       <div style={{ marginTop: 44 }}>
         <SubscribeSelector
           clubs={clubs}
+          disciplines={disciplines}
           initialDisciplines={initialDisciplines}
           initialRegion={initialRegion}
           initialClub={initialClub}

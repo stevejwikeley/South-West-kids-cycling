@@ -53,6 +53,14 @@ test("clubDisc returns a usable fallback for an unrecognised discipline instead 
 // Verified live against the discipline_type enum on Supabase project
 // mpbptzacxbxadvwnqdol (eu-west-3) on 2026-09-13 via:
 //   select enumlabel from pg_enum where enumtypid = 'discipline_type'::regtype
+// NOTE: this is a hand-typed snapshot of that query's result, not a live
+// query itself — this test re-runs it against nothing but the constant
+// below, on every run, forever. It cannot notice a migration that adds a
+// new label to the live enum after 2026-09-13; it only catches EVENT_DISCIPLINES
+// drifting from *this snapshot*. Re-run the query above and update this
+// constant by hand whenever the enum changes. (Compile-time protection for
+// the DisciplineId/EVENT_DISCIPLINES half of this — as opposed to the DB
+// enum half — now lives in lib/mock-data.ts's AssertCovers guard.)
 // This is the exact defect that caused the 2026-09-13 outage: 'coaching' was
 // added to the live enum, and every hand-written TS union (DisciplineId,
 // DisciplineType, EVENT_DISCIPLINES) went on claiming to be exhaustive

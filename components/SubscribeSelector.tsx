@@ -3,8 +3,8 @@
 import { useMemo, useState } from "react";
 import CopyLink from "./CopyLink";
 import { trackEvent } from "@/lib/analytics";
-import { EVENT_DISCIPLINES } from "@/lib/mock-data";
-import type { Club, DisciplineId, Region } from "@/lib/types";
+import { eventDisc } from "@/lib/mock-data";
+import type { Club, Discipline, DisciplineId, Region } from "@/lib/types";
 
 // Always production, whatever this page is running on — a feed URL is copied
 // into someone's calendar app and stays there for years, so it must never be
@@ -26,12 +26,6 @@ const REGION_OPTIONS: [Region | "all", string][] = [
   ["somerset", "Somerset"],
 ];
 
-// Training is not a discipline you subscribe to here — it is per-club, and
-// has its own control below. A cluster session (several clubs training
-// together, a few times a year) is a real event discipline, so it stays in
-// this list like any other race discipline.
-const SUBSCRIBABLE_DISCIPLINES = EVENT_DISCIPLINES.filter((d) => d.id !== "training");
-
 const stepStyle: React.CSSProperties = { fontSize: 14, lineHeight: 1.6, color: "#4A4A46", marginBottom: 10 };
 const stepNumStyle: React.CSSProperties = { fontWeight: 700, color: "#111111" };
 const subheadStyle: React.CSSProperties = { fontWeight: 700, fontSize: 14.5, marginBottom: 10, marginTop: 24 };
@@ -47,11 +41,17 @@ function Callout({ children }: { children: React.ReactNode }) {
 
 export default function SubscribeSelector({
   clubs = [],
+  disciplines: availableDisciplines = [],
   initialDisciplines = [],
   initialRegion = "all",
   initialClub = "all",
 }: {
   clubs?: Club[];
+  // The chips to render — disciplines actually present in the data (see
+  // app/subscribe/page.tsx), not a hardcoded list. Already excludes
+  // "training", which isn't offered as a chip here (see the Club training
+  // control below), so this component doesn't need to filter it again.
+  disciplines?: Discipline[];
   initialDisciplines?: DisciplineId[];
   initialRegion?: Region | "all";
   initialClub?: string;
@@ -103,7 +103,7 @@ export default function SubscribeSelector({
     const regionPart = region !== "all" ? REGION_OPTIONS.find(([v]) => v === region)?.[1] : null;
     const disciplineLabels =
       disciplines.size > 0
-        ? [...disciplines].map((id) => EVENT_DISCIPLINES.find((d) => d.id === id)?.label ?? id).join(", ")
+        ? [...disciplines].map((id) => eventDisc(id).label).join(", ")
         : null;
 
     const kindPart = includeTraining
@@ -139,7 +139,7 @@ export default function SubscribeSelector({
       <div style={{ marginBottom: 22 }}>
         <label className="mono" style={labelStyle}>DISCIPLINE</label>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          {SUBSCRIBABLE_DISCIPLINES.map((d) => {
+          {availableDisciplines.map((d) => {
             const active = disciplines.has(d.id);
             return (
               <button

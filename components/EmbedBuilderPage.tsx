@@ -1,19 +1,12 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { EVENT_DISCIPLINES } from "@/lib/mock-data";
-import type { Club, DisciplineId, Region } from "@/lib/types";
+import type { Club, Discipline, DisciplineId, Region } from "@/lib/types";
 
 // Always points at production regardless of which environment this builder
 // itself is running on (preview, localhost) — a club pasting this snippet
 // onto their own site should never end up embedding a staging URL.
 const SITE_URL = "https://www.southwestkidscycling.uk";
-
-// Training is not a discipline here either — it is per-club, and has its own
-// toggle below, same as the subscribe builder. A cluster session (several
-// clubs training together, a few times a year) is a real event discipline,
-// so it stays in this list like any other race discipline.
-const SUBSCRIBABLE_DISCIPLINES = EVENT_DISCIPLINES.filter((d) => d.id !== "training");
 
 const REGION_OPTIONS: [Region | "all", string][] = [
   ["all", "All"],
@@ -22,7 +15,20 @@ const REGION_OPTIONS: [Region | "all", string][] = [
   ["somerset", "Somerset"],
 ];
 
-export default function EmbedBuilderPage({ clubs }: { clubs: Club[] }) {
+export default function EmbedBuilderPage({
+  clubs,
+  disciplines: availableDisciplines,
+}: {
+  clubs: Club[];
+  // The chips to render — disciplines actually present in the data (see
+  // app/embed-builder/page.tsx), the same fix as the calendar's own filter
+  // chips (lib/visible-disciplines.ts) and the subscribe builder
+  // (components/SubscribeSelector.tsx), not a hardcoded list. Already
+  // excludes "training": that isn't a discipline here either — it is
+  // per-club, and has its own toggle below (SESSIONS), same as the
+  // subscribe builder — a deliberate policy choice, not an oversight.
+  disciplines: Discipline[];
+}) {
   const [region, setRegion] = useState<Region | "all">("all");
   const [disciplines, setDisciplines] = useState<Set<DisciplineId>>(new Set());
   const [club, setClub] = useState("all");
@@ -108,7 +114,7 @@ export default function EmbedBuilderPage({ clubs }: { clubs: Club[] }) {
           <div style={{ marginBottom: 24 }}>
             <label className="mono" style={{ fontSize: 10.5, color: "#6B6B66", display: "block", marginBottom: 8, letterSpacing: "0.03em" }}>DISCIPLINE (LEAVE BLANK FOR ALL)</label>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              {SUBSCRIBABLE_DISCIPLINES.map((d) => {
+              {availableDisciplines.map((d) => {
                 const active = disciplines.has(d.id);
                 const disabled = sessionsMode === "training";
                 return (
