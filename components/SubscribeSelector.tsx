@@ -91,18 +91,7 @@ export default function SubscribeSelector({
     if (disciplineList.length > 0) params.set("discipline", disciplineList.join(","));
     if (region !== "all") params.set("region", region);
     if (club !== "all") params.set("club", club);
-    // `discipline=clusters` used to mean "club training" before `kind`
-    // existed, so app/calendar.ics/route.ts treats a request that names a
-    // discipline but carries no `kind` at all as a pre-change subscription
-    // (see the shim comment there). That only works if a discipline chip
-    // never generates a URL without `kind` from now on — so once at least
-    // one chip is selected, always set it explicitly, even for the
-    // otherwise-default "race" case.
-    if (disciplines.size > 0) {
-      params.set("kind", includeTraining ? "all" : "race");
-    } else if (includeTraining) {
-      params.set("kind", "all");
-    }
+    if (includeTraining) params.set("kind", "all");
     const query = params.toString();
     return `${SITE_URL}/calendar.ics${query ? `?${query}` : ""}`;
   }, [disciplines, region, club, includeTraining]);

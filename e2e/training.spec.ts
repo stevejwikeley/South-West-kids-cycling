@@ -80,11 +80,12 @@ test.describe("calendar.ics training filtering", () => {
     for (const uid of raceUids) expect(allUids.has(uid)).toBe(true);
   });
 
-  // Clusters is now a real event discipline (a cluster session — several
-  // clubs training together, a few times a year) rather than a stand-in for
-  // club training — PROVIDED the request carries an explicit `kind`. A bare
-  // `?discipline=clusters` with no `kind` at all predates `kind` itself and
-  // is handled by the legacy shim in the next test instead.
+  // Clusters is a real event discipline (a cluster session — several clubs
+  // training together, a few times a year), never a stand-in for club
+  // training, whether or not the request also names `kind`. An explicit
+  // `kind=race` and the bare-discipline default (kind defaults to "race")
+  // must behave identically — there is no longer any special case for a
+  // discipline-only `?discipline=clusters` request.
   test("?discipline=clusters&kind=race returns cluster sessions only, not club training", async ({ request }) => {
     const [res, trainingRes] = await Promise.all([
       request.get("/calendar.ics?discipline=clusters&kind=race"),
@@ -95,26 +96,24 @@ test.describe("calendar.ics training filtering", () => {
     const [body, trainingBody] = await Promise.all([res.text(), trainingRes.text()]);
     expect(body).toContain("BEGIN:VCALENDAR");
 
-    // An explicit kind=race takes the shim out of play (it only fires when
-    // `kind` is entirely absent — see isLegacyClustersTrainingRequest in
-    // app/calendar.ics/route.ts), so this must never contain a club-training
-    // UID, in either data state (discipline='clusters' now, 'training' once
-    // migration 0025 runs).
+    // Must never contain a club-training UID, regardless of which discipline
+    // label training rows happen to carry today.
     const trainingUids = uidsOf(trainingBody);
     const bodyUids = uidsOf(body);
     expect(trainingUids.size).toBeGreaterThan(0);
     for (const uid of trainingUids) expect(bodyUids.has(uid)).toBe(false);
   });
 
-  // The legacy shim (app/calendar.ics/route.ts, isLegacyClustersTrainingRequest):
-  // `kind` did not exist before this branch, and discipline=clusters used to
-  // mean "club training" in both URL builders — so a request naming
-  // discipline=clusters with no `kind` param at all can only be a
-  // subscription built before this branch shipped. Without special-casing
-  // it, that URL would now silently go empty (clusters correctly means
-  // cluster sessions today, and there may be zero of those). The shim
-  // treats it instead as the training subscription it always was.
-  test("?discipline=clusters with no kind returns club training (legacy shim)", async ({ request }) => {
+  // Same assertion as above, but with `kind` omitted entirely. There used to
+  // be a shim here that treated a bare `?discipline=clusters` (no `kind` at
+  // all) as a pre-`kind` training subscription and widened the discipline
+  // match to include club training — that has been removed as a deliberate
+  // breaking change: `kind` defaults to "race" whether or not `discipline`
+  // is present, so this must resolve identically to `?discipline=clusters
+  // &kind=race` and pull in zero club training, even though that silently
+  // stops delivering training to any subscription built before `clusters`
+  // was corrected to mean a cluster session.
+  test("?discipline=clusters with no kind returns cluster sessions only, not club training", async ({ request }) => {
     const [res, trainingRes] = await Promise.all([
       request.get("/calendar.ics?discipline=clusters"),
       request.get("/calendar.ics?kind=training"),
@@ -124,15 +123,12 @@ test.describe("calendar.ics training filtering", () => {
     const [body, trainingBody] = await Promise.all([res.text(), trainingRes.text()]);
     expect(body).toContain("BEGIN:VCALENDAR");
 
-    // Every ?kind=training UID must show up here too — holds in both data
-    // states, since the shim widens its discipline match to cover both
-    // 'clusters' (now) and 'training' (post-migration 0025) and skips the
-    // kind filter entirely rather than keying off which label happens to be
-    // live today.
+    // No `?kind=training` UID may appear here — the opposite of what the
+    // removed shim guaranteed.
     const trainingUids = uidsOf(trainingBody);
     const bodyUids = uidsOf(body);
     expect(trainingUids.size).toBeGreaterThan(0);
-    for (const uid of trainingUids) expect(bodyUids.has(uid)).toBe(true);
+    for (const uid of trainingUids) expect(bodyUids.has(uid)).toBe(false);
   });
 
   test("an unknown kind degrades to races rather than erroring", async ({ request }) => {
