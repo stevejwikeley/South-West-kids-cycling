@@ -6,7 +6,12 @@ import { getCurrentProfile, isAdminRole } from "@/lib/auth";
 import { parseSeriesForm, type EventSeriesFormValues } from "./parse-series-form";
 import { geocodeLocation } from "@/lib/geocode";
 import { generateOccurrenceDates } from "@/lib/recurrence";
-import { ukMidnightUtcIso } from "@/lib/uk-time";
+import {
+  occurrenceInsertRow,
+  seriesInsertRow,
+  seriesUpdateRow,
+  eventsPropagateUpdateRow,
+} from "@/lib/series-rows";
 import type { EventSeriesExceptionRow, EventRow } from "@/lib/supabase/types";
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
@@ -17,47 +22,6 @@ export interface SeriesFormState {
 
 function todayIso(): string {
   return new Date().toISOString().slice(0, 10);
-}
-
-// One events row per occurrence date, copying the series template. Matches
-// the plain manual-create path in lib/actions/events.ts: auto-approved,
-// source_type "manual".
-function occurrenceInsertRow(
-  values: EventSeriesFormValues & { lat: number | null; lng: number | null },
-  seriesId: string,
-  occurrenceDate: string,
-  userId: string
-) {
-  return {
-    title: values.title,
-    discipline: values.discipline,
-    status: values.status,
-    kind: values.kind,
-    all_day: true,
-    start_datetime: ukMidnightUtcIso(occurrenceDate),
-    end_datetime: null,
-    venue_name: values.venue_name,
-    address: values.address,
-    postcode: values.postcode,
-    lat: values.lat,
-    lng: values.lng,
-    age_categories: values.age_categories,
-    kids_only: values.kids_only,
-    booking_status: values.booking_status,
-    booking_link: values.booking_link,
-    organiser_url: values.organiser_url,
-    organiser_name: values.organiser_name,
-    organiser_contact: values.organiser_contact,
-    club_id: values.club_id,
-    description: values.description,
-    region: values.region,
-    source_type: "manual" as const,
-    approved: true,
-    series_id: seriesId,
-    occurrence_date: occurrenceDate,
-    series_detached: false,
-    created_by: userId,
-  };
 }
 
 // redirectTo is null for a possible future inline panel; every current
@@ -126,32 +90,7 @@ async function createNewSeries(
 
   const { data: series, error: seriesError } = await supabase
     .from("event_series")
-    .insert({
-      title: values.title,
-      discipline: values.discipline,
-      status: values.status,
-      kind: values.kind,
-      weekdays: values.weekdays,
-      start_date: values.start_date,
-      until_date: values.until_date,
-      venue_name: values.venue_name,
-      address: values.address,
-      postcode: values.postcode,
-      lat: values.lat,
-      lng: values.lng,
-      age_categories: values.age_categories,
-      kids_only: values.kids_only,
-      booking_status: values.booking_status,
-      booking_link: values.booking_link,
-      organiser_url: values.organiser_url,
-      organiser_name: values.organiser_name,
-      organiser_contact: values.organiser_contact,
-      club_id: values.club_id,
-      description: values.description,
-      region: values.region,
-      approved: true,
-      created_by: userId,
-    })
+    .insert(seriesInsertRow(values, userId))
     .select("id")
     .single();
   if (seriesError || !series) return { error: seriesError?.message ?? "Could not create the series." };
@@ -220,31 +159,7 @@ async function updateExistingSeries(
 
   const { error: updateSeriesError } = await supabase
     .from("event_series")
-    .update({
-      title: values.title,
-      discipline: values.discipline,
-      status: values.status,
-      kind: values.kind,
-      weekdays: values.weekdays,
-      start_date: values.start_date,
-      until_date: values.until_date,
-      venue_name: values.venue_name,
-      address: values.address,
-      postcode: values.postcode,
-      lat: values.lat,
-      lng: values.lng,
-      age_categories: values.age_categories,
-      kids_only: values.kids_only,
-      booking_status: values.booking_status,
-      booking_link: values.booking_link,
-      organiser_url: values.organiser_url,
-      organiser_name: values.organiser_name,
-      organiser_contact: values.organiser_contact,
-      club_id: values.club_id,
-      description: values.description,
-      region: values.region,
-      updated_by: userId,
-    })
+    .update(seriesUpdateRow(values, userId))
     .eq("id", seriesId);
   if (updateSeriesError) return { error: updateSeriesError.message };
 
@@ -272,28 +187,7 @@ async function updateExistingSeries(
   if (toUpdateDates.length > 0) {
     const { error } = await supabase
       .from("events")
-      .update({
-        title: values.title,
-        discipline: values.discipline,
-        status: values.status,
-        kind: values.kind,
-        venue_name: values.venue_name,
-        address: values.address,
-        postcode: values.postcode,
-        lat: values.lat,
-        lng: values.lng,
-        age_categories: values.age_categories,
-        kids_only: values.kids_only,
-        booking_status: values.booking_status,
-        booking_link: values.booking_link,
-        organiser_url: values.organiser_url,
-        organiser_name: values.organiser_name,
-        organiser_contact: values.organiser_contact,
-        club_id: values.club_id,
-        description: values.description,
-        region: values.region,
-        updated_by: userId,
-      })
+      .update(eventsPropagateUpdateRow(values, userId))
       .eq("series_id", seriesId)
       .eq("series_detached", false)
       .in("occurrence_date", toUpdateDates);
