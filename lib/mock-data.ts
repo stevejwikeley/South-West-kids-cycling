@@ -11,7 +11,12 @@ export const EVENT_DISCIPLINES: Discipline[] = [
   { id: "other", label: "Other", color: "#6A3F86" },
 ];
 
-export const eventDisc = (id: DisciplineId) => EVENT_DISCIPLINES.find((d) => d.id === id)!;
+// Falls back to "Other" instead of asserting a match: event rows in
+// production can carry a discipline id that predates this list (e.g. added
+// to the DB enum before this array was updated), and one unrecognised id
+// shouldn't crash the whole calendar/embed render for every event.
+const FALLBACK_DISCIPLINE = EVENT_DISCIPLINES.find((d) => d.id === "other")!;
+export const eventDisc = (id: DisciplineId) => EVENT_DISCIPLINES.find((d) => d.id === id) ?? FALLBACK_DISCIPLINE;
 export const ageLabel = (id: string) => id.toUpperCase();
 
 export const CLUB_DISCIPLINES: Discipline[] = [
