@@ -54,6 +54,9 @@ export default function EventForm({
   const [bookable, setBookable] = useState(event?.bookable ?? false);
   const [clubId, setClubId] = useState(event?.club_id ?? "");
   const [kind, setKind] = useState<"race" | "training">(event?.kind ?? "race");
+  // "training" is a kind, not a discipline in its own right for a race — see
+  // the DISCIPLINE select below.
+  const availableDisciplines = kind === "race" ? EVENT_DISCIPLINES.filter((d) => d.id !== "training") : EVENT_DISCIPLINES;
   const [description, setDescription] = useState(event?.description ?? "");
   const [generating, setGenerating] = useState(false);
   const [generateNote, setGenerateNote] = useState("");
@@ -217,16 +220,24 @@ export default function EventForm({
       <div style={row}>
         <div style={col}>
           <label className="mono" style={label}>DISCIPLINE</label>
+          {/* "training" is only offered as a discipline when kind is itself
+              "training" — otherwise a Race could save with discipline
+              "training" and land, mislabelled, on the main race calendar
+              (the exact mis-filing the kind/discipline split exists to
+              prevent). A club's training can still legitimately carry any
+              other discipline (e.g. xc), so nothing else is restricted. */}
           <select style={input} name="discipline" defaultValue={event?.discipline ?? ""} required>
             <option value="" disabled>Select…</option>
-            {EVENT_DISCIPLINES.map((d) => <option key={d.id} value={d.id}>{d.label}</option>)}
+            {availableDisciplines.map((d) => <option key={d.id} value={d.id}>{d.label}</option>)}
             {/* An event can carry a discipline this deployment's EVENT_DISCIPLINES
-                list doesn't know about yet (a new DB enum value) — without this,
-                no option matches defaultValue, the browser selects the disabled
-                placeholder, and `required` then forces the admin to pick a known
-                discipline before they can save any other edit, silently
-                overwriting the real value. */}
-            {event?.discipline && !EVENT_DISCIPLINES.some((d) => d.id === event.discipline) && (
+                list doesn't know about yet (a new DB enum value), or one that's
+                valid but excluded for the current kind (e.g. an existing race
+                row saved with discipline "training" before this restriction
+                existed) — without this, no option matches defaultValue, the
+                browser selects the disabled placeholder, and `required` then
+                forces the admin to pick a known discipline before they can save
+                any other edit, silently overwriting the real value. */}
+            {event?.discipline && !availableDisciplines.some((d) => d.id === event.discipline) && (
               <option value={event.discipline}>{eventDisc(event.discipline).label}</option>
             )}
           </select>

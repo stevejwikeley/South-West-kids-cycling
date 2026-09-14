@@ -65,6 +65,9 @@ export default function SeriesForm({
   const [bookingStatus, setBookingStatus] = useState(base?.booking_status ?? "planned");
   const [clubId, setClubId] = useState(base?.club_id ?? "");
   const [kind, setKind] = useState<"race" | "training">(base?.kind ?? "race");
+  // "training" is a kind, not a discipline in its own right for a race — see
+  // the DISCIPLINE select below.
+  const availableDisciplines = kind === "race" ? EVENT_DISCIPLINES.filter((d) => d.id !== "training") : EVENT_DISCIPLINES;
   const [description, setDescription] = useState(base?.description ?? "");
   const [generating, setGenerating] = useState(false);
   const [generateNote, setGenerateNote] = useState("");
@@ -165,14 +168,19 @@ export default function SeriesForm({
       <div style={row}>
         <div style={col}>
           <label className="mono" style={label}>DISCIPLINE</label>
+          {/* Same reasoning as EventForm: "training" is only offered as a
+              discipline when kind is itself "training", so a Race series
+              can't save with discipline "training" and land, mislabelled,
+              on the main race calendar. */}
           <select style={input} name="discipline" defaultValue={base?.discipline ?? ""} required>
             <option value="" disabled>Select…</option>
-            {EVENT_DISCIPLINES.map((d) => <option key={d.id} value={d.id}>{d.label}</option>)}
+            {availableDisciplines.map((d) => <option key={d.id} value={d.id}>{d.label}</option>)}
             {/* Same reasoning as EventForm: a series can carry a discipline this
-                deployment's EVENT_DISCIPLINES list doesn't know about yet — without
-                this, `required` forces the admin to overwrite it with a known value
+                deployment's EVENT_DISCIPLINES list doesn't know about yet, or one
+                that's valid but excluded for the current kind — without this,
+                `required` forces the admin to overwrite it with a known value
                 before they can save any other edit. */}
-            {base?.discipline && !EVENT_DISCIPLINES.some((d) => d.id === base.discipline) && (
+            {base?.discipline && !availableDisciplines.some((d) => d.id === base.discipline) && (
               <option value={base.discipline}>{eventDisc(base.discipline).label}</option>
             )}
           </select>

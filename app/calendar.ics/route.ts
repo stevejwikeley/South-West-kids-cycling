@@ -137,10 +137,18 @@ function feedName(
   clubNames: string[],
   kind: KindFilter
 ): string {
+  // The `?discipline=` builders (SubscribeSelector, EmbedBuilderPage) append
+  // the synthetic "training" value onto an otherwise real discipline list so
+  // a kind=all feed with discipline chips still pulls in training rows
+  // (which carry discipline "training"). It's a query-plumbing detail, not
+  // a discipline someone chose to see named — "Club training" already
+  // covers that below, so it's dropped here rather than showing up as a
+  // bare "Training" alongside real disciplines (e.g. "Cyclocross/Training").
+  const namedDisciplines = disciplines.filter((d) => d !== "training");
   const parts = [
     clubNames.length ? clubNames.join("/") : null,
     kind === "training" ? "Club training" : null,
-    disciplines.length ? disciplines.map((d) => DISCIPLINE_LABELS[d]).join("/") : null,
+    namedDisciplines.length ? namedDisciplines.map((d) => DISCIPLINE_LABELS[d]).join("/") : null,
     regions.length ? regions.map((r) => REGION_LABELS[r]).join("/") : null,
   ].filter(Boolean);
   return parts.length ? `South West Kids Cycling — ${parts.join(", ")}` : "South West Kids Cycling";

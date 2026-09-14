@@ -18,11 +18,23 @@ function veventCount(body: string): number {
 
 test.describe("calendar.ics training filtering", () => {
   test("the default feed contains no training sessions", async ({ request }) => {
-    const res = await request.get("/calendar.ics");
+    const [res, trainingRes] = await Promise.all([
+      request.get("/calendar.ics"),
+      request.get("/calendar.ics?kind=training"),
+    ]);
     expect(res.status()).toBe(200);
-    const body = await res.text();
+    expect(trainingRes.status()).toBe(200);
+    const [body, trainingBody] = await Promise.all([res.text(), trainingRes.text()]);
     expect(body).toContain("BEGIN:VCALENDAR");
-    expect(body).not.toContain("Discipline: TRAINING");
+
+    // Holds regardless of which discipline label training rows happen to
+    // carry today: the default feed's UIDs must be disjoint from the
+    // ?kind=training feed's UIDs, so training leaking into the default feed
+    // fails this even if training's discipline value changes again.
+    const trainingUids = uidsOf(trainingBody);
+    const bodyUids = uidsOf(body);
+    expect(trainingUids.size).toBeGreaterThan(0);
+    for (const uid of trainingUids) expect(bodyUids.has(uid)).toBe(false);
   });
 
   // Asserts the `kind` contract itself (feed naming + which rows a
@@ -72,17 +84,36 @@ test.describe("calendar.ics training filtering", () => {
   // clubs training together, a few times a year) rather than a stand-in for
   // club training, so this must NOT return club training rows.
   test("?discipline=clusters does not return club training", async ({ request }) => {
-    const res = await request.get("/calendar.ics?discipline=clusters");
+    const [res, trainingRes] = await Promise.all([
+      request.get("/calendar.ics?discipline=clusters"),
+      request.get("/calendar.ics?kind=training"),
+    ]);
     expect(res.status()).toBe(200);
-    const body = await res.text();
+    expect(trainingRes.status()).toBe(200);
+    const [body, trainingBody] = await Promise.all([res.text(), trainingRes.text()]);
     expect(body).toContain("BEGIN:VCALENDAR");
-    expect(body).not.toContain("Discipline: TRAINING");
+
+    // Same UID-disjointness technique as above — holds whether club training
+    // currently carries discipline "clusters" or its own "training" value.
+    const trainingUids = uidsOf(trainingBody);
+    const bodyUids = uidsOf(body);
+    expect(trainingUids.size).toBeGreaterThan(0);
+    for (const uid of trainingUids) expect(bodyUids.has(uid)).toBe(false);
   });
 
   test("an unknown kind degrades to races rather than erroring", async ({ request }) => {
-    const res = await request.get("/calendar.ics?kind=banana");
+    const [res, trainingRes] = await Promise.all([
+      request.get("/calendar.ics?kind=banana"),
+      request.get("/calendar.ics?kind=training"),
+    ]);
     expect(res.status()).toBe(200);
-    expect(await res.text()).not.toContain("Discipline: TRAINING");
+    expect(trainingRes.status()).toBe(200);
+    const [body, trainingBody] = await Promise.all([res.text(), trainingRes.text()]);
+
+    const trainingUids = uidsOf(trainingBody);
+    const bodyUids = uidsOf(body);
+    expect(trainingUids.size).toBeGreaterThan(0);
+    for (const uid of trainingUids) expect(bodyUids.has(uid)).toBe(false);
   });
 });
 
