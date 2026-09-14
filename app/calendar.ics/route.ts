@@ -101,6 +101,61 @@ function toIcsEvent(e: EventRow): EventAttributes {
 // but no longer exists is the one exception: it stays in the query and
 // yields an empty feed, because silently widening someone's club-only
 // subscription back out to every event in the region would be worse.
+// LEGACY SHIM — do not delete without reading this in full.
+//
+// Before this branch, discipline='clusters' was mislabelled "Training
+// session" in both URL builders (SubscribeSelector, EmbedBuilderPage), so
+// anyone who built a training-only calendar subscription before this branch
+// shipped holds a URL like `?discipline=clusters` with no `kind` param at
+// all. `kind` did not exist before this branch — it's introduced by this
+// same change — so its total absence is a sound fingerprint of a pre-change
+// URL, PROVIDED every new URL that names a discipline always carries an
+// explicit `kind` from now on. That precondition is enforced in the two
+// builders (see the matching comments in components/SubscribeSelector.tsx
+// and components/EmbedBuilderPage.tsx, and app/embed/page.tsx for the same
+// shim applied to the embed feed) — so a request with `discipline=clusters`
+// and no `kind` at all can only have been built by the old code.
+//
+// Without this shim, every one of those existing subscriptions goes quietly
+// empty the moment this ships: 'clusters' now correctly means a cluster
+// session (several clubs training together, a few times a year, a genuine
+// race-calendar event), not club training, so an un-shimmed request would
+// filter on kind='race' (the default) and discipline='clusters' and match
+// nothing a legacy training subscriber ever wanted.
+//
+// The widened filter below has to work in both data states this shim will
+// live through:
+//   - now: 0025_reclassify_club_training_retry.sql is deliberately
+//     unapplied, so club-training rows still carry discipline = 'clusters'
+//     (confirmed live: every discipline='clusters' row today is
+//     kind='training', and there are currently zero kind='race'
+//     discipline='clusters' rows — i.e. no real cluster session exists yet).
+//   - after 0025 runs: club-training rows carry discipline = 'training'
+//     instead; genuine cluster sessions keep discipline = 'clusters'
+//     (0022_event_kind.sql already partitioned every clusters row into
+//     kind='training' before 0023/0024/0025 ever ran, so no real cluster
+//     session can be reclassified by mistake).
+// So: widen the discipline filter to match BOTH 'clusters' and 'training',
+// and skip the kind filter entirely. In either data state that combination
+// is exactly {club training, cluster sessions} — precisely what a
+// pre-change training subscriber expects to keep receiving, in both states,
+// with no extra kind filtering needed because the widened discipline set
+// alone already excludes every other kind of event.
+//
+// Delete this once no legacy subscription can plausibly still be alive.
+// There is no way to measure that today — calendar_feed_hits,
+// calendar_feed_subscribers and calendar_feed_stats all exist but nothing
+// in the codebase has ever written to them — so removing this is a
+// judgement call, not something backed by usage data.
+function isLegacyClustersTrainingRequest(searchParams: URLSearchParams): boolean {
+  if (searchParams.has("kind")) return false;
+  const disciplineList = (searchParams.get("discipline") ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  return disciplineList.length === 1 && disciplineList[0] === "clusters";
+}
+
 function parseFilters(searchParams: URLSearchParams) {
   const disciplines = (searchParams.get("discipline") ?? "")
     .split(",")
@@ -155,12 +210,21 @@ function feedName(
 }
 
 export async function GET(request: NextRequest) {
-  const { disciplines, regions, clubs, kind } = parseFilters(request.nextUrl.searchParams);
+  const searchParams = request.nextUrl.searchParams;
+  const { disciplines, regions, clubs, kind } = parseFilters(searchParams);
+  const isLegacy = isLegacyClustersTrainingRequest(searchParams);
 
   const supabase = await createClient();
   let query = supabase.from("events").select("*").eq("approved", true).neq("status", "cancelled");
-  if (kind !== "all") query = query.eq("kind", kind satisfies EventKind);
-  if (disciplines.length) query = query.in("discipline", disciplines);
+  if (isLegacy) {
+    // See isLegacyClustersTrainingRequest above: a pre-change training
+    // subscription, widened to both possible data states and deliberately
+    // not filtered by kind.
+    query = query.in("discipline", ["clusters", "training"] satisfies DisciplineType[]);
+  } else {
+    if (kind !== "all") query = query.eq("kind", kind satisfies EventKind);
+    if (disciplines.length) query = query.in("discipline", disciplines);
+  }
   if (regions.length) query = query.in("region", regionsToMatch(regions));
   if (clubs.length) query = query.in("club_id", clubs);
   const { data, error } = await query.order("start_datetime", { ascending: true });
@@ -178,8 +242,14 @@ export async function GET(request: NextRequest) {
       )
     : [];
 
+  // A legacy request's discipline list is just ["clusters"] — naming it
+  // that way would call a feed that also contains club training "Cluster
+  // session", which is exactly the mislabelling this shim exists to correct
+  // the *contents* of. So the calendar name for a legacy request is built as
+  // "Club training" instead (dropping the raw discipline), matching what
+  // this feed actually is rather than the URL it was requested with.
   const { error: icsError, value } = createEvents((data as EventRow[]).map(toIcsEvent), {
-    calName: feedName(disciplines, regions, clubNames, kind),
+    calName: feedName(isLegacy ? [] : disciplines, regions, clubNames, isLegacy ? "training" : kind),
     productId: "-//South West Kids Cycling//Calendar//EN",
   });
 

@@ -16,13 +16,40 @@ export default async function EmbedPage({
   searchParams: Promise<{ region?: string; discipline?: string; club?: string; limit?: string; kind?: string }>;
 }) {
   const { region, discipline, club, limit, kind } = await searchParams;
-  const disciplineFilter = discipline ? new Set(discipline.split(",") as DisciplineId[]) : null;
+
+  // LEGACY SHIM — full rationale in the matching comment in
+  // app/calendar.ics/route.ts; duplicated here in brief because this route
+  // builds its result differently (getEvents() plus in-memory discipline
+  // filtering below, not one Supabase query with discipline in the `where`).
+  //
+  // Before this branch, the embed builder offered discipline=clusters as
+  // "Training session" too, so clubs' own websites can hold an <iframe> src
+  // like ?discipline=clusters with no `kind` param at all. `kind` didn't
+  // exist before this branch, so that combination can only have been built
+  // by the old embed builder — the current one always sets `kind`
+  // explicitly once a discipline is chosen (see EmbedBuilderPage.tsx).
+  // Treat it as the pre-change training embed it actually is: widen the
+  // discipline match to both 'clusters' and 'training' (covers both the
+  // current, pre-0025 data state and the post-0025 one — see
+  // supabase/migrations/0025_reclassify_club_training_retry.sql) and skip
+  // the kind filter entirely, exactly as the .ics feed does.
+  //
+  // Delete once no legacy embed can plausibly still be live on a club's
+  // site. There's no instrumentation to measure that (see the .ics route's
+  // comment), so it's a judgement call, not a measurement.
+  const isLegacyClustersTraining = kind === undefined && discipline === "clusters";
+
+  const disciplineFilter = isLegacyClustersTraining
+    ? new Set<DisciplineId>(["clusters", "training"])
+    : discipline
+      ? new Set(discipline.split(",") as DisciplineId[])
+      : null;
   // Races by default. Training reaches an embed only when it's explicitly
   // asked for via ?kind=training or ?kind=all — discipline=clusters is a
   // real event discipline (a cluster session, several clubs training
   // together), not a stand-in for training, so it must not carve training
   // into the default view the way it once did.
-  const kindFilter = kind === "training" || kind === "all" ? kind : "race";
+  const kindFilter = isLegacyClustersTraining ? "all" : kind === "training" || kind === "all" ? kind : "race";
   const events = await getEvents(kindFilter);
   const regionFilter = region as Region | undefined;
   const max = Math.max(1, Math.min(50, Number(limit) || 15));

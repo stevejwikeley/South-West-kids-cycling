@@ -74,7 +74,14 @@ export default function EmbedBuilderPage({
     if (disciplineList.length > 0) params.set("discipline", disciplineList.join(","));
     if (club !== "all") params.set("club", club);
     if (limit !== 15) params.set("limit", String(limit));
-    if (kind !== "race") params.set("kind", kind);
+    // `discipline=clusters` used to mean "club training" before `kind`
+    // existed, so app/embed/page.tsx (and app/calendar.ics/route.ts) treat a
+    // request that names a discipline but carries no `kind` at all as a
+    // pre-change subscription (see the shim comment there). That only works
+    // if a discipline chip never generates a URL without `kind` from now
+    // on — so once at least one chip is selected, always set it explicitly,
+    // even for the otherwise-default "race" case.
+    if (kind !== "race" || disciplineList.length > 0) params.set("kind", kind);
     const query = params.toString();
     return `${SITE_URL}/embed${query ? `?${query}` : ""}`;
   }, [region, disciplines, club, limit, kind, sessionsMode, includeTraining]);

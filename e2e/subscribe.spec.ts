@@ -21,7 +21,13 @@ test.describe("Subscribe page feed builder", () => {
     await page.getByRole("button", { name: "Cyclocross", exact: true }).click();
     await page.getByRole("button", { name: /Google Calendar/ }).click();
 
-    await expect(feedLink(page)).toHaveValue(/\/calendar\.ics\?discipline=cx$/);
+    // `kind=race` is appended explicitly, not left implicit, whenever a
+    // discipline chip is selected — that's how app/calendar.ics/route.ts
+    // tells a brand-new discipline-scoped subscription apart from a
+    // pre-`kind` legacy one (see the shim comment there and in this
+    // component). The bare, no-chips-selected default asserted above stays
+    // parameter-free.
+    await expect(feedLink(page)).toHaveValue(/\/calendar\.ics\?discipline=cx&kind=race$/);
     await expect(page.getByText(/You'll get:/)).toContainText("Cyclocross events");
   });
 
