@@ -47,7 +47,7 @@ export default function ClubsPage({ clubs, training = [] }: { clubs: Club[]; tra
         </p>
       </header>
 
-      <p style={{ maxWidth: 1100, margin: "16px auto 0", padding: "10px 24px", fontSize: 13, lineHeight: 1.6, color: "#946A0E", background: "#FDF3E4", border: "1px solid #E9C98A", boxSizing: "border-box" }}>
+      <p style={{ maxWidth: 1100, margin: "32px auto 36px", padding: "13px 24px", fontSize: 13, lineHeight: 1.6, color: "#946A0E", background: "#FDF3E4", border: "1px solid #E9C98A", boxSizing: "border-box" }}>
         Training times can change at short notice — always check with the club before turning up.
       </p>
 
