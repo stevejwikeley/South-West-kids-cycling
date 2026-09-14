@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { createEvents, type DateArray, type EventAttributes } from "ics";
 import { createClient } from "@/lib/supabase/server";
+import { EVENT_DISCIPLINES } from "@/lib/mock-data";
 import type { DisciplineType, EventKind, EventRow, RegionType } from "@/lib/supabase/types";
 
 // Generated live on every request from the approved events table (spec
@@ -8,7 +9,15 @@ import type { DisciplineType, EventKind, EventRow, RegionType } from "@/lib/supa
 // next refresh with no separate publish step.
 export const dynamic = "force-dynamic";
 
-const DISCIPLINE_VALUES = new Set<DisciplineType>(["cx", "xc", "road", "tri", "gravel", "duathlon", "clusters", "training", "other"]);
+// Derived from EVENT_DISCIPLINES rather than hand-copied, so this can't
+// silently drift from the disciplines the rest of the site already knows
+// about the way it did before: this set was missing "coaching" — a value
+// already live in the discipline_type enum — so ?discipline=coaching had
+// its only filter term dropped and returned every race on the calendar
+// instead of an empty feed. EVENT_DISCIPLINES is still hand-maintained
+// against the live enum (see lib/supabase/types.ts), but now there is only
+// one place to update, not two.
+const DISCIPLINE_VALUES = new Set<DisciplineType>(EVENT_DISCIPLINES.map((d) => d.id));
 const REGION_VALUES = new Set<RegionType>(["devon", "cornwall", "somerset", "both"]);
 const DISCIPLINE_LABELS: Record<DisciplineType, string> = {
   cx: "Cyclocross",
@@ -18,6 +27,7 @@ const DISCIPLINE_LABELS: Record<DisciplineType, string> = {
   gravel: "Gravel",
   duathlon: "Duathlon",
   clusters: "Cluster session",
+  coaching: "Coaching session",
   training: "Training",
   other: "Other",
 };

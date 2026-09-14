@@ -4,7 +4,7 @@ import { useActionState, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { saveSeries, deleteSeries, type SeriesFormState } from "@/lib/actions/event-series";
 import { generateDescriptionAction } from "@/lib/actions/event-description";
-import { EVENT_DISCIPLINES } from "@/lib/mock-data";
+import { EVENT_DISCIPLINES, eventDisc } from "@/lib/mock-data";
 import ClubSelect from "@/components/clubs/ClubSelect";
 import type { EventSeriesRow } from "@/lib/supabase/types";
 import type { SeriesPrefill } from "@/lib/actions/parse-series-form";
@@ -168,6 +168,13 @@ export default function SeriesForm({
           <select style={input} name="discipline" defaultValue={base?.discipline ?? ""} required>
             <option value="" disabled>Select…</option>
             {EVENT_DISCIPLINES.map((d) => <option key={d.id} value={d.id}>{d.label}</option>)}
+            {/* Same reasoning as EventForm: a series can carry a discipline this
+                deployment's EVENT_DISCIPLINES list doesn't know about yet — without
+                this, `required` forces the admin to overwrite it with a known value
+                before they can save any other edit. */}
+            {base?.discipline && !EVENT_DISCIPLINES.some((d) => d.id === base.discipline) && (
+              <option value={base.discipline}>{eventDisc(base.discipline).label}</option>
+            )}
           </select>
         </div>
         <div style={col}>

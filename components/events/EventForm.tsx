@@ -8,7 +8,7 @@ import { generateDescriptionAction } from "@/lib/actions/event-description";
 import { skipSeriesOccurrences } from "@/lib/actions/event-series";
 import { getBookingCountForConfirm } from "@/lib/actions/bookings";
 import { utcIsoToUkLocalParts } from "@/lib/uk-time";
-import { EVENT_DISCIPLINES } from "@/lib/mock-data";
+import { EVENT_DISCIPLINES, eventDisc } from "@/lib/mock-data";
 import ClubSelect from "@/components/clubs/ClubSelect";
 import type { EventRow } from "@/lib/supabase/types";
 import type { AgeCategory, Club } from "@/lib/types";
@@ -220,6 +220,15 @@ export default function EventForm({
           <select style={input} name="discipline" defaultValue={event?.discipline ?? ""} required>
             <option value="" disabled>Select…</option>
             {EVENT_DISCIPLINES.map((d) => <option key={d.id} value={d.id}>{d.label}</option>)}
+            {/* An event can carry a discipline this deployment's EVENT_DISCIPLINES
+                list doesn't know about yet (a new DB enum value) — without this,
+                no option matches defaultValue, the browser selects the disabled
+                placeholder, and `required` then forces the admin to pick a known
+                discipline before they can save any other edit, silently
+                overwriting the real value. */}
+            {event?.discipline && !EVENT_DISCIPLINES.some((d) => d.id === event.discipline) && (
+              <option value={event.discipline}>{eventDisc(event.discipline).label}</option>
+            )}
           </select>
         </div>
         <div style={col}>

@@ -8,6 +8,10 @@ export const EVENT_DISCIPLINES: Discipline[] = [
   { id: "gravel", label: "Gravel", color: "#8B5E34" },
   { id: "duathlon", label: "Duathlon", color: "#A6446E" },
   { id: "clusters", label: "Cluster session", color: "#B8860B" },
+  // Olive/yellow-green — hue ~82°, at least 39° from every neighbouring
+  // colour above and below (clusters' gold at 43°, xc's green at 146°), so
+  // it reads as its own colour rather than a near-miss of either.
+  { id: "coaching", label: "Coaching session", color: "#5C7A29" },
   { id: "training", label: "Training", color: "#6B6B66" },
   { id: "other", label: "Other", color: "#6A3F86" },
 ];

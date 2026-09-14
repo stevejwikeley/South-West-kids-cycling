@@ -3,7 +3,8 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { MapPin, Search, X, Calendar, ArrowUpRight, Filter, Download, Repeat } from "lucide-react";
-import { EVENT_DISCIPLINES, eventDisc, ageLabel } from "@/lib/mock-data";
+import { eventDisc, ageLabel } from "@/lib/mock-data";
+import { visibleDisciplinesFor } from "@/lib/visible-disciplines";
 import type { DisciplineId, CalendarEvent, Club } from "@/lib/types";
 import { MONTHS, fmtDay } from "@/lib/format";
 import { trackEvent } from "@/lib/analytics";
@@ -23,10 +24,12 @@ export default function CalendarPage({ events, clubs = [], training = [], isAdmi
   const [editingId, setEditingId] = useState<string | null>(null);
   const [suggestingId, setSuggestingId] = useState<string | null>(null);
 
-  const visibleDisciplines = useMemo(() => {
-    const present = new Set(events.map((e) => e.discipline));
-    return EVENT_DISCIPLINES.filter((d) => present.has(d.id));
-  }, [events]);
+  // See lib/visible-disciplines.ts: a discipline present in the data always
+  // gets a chip, even one this deployment's EVENT_DISCIPLINES list doesn't
+  // know about yet — otherwise an event in that discipline renders fine on
+  // the unfiltered page but has no chip to bring it back the moment any
+  // other filter is applied.
+  const visibleDisciplines = useMemo(() => visibleDisciplinesFor(events.map((e) => e.discipline)), [events]);
 
   const clubNameById = useMemo(() => new Map(clubs.map((c) => [c.id, c.name])), [clubs]);
 

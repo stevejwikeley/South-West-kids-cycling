@@ -10,7 +10,12 @@ import * as Sentry from "@sentry/nextjs";
 // before reaching this single function; there is no per-source parsing logic
 // beyond that normalization.
 
-const DISCIPLINES = ["cx", "xc", "road", "tri", "gravel", "duathlon", "clusters", "training", "other"] as const;
+// Kept in sync with DisciplineType (lib/supabase/types.ts) by hand — a
+// mismatch here doesn't 500 anything at runtime (the AI just can't propose
+// a value this tuple omits), but it does surface as a compile error the
+// moment ExtractedEvent's discipline is assigned from a DisciplineType
+// value, which is what caught "coaching" missing here.
+const DISCIPLINES = ["cx", "xc", "road", "tri", "gravel", "duathlon", "clusters", "coaching", "training", "other"] as const;
 const STATUSES = ["confirmed", "provisional", "cancelled"] as const;
 const REGIONS = ["devon", "cornwall", "somerset", "both"] as const;
 const AGE_CATEGORIES = ["u8", "u10", "u12", "u14", "u16"] as const;

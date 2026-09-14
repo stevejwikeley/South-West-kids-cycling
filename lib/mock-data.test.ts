@@ -49,3 +49,38 @@ test("clubDisc returns a usable fallback for an unrecognised discipline instead 
   assert.equal(typeof d.color, "string");
   assert.ok(/^#[0-9A-Fa-f]{6}$/.test(d.color));
 });
+
+// Verified live against the discipline_type enum on Supabase project
+// mpbptzacxbxadvwnqdol (eu-west-3) on 2026-09-13 via:
+//   select enumlabel from pg_enum where enumtypid = 'discipline_type'::regtype
+// This is the exact defect that caused the 2026-09-13 outage: 'coaching' was
+// added to the live enum, and every hand-written TS union (DisciplineId,
+// DisciplineType, EVENT_DISCIPLINES) went on claiming to be exhaustive
+// without it. EVENT_DISCIPLINES is the one runtime-enumerable stand-in for
+// DisciplineId — this test would have caught 'coaching' going missing (or
+// any future drift) the moment someone forgot to update it after a
+// migration, rather than leaving it to be discovered by an outage or an
+// audit.
+const LIVE_DISCIPLINE_TYPE_ENUM = [
+  "cx",
+  "xc",
+  "road",
+  "tri",
+  "clusters",
+  "other",
+  "gravel",
+  "duathlon",
+  "coaching",
+  "training",
+] as const;
+
+test("EVENT_DISCIPLINES enumerates exactly the live discipline_type enum — no more, no less", () => {
+  const declared = new Set(EVENT_DISCIPLINES.map((d) => d.id));
+  const live = new Set(LIVE_DISCIPLINE_TYPE_ENUM);
+
+  const missingFromCode = [...live].filter((id) => !declared.has(id));
+  const goneFromDb = [...declared].filter((id) => !live.has(id));
+
+  assert.deepEqual(missingFromCode, [], `live enum value(s) not in EVENT_DISCIPLINES: ${missingFromCode.join(", ")}`);
+  assert.deepEqual(goneFromDb, [], `EVENT_DISCIPLINES id(s) no longer in the live enum: ${goneFromDb.join(", ")}`);
+});
