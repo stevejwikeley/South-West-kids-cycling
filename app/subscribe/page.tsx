@@ -3,7 +3,7 @@ import { Calendar, Mail } from "lucide-react";
 import SubscribeSelector from "@/components/SubscribeSelector";
 import EmailSubscribeForm from "@/components/EmailSubscribeForm";
 import { getClubs, getEvents } from "@/lib/data";
-import { visibleDisciplinesFor } from "@/lib/visible-disciplines";
+import { subscribableDisciplinesFor } from "@/lib/subscribable-disciplines";
 import type { DisciplineId, Region } from "@/lib/types";
 
 // "both" is a storage value (an event that counts as Devon *and* Cornwall),
@@ -26,17 +26,27 @@ export default async function SubscribePage({
   const { discipline, region, club } = await searchParams;
   const [clubs, events] = await Promise.all([getClubs(), getEvents()]);
 
-  // Same fix as the calendar's own filter chips (lib/visible-disciplines.ts):
-  // a discipline chip here must be built from what's actually in the data,
-  // not the hardcoded, hand-maintained EVENT_DISCIPLINES list — otherwise a
-  // discipline that reaches production ahead of a code deploy is visible on
-  // the calendar (that fix already shipped) but has no way to build a feed
-  // narrowed to it here. "training" is deliberately excluded: it isn't a
-  // discipline you subscribe to via a chip, it's per-club, with its own
-  // dedicated control below (see SubscribeSelector's includeTraining) — this
-  // is a policy choice, not an oversight, and matches SubscribeSelector's own
-  // (now-redundant) filter of the same id.
-  const disciplines = visibleDisciplinesFor(events.map((e) => e.discipline)).filter((d) => d.id !== "training");
+  // Deliberately NOT the calendar's visibleDisciplinesFor (lib/visible-
+  // disciplines.ts), even though that looks like the more "correct", data-
+  // driven choice — that was tried (commit 3237578) and was a regression.
+  // The calendar's chips filter what's on screen right now, so it's fine for
+  // them to track live data exactly. This page instead builds a *standing
+  // feed URL* that gets pasted into a calendar app and kept for months or
+  // years — if its chips only showed disciplines with an upcoming event
+  // today, a discipline with nothing scheduled this week (e.g. every current
+  // XC race has already lapsed into the past) would vanish from the builder
+  // entirely, and nobody could construct an XC feed until a new XC race
+  // happened to appear. So: the full curated list, always, regardless of
+  // what's live — plus (via subscribableDisciplinesFor) any discipline
+  // genuinely present in the data that isn't in that curated list yet, so an
+  // unrecognised-but-live discipline (the bug class behind the 2026-09-13
+  // outage) still gets a chip too. See lib/subscribable-disciplines.ts.
+  //
+  // "training" is deliberately excluded: it isn't a discipline you subscribe
+  // to via a chip, it's per-club, with its own dedicated control below (see
+  // SubscribeSelector's includeTraining) — this is a policy choice, not an
+  // oversight.
+  const disciplines = subscribableDisciplinesFor(events.map((e) => e.discipline)).filter((d) => d.id !== "training");
 
   const validDisciplines = new Set(disciplines.map((d) => d.id));
   const initialDisciplines = (discipline ?? "")

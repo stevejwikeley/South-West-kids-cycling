@@ -20,13 +20,18 @@ export default function EmbedBuilderPage({
   disciplines: availableDisciplines,
 }: {
   clubs: Club[];
-  // The chips to render — disciplines actually present in the data (see
-  // app/embed-builder/page.tsx), the same fix as the calendar's own filter
-  // chips (lib/visible-disciplines.ts) and the subscribe builder
-  // (components/SubscribeSelector.tsx), not a hardcoded list. Already
-  // excludes "training": that isn't a discipline here either — it is
-  // per-club, and has its own toggle below (SESSIONS), same as the
-  // subscribe builder — a deliberate policy choice, not an oversight.
+  // The chips to render — the full curated discipline list (see
+  // app/embed-builder/page.tsx and lib/subscribable-disciplines.ts), plus
+  // any discipline genuinely present in the data that isn't in that curated
+  // list yet. Deliberately NOT limited to disciplines with a live upcoming
+  // event, unlike the calendar's own filter chips (lib/visible-
+  // disciplines.ts) — this builder produces an embed snippet a club pastes
+  // into their own site and keeps indefinitely, so a discipline with nothing
+  // scheduled this week must still be offerable (see the comment in
+  // app/subscribe/page.tsx for the regression this avoids). Already excludes
+  // "training": that isn't a discipline here either — it is per-club, and
+  // has its own toggle below (SESSIONS), same as the subscribe builder — a
+  // deliberate policy choice, not an oversight.
   disciplines: Discipline[];
 }) {
   const [region, setRegion] = useState<Region | "all">("all");

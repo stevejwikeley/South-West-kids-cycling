@@ -36,18 +36,24 @@ test.describe("Subscribe page feed builder", () => {
     await expect(feedLink(page)).toHaveValue("https://www.southwestkidscycling.uk/calendar.ics");
   });
 
-  // Discipline chips here are now built from disciplines actually present
-  // in the current (upcoming) event data — see app/subscribe/page.tsx and
-  // lib/visible-disciplines.ts — not a fixed curated list, so this must pick
-  // one with a real upcoming race in the dev dataset (as the "picking a
-  // discipline" test above already does with Cyclocross) rather than an
-  // arbitrary DisciplineId. Triathlon is a second, independent choice so the
-  // two tests don't rely on the same discipline staying present.
+  // Discipline chips here are the full curated list (see
+  // app/subscribe/page.tsx and lib/subscribable-disciplines.ts), so this can
+  // assert against a fixed discipline regardless of what's currently
+  // scheduled in the dev dataset — no dev-DB dependency to keep in sync.
   test("filters arriving as query params are preselected", async ({ page }) => {
-    await page.goto("/subscribe?discipline=tri&region=cornwall");
-    await expect(page.getByRole("button", { name: "Triathlon", exact: true })).toHaveAttribute("aria-pressed", "true");
+    await page.goto("/subscribe?discipline=xc&region=cornwall");
+    await expect(page.getByRole("button", { name: "XC", exact: true })).toHaveAttribute("aria-pressed", "true");
     await expect(page.getByRole("button", { name: "Cornwall", exact: true })).toHaveAttribute("aria-pressed", "true");
-    await expect(page.getByText(/You'll get:/)).toContainText("Triathlon events in Cornwall");
+    await expect(page.getByText(/You'll get:/)).toContainText("XC events in Cornwall");
+  });
+
+  // Regression coverage for the 3237578 bug: the chip set must include a
+  // discipline even when nothing upcoming uses it. XC's only current dev-DB
+  // race is in the past, so this is a live demonstration, not just a unit
+  // test of the pure function.
+  test("offers a discipline chip that has no upcoming events", async ({ page }) => {
+    await page.goto("/subscribe");
+    await expect(page.getByRole("button", { name: "XC", exact: true })).toBeVisible();
   });
 });
 

@@ -47,10 +47,15 @@ export default function SubscribeSelector({
   initialClub = "all",
 }: {
   clubs?: Club[];
-  // The chips to render — disciplines actually present in the data (see
-  // app/subscribe/page.tsx), not a hardcoded list. Already excludes
-  // "training", which isn't offered as a chip here (see the Club training
-  // control below), so this component doesn't need to filter it again.
+  // The chips to render — the full curated discipline list (see
+  // app/subscribe/page.tsx and lib/subscribable-disciplines.ts), plus any
+  // discipline genuinely present in the data that isn't in that curated list
+  // yet. Deliberately NOT limited to disciplines with a live upcoming event
+  // — this page builds a standing feed URL that outlives whatever happens to
+  // be scheduled this week (see the comment in app/subscribe/page.tsx for
+  // the regression this avoids). Already excludes "training", which isn't
+  // offered as a chip here (see the Club training control below), so this
+  // component doesn't need to filter it again.
   disciplines?: Discipline[];
   initialDisciplines?: DisciplineId[];
   initialRegion?: Region | "all";
