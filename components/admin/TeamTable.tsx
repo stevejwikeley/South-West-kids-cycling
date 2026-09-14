@@ -16,11 +16,17 @@ const ROLE_COLOR: Record<UserRole, { bg: string; fg: string }> = {
   organiser: { bg: "#F3F2EE", fg: "#6B6B66" },
 };
 
+// Neutral fallback, same shape as eventDisc/clubDisc's fallback in
+// lib/mock-data.ts: `role` is a DB enum that can gain a value this
+// deployment doesn't know about, and a bare `ROLE_COLOR[role]` lookup would
+// then be `undefined`, throwing on `.bg`/`.fg` and 500ing this page.
+const FALLBACK_ROLE_COLOR = { bg: "#F3F2EE", fg: "#6B6B66" };
+
 function RoleBadge({ role }: { role: UserRole }) {
-  const c = ROLE_COLOR[role];
+  const c = ROLE_COLOR[role] ?? FALLBACK_ROLE_COLOR;
   return (
     <span className="mono" style={{ fontSize: 10, fontWeight: 700, padding: "3px 8px", letterSpacing: "0.03em", background: c.bg, color: c.fg }}>
-      {ROLE_LABEL[role]}
+      {ROLE_LABEL[role] ?? role.toUpperCase()}
     </span>
   );
 }

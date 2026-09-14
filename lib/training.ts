@@ -34,6 +34,12 @@ function addDays(date: string, days: number): string {
   return d.toISOString().slice(0, 10);
 }
 
+// A club training on one or two weekdays has a describable rhythm ("Trains
+// Saturdays", "Trains Thursdays & Saturdays"); three or more stops reading
+// as a rhythm and starts reading as "basically every day", so it's better
+// described by the actual dates than by a manufactured weekday list.
+const MAX_DESCRIBABLE_WEEKDAYS = 2;
+
 // "Saturdays", or "Thursdays & Saturdays" — and null the moment the dates
 // stop forming a weekly pattern. Returning null matters: the clubs page
 // falls back to listing dates rather than asserting a rhythm that isn't
@@ -41,7 +47,7 @@ function addDays(date: string, days: number): string {
 export function weekdayPattern(sessions: TrainingSession[]): string | null {
   if (sessions.length === 0) return null;
   const days = new Set(sessions.map((s) => isoWeekdayOf(s.date)));
-  if (days.size > 2) return null;
+  if (days.size > MAX_DESCRIBABLE_WEEKDAYS) return null;
   return [...days]
     .sort((a, b) => a - b)
     .map((d) => WEEKDAY_NAMES[d - 1])

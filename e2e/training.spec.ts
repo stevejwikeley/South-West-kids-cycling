@@ -130,9 +130,33 @@ test.describe("Clubs page training", () => {
     await expect(page.getByText("No training sessions listed").first()).toBeVisible();
   });
 
-  test("each club row carries an anchor the calendar strip can target", async ({ page }) => {
+  test("each club row carries an anchor built from its own club id", async ({ page }) => {
     await page.goto("/clubs");
-    await expect(page.locator('main [id^="club-"]').first()).toBeAttached();
+
+    // One anchor per rendered club row — not just that some anchor exists
+    // somewhere on the page. `.row-hover` is the same div the anchor id is
+    // set on, but counted via an independent selector so a row silently
+    // missing its id (or an id duplicated onto the wrong row) would show up
+    // as a mismatch rather than passing by construction.
+    const anchors = page.locator('main [id^="club-"]');
+    const rowCount = await page.locator("main .row-hover").count();
+    expect(rowCount).toBeGreaterThan(0);
+    await expect(anchors).toHaveCount(rowCount);
+
+    // Pick a club whose training band independently states its own club id
+    // (via the "add this club's training" feed link's `?club=` param), then
+    // confirm that exact link lives inside the row anchored at that same
+    // id — i.e. the anchor on THIS row matches THIS club, not merely that
+    // anchors exist in general.
+    const band = page.getByTestId("club-training").first();
+    const feedLink = band.getByRole("link", { name: /add this club's training/i });
+    const feedHref = await feedLink.getAttribute("href");
+    const clubId = feedHref?.match(/[?&]club=([0-9a-f-]{36})/)?.[1];
+    expect(clubId).toBeTruthy();
+
+    const ownRow = page.locator(`main #club-${clubId}`);
+    await expect(ownRow).toHaveCount(1);
+    await expect(ownRow.getByRole("link", { name: /add this club's training/i })).toHaveAttribute("href", feedHref!);
   });
 });
 

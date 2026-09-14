@@ -3,7 +3,11 @@ import type { CalendarEvent, Club } from "@/lib/types";
 import type { EventRow, ClubRow, EventPendingRow, WatchedSourceRow, ProfileRow, EventSeriesRow, SignupStatus, BookingPersonRow } from "@/lib/supabase/types";
 import type { TrainingSession } from "@/lib/training";
 
-function toCalendarEvent(row: EventRow): CalendarEvent {
+// Exported so app/api/cron/monthly-digest/route.ts can share this mapper
+// rather than keeping its own copy — this branch already had to edit both
+// copies when a field was added, which TypeScript happened to catch but a
+// looser change would not have.
+export function toCalendarEvent(row: EventRow): CalendarEvent {
   return {
     id: row.id,
     title: row.title,
@@ -180,12 +184,19 @@ export async function getPendingRowById(id: string): Promise<EventPendingRow | n
 // reader scanning the page actually wants).
 const ROLE_ORDER: Record<ProfileRow["role"], number> = { super_admin: 0, admin: 1, organiser: 2 };
 
+// Total accessor, same shape as eventDisc/clubDisc's fallback in
+// lib/mock-data.ts: `role` is a DB enum that can gain a value this
+// deployment doesn't know about, and a bare `ROLE_ORDER[role]` lookup would
+// then be `undefined`, turning the comparator's subtraction into `NaN` and
+// leaving the sort order silently arbitrary. Unknown roles sort last.
+const roleOrder = (role: string): number => ROLE_ORDER[role as ProfileRow["role"]] ?? 99;
+
 export async function getTeamProfiles(): Promise<ProfileRow[]> {
   const supabase = await createClient();
   const { data, error } = await supabase.from("profiles").select("*").order("email", { ascending: true });
 
   if (error) throw error;
-  return ((data as ProfileRow[]) ?? []).sort((a, b) => ROLE_ORDER[a.role] - ROLE_ORDER[b.role]);
+  return ((data as ProfileRow[]) ?? []).sort((a, b) => roleOrder(a.role) - roleOrder(b.role));
 }
 
 export async function getEventSpacesLeft(eventId: string): Promise<number | null> {

@@ -26,10 +26,20 @@ insert into events (title, discipline, status, start_datetime, all_day, venue_na
   ('MDCC Youth Time Trial Taster', 'road', 'confirmed', '2026-10-25T00:00:00.000Z', true, 'A38 Course, Plymouth', 'devon', true, array['u12','u14','u16']::age_category[], 'planned', null, 'https://example.com', true, 'manual', 'auto'),
   ('Exmouth Sprint Triathlon — Junior Wave', 'tri', 'confirmed', '2026-08-30T00:00:00.000Z', true, 'Exmouth Seafront', 'devon', false, array['u12','u14','u16']::age_category[], 'open', 'https://example.com/book', 'https://example.com', true, 'manual', 'auto'),
   ('Truro Junior Aquathlon', 'tri', 'confirmed', '2026-09-14T00:00:00.000Z', true, 'Boconnoc Estate', 'cornwall', true, array['u10','u12','u14']::age_category[], 'planned', null, 'https://example.com', true, 'manual', 'auto'),
-  ('MDCC Youth Academy — Tuesday Track', 'clusters', 'confirmed', '2026-08-18T00:00:00.000Z', true, 'Tiverton Track', 'devon', true, array['u8','u10','u12','u14','u16']::age_category[], 'open', 'https://example.com/book', 'https://example.com', true, 'manual', 'auto'),
-  ('Exeter Wheelers Youth — Thursday Skills', 'clusters', 'confirmed', '2026-08-20T00:00:00.000Z', true, 'Haldon Forest', 'devon', true, array['u8','u10','u12']::age_category[], 'planned', null, 'https://example.com', true, 'manual', 'auto'),
-  ('Bowman Go-Ride Skills Day', 'clusters', 'confirmed', '2026-08-29T00:00:00.000Z', true, 'Newton Abbot Leisure Centre', 'devon', true, array['u8','u10']::age_category[], 'open', 'https://example.com/book', 'https://example.com', true, 'manual', 'auto'),
-  ('Cornwall Go-Ride Taster Session', 'clusters', 'provisional', '2026-09-12T00:00:00.000Z', true, 'Par Track', 'cornwall', true, array['u8']::age_category[], 'planned', null, 'https://example.com', true, 'manual', 'auto'),
-  ('MDCC Youth Academy — Tuesday Track', 'clusters', 'confirmed', '2026-08-25T00:00:00.000Z', true, 'Tiverton Track', 'devon', true, array['u8','u10','u12','u14','u16']::age_category[], 'planned', null, 'https://example.com', true, 'manual', 'auto'),
+  -- A genuine cluster session: several clubs training together, a few
+  -- times a year — kind stays the default 'race' and discipline 'clusters'
+  -- is correct, because this is a real event that belongs on the main
+  -- calendar (unlike the club-training rows below, which are not).
+  ('Cornwall Clubs Go-Ride Cluster Day', 'clusters', 'provisional', '2026-09-12T00:00:00.000Z', true, 'Par Track', 'cornwall', true, array['u8']::age_category[], 'planned', null, 'https://example.com', true, 'manual', 'auto'),
   ('SW Youth Duathlon', 'tri', 'confirmed', '2026-10-11T00:00:00.000Z', true, 'Bude', 'cornwall', false, array['u12','u14','u16']::age_category[], 'planned', null, 'https://example.com', true, 'manual', 'auto');
 
+-- Club training: one club's own recurring coaching, kind = 'training' and
+-- discipline = 'training' — never 'clusters', which is reserved for a
+-- genuine cluster session (see above). These never appear on the main
+-- calendar. `training_requires_club` needs a real club_id, resolved by
+-- name from the clubs inserted above rather than a hardcoded uuid.
+insert into events (title, discipline, status, start_datetime, all_day, venue_name, region, kids_only, age_categories, booking_status, booking_link, organiser_url, approved, source_type, published_via, kind, club_id) values
+  ('MDCC Youth Academy — Tuesday Track', 'training', 'confirmed', '2026-08-18T00:00:00.000Z', true, 'Tiverton Track', 'devon', true, array['u8','u10','u12','u14','u16']::age_category[], 'open', 'https://example.com/book', 'https://example.com', true, 'manual', 'auto', 'training', (select id from clubs where name = 'Mid Devon CC')),
+  ('MDCC Youth Academy — Tuesday Track', 'training', 'confirmed', '2026-08-25T00:00:00.000Z', true, 'Tiverton Track', 'devon', true, array['u8','u10','u12','u14','u16']::age_category[], 'planned', null, 'https://example.com', true, 'manual', 'auto', 'training', (select id from clubs where name = 'Mid Devon CC')),
+  ('Exeter Wheelers Youth — Thursday Skills', 'training', 'confirmed', '2026-08-20T00:00:00.000Z', true, 'Haldon Forest', 'devon', true, array['u8','u10','u12']::age_category[], 'planned', null, 'https://example.com', true, 'manual', 'auto', 'training', (select id from clubs where name = 'Exeter Wheelers')),
+  ('MDCC Go-Ride Skills Day', 'training', 'confirmed', '2026-08-29T00:00:00.000Z', true, 'Newton Abbot Leisure Centre', 'devon', true, array['u8','u10']::age_category[], 'open', 'https://example.com/book', 'https://example.com', true, 'manual', 'auto', 'training', (select id from clubs where name = 'Mid Devon CC'));

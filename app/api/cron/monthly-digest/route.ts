@@ -4,33 +4,8 @@ import * as Sentry from "@sentry/nextjs";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email/resend";
 import { buildMonthlyDigestHtml } from "@/lib/email/monthly-digest";
+import { toCalendarEvent } from "@/lib/data";
 import type { EventRow, EmailSubscriberRow } from "@/lib/supabase/types";
-import type { CalendarEvent } from "@/lib/types";
-
-function toCalendarEvent(row: EventRow): CalendarEvent {
-  return {
-    id: row.id,
-    title: row.title,
-    discipline: row.discipline,
-    kind: row.kind,
-    date: row.start_datetime.slice(0, 10),
-    venue: row.venue_name,
-    address: row.address,
-    postcode: row.postcode,
-    lat: row.lat,
-    lng: row.lng,
-    region: row.region,
-    status: row.status,
-    kidsOnly: row.kids_only,
-    ages: row.age_categories,
-    bookingStatus: row.booking_status,
-    booking: row.booking_link,
-    organiserUrl: row.organiser_url,
-    seriesId: row.series_id,
-    bookable: row.bookable,
-    clubId: row.club_id,
-  };
-}
 
 export async function GET(request: NextRequest) {
   const auth = request.headers.get("authorization");
