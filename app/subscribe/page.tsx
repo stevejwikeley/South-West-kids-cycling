@@ -8,7 +8,7 @@ import type { DisciplineId, Region } from "@/lib/types";
 
 // "both" is a storage value (an event that counts as Devon *and* Cornwall),
 // not something anyone picks — the selector offers the three counties only.
-const REGIONS = new Set<Region>(["devon", "cornwall", "somerset"]);
+const REGIONS = new Set<Region>(["devon", "cornwall", "somerset", "bristol"]);
 
 export const metadata = {
   title: "Subscribe to the calendar",

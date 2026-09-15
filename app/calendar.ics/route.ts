@@ -19,7 +19,7 @@ export const dynamic = "force-dynamic";
 // against the live enum (see lib/supabase/types.ts), but now there is only
 // one place to update, not two.
 const DISCIPLINE_VALUES = new Set<DisciplineType>(EVENT_DISCIPLINES.map((d) => d.id));
-const REGION_VALUES = new Set<RegionType>(["devon", "cornwall", "somerset", "both"]);
+const REGION_VALUES = new Set<RegionType>(["devon", "cornwall", "somerset", "bristol", "both"]);
 const DISCIPLINE_LABELS: Record<DisciplineType, string> = {
   cx: "Cyclocross",
   xc: "XC",
@@ -32,7 +32,7 @@ const DISCIPLINE_LABELS: Record<DisciplineType, string> = {
   training: "Training",
   other: "Other",
 };
-const REGION_LABELS: Record<RegionType, string> = { devon: "Devon", cornwall: "Cornwall", somerset: "Somerset", both: "Devon & Cornwall" };
+const REGION_LABELS: Record<RegionType, string> = { devon: "Devon", cornwall: "Cornwall", somerset: "Somerset", bristol: "Bristol", both: "Devon & Cornwall" };
 
 // Club ids are uuids and go straight into a Postgres `in` filter, so anything
 // that isn't uuid-shaped is dropped before it reaches the query — a mistyped
