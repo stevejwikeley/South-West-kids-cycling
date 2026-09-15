@@ -197,7 +197,7 @@ export default function EmbedBuilderPage({
               </label>
             )}
             <p style={{ fontSize: 12, color: "#6B6B66", marginTop: 8, maxWidth: 340 }}>
-              A club can pick itself above and switch to Club training to show just its own sessions on its own site.
+              Club only narrows Club training, not Races &amp; events — most races aren&apos;t tied to one club the way training is. A club can pick itself above and switch to Club training to show just its own sessions on its own site.
             </p>
           </div>
 

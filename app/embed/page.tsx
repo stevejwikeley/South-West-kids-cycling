@@ -44,7 +44,12 @@ export default async function EmbedPage({
   const filtered = events
     .filter((e) => !regionFilter || e.region === regionFilter || e.region === "both")
     .filter((e) => !disciplineFilter || disciplineFilter.has(e.discipline))
-    .filter((e) => !club || e.clubId === club)
+    // Club only ever narrows training — a race isn't "this club's race" the
+    // way a training session is "this club's session" (most races carry no
+    // club_id at all), so filtering races by club used to return next to
+    // nothing for a club that picked itself while still on "Races & events".
+    // See the matching comment in app/calendar.ics/route.ts.
+    .filter((e) => !club || e.kind === "race" || e.clubId === club)
     .slice(0, max);
 
   return (

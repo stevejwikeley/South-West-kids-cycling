@@ -147,6 +147,79 @@ test.describe("calendar.ics training filtering", () => {
   });
 });
 
+// Club only ever narrows training — a race isn't "this club's race" the way
+// a training session is "this club's session" (most races carry no club_id
+// at all), so filtering races by club used to return next to nothing for
+// anyone who picked a club without also including training. These pull a
+// real club id from /clubs's own training bands (the same pattern the
+// "Clubs page training" tests below already use) rather than hardcoding
+// one, so they don't rot if that club's data changes.
+test.describe("calendar.ics club filtering", () => {
+  async function aTrainingClubId(page: import("@playwright/test").Page): Promise<string> {
+    await page.goto("/clubs");
+    const band = page.getByTestId("club-training").first();
+    const feedLink = band.getByRole("link", { name: /add this club's training/i });
+    const href = await feedLink.getAttribute("href");
+    const clubId = href?.match(/[?&]club=([0-9a-f-]{36})/)?.[1];
+    if (!clubId) throw new Error("Expected at least one club with a training subscribe link on /clubs");
+    return clubId;
+  }
+
+  test("a club filter alone does not narrow the race feed", async ({ page, request }) => {
+    const clubId = await aTrainingClubId(page);
+    const [baseRes, clubRes] = await Promise.all([request.get("/calendar.ics"), request.get(`/calendar.ics?club=${clubId}`)]);
+    expect(baseRes.status()).toBe(200);
+    expect(clubRes.status()).toBe(200);
+    const [baseBody, clubBody] = await Promise.all([baseRes.text(), clubRes.text()]);
+
+    // Picking a club with no kind (kind defaults to "race") must be a
+    // complete no-op on which races come back — the exact same set, not
+    // merely the same count.
+    expect(uidsOf(clubBody)).toEqual(uidsOf(baseBody));
+  });
+
+  test("?club=<id>&kind=training still scopes training to that club", async ({ page, request }) => {
+    const clubId = await aTrainingClubId(page);
+    const [trainingRes, clubTrainingRes] = await Promise.all([
+      request.get("/calendar.ics?kind=training"),
+      request.get(`/calendar.ics?club=${clubId}&kind=training`),
+    ]);
+    const [trainingBody, clubTrainingBody] = await Promise.all([trainingRes.text(), clubTrainingRes.text()]);
+
+    const clubTrainingUids = uidsOf(clubTrainingBody);
+    const trainingUids = uidsOf(trainingBody);
+    // Non-empty (this club genuinely trains, or /clubs wouldn't have shown
+    // its subscribe link) and a subset of all training — the regression
+    // guard for the case that must NOT change: ClubTrainingBand's own
+    // per-club feed link relies on exactly this scoping.
+    expect(clubTrainingUids.size).toBeGreaterThan(0);
+    for (const uid of clubTrainingUids) expect(trainingUids.has(uid)).toBe(true);
+  });
+
+  test("?club=<id>&kind=all returns every race plus only that club's training", async ({ page, request }) => {
+    const clubId = await aTrainingClubId(page);
+    const [raceRes, clubTrainingRes, allClubRes] = await Promise.all([
+      request.get("/calendar.ics"),
+      request.get(`/calendar.ics?club=${clubId}&kind=training`),
+      request.get(`/calendar.ics?club=${clubId}&kind=all`),
+    ]);
+    const [raceBody, clubTrainingBody, allClubBody] = await Promise.all([raceRes.text(), clubTrainingRes.text(), allClubRes.text()]);
+
+    const raceUids = uidsOf(raceBody);
+    const clubTrainingUids = uidsOf(clubTrainingBody);
+    const allClubUids = uidsOf(allClubBody);
+
+    // Every race is present — club never narrows races, even under
+    // kind=all — plus exactly this club's training, and nothing from any
+    // other club's training (kind partitions the table, so race and
+    // training UIDs can never overlap; a plain size check is therefore a
+    // genuine equality check here, not just a lower bound).
+    for (const uid of raceUids) expect(allClubUids.has(uid)).toBe(true);
+    for (const uid of clubTrainingUids) expect(allClubUids.has(uid)).toBe(true);
+    expect(allClubUids.size).toBe(raceUids.size + clubTrainingUids.size);
+  });
+});
+
 test.describe("Calendar page", () => {
   test("shows no training sessions", async ({ page }) => {
     await page.goto("/");
@@ -320,5 +393,30 @@ test.describe("Embed builder segmented control", () => {
     await page.getByRole("button", { name: "Club training" }).click();
     await expect(chip).toBeDisabled();
     await expect(page.getByText(/training sessions aren't split by discipline/i)).toBeVisible();
+  });
+});
+
+// Same fix, same reasoning, on the widget clubs embed on their own
+// websites: club only narrows training there too (app/embed/page.tsx).
+test.describe("embed club filtering", () => {
+  test("a club filter alone does not narrow the embedded race list", async ({ page }) => {
+    await page.goto("/clubs");
+    const band = page.getByTestId("club-training").first();
+    const feedLink = band.getByRole("link", { name: /add this club's training/i });
+    const href = await feedLink.getAttribute("href");
+    const clubId = href?.match(/[?&]club=([0-9a-f-]{36})/)?.[1];
+    expect(clubId).toBeTruthy();
+
+    await page.goto("/embed");
+    const baseCount = await page.getByRole("link", { name: /Book|Organisers website/ }).count();
+
+    await page.goto(`/embed?club=${clubId}`);
+    const clubCount = await page.getByRole("link", { name: /Book|Organisers website/ }).count();
+
+    // Picking a club with no kind (kind defaults to "race") must not shrink
+    // the embedded race list — same invariant as the .ics feed's equivalent
+    // test, checked here via the actual rendered links rather than a raw
+    // HTML regex, since /embed's markup carries no per-event id to match on.
+    expect(clubCount).toBe(baseCount);
   });
 });

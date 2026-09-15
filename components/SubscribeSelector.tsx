@@ -103,6 +103,15 @@ export default function SubscribeSelector({
   // additive to races now, never a replacement for them, so this always
   // leads with races/events and only adds training when it's actually
   // included — it must never claim the feed contains something it doesn't.
+  //
+  // The club filter only ever narrows training (see app/calendar.ics/
+  // route.ts) — it has no effect at all unless training is included, and
+  // even then it only scopes the training half, never the races. So the
+  // club name is attached to "training" specifically, never trailed after
+  // the whole summary the way it used to be — that phrasing implied every
+  // race in the feed belonged to that club, which was never true (most
+  // races have no club at all) and is actively wrong now that club can't
+  // touch races even when one's picked.
   const summary = useMemo(() => {
     const clubName = club !== "all" ? clubs.find((c) => c.id === club)?.name : null;
     const regionPart = region !== "all" ? REGION_OPTIONS.find(([v]) => v === region)?.[1] : null;
@@ -110,18 +119,15 @@ export default function SubscribeSelector({
       disciplines.size > 0
         ? [...disciplines].map((id) => eventDisc(id).label).join(", ")
         : null;
+    const racesPart = disciplineLabels ? `${disciplineLabels} events` : "Races and events";
 
     const kindPart = includeTraining
-      ? disciplineLabels
-        ? `${disciplineLabels} events and club training`
-        : "Races, events and club training"
-      : disciplineLabels
-        ? `${disciplineLabels} events`
-        : "Races and events";
+      ? clubName
+        ? `${racesPart}, plus ${clubName} training`
+        : `${racesPart} and club training`
+      : racesPart;
 
-    return [kindPart, clubName ? `from ${clubName}` : null, regionPart ? `in ${regionPart}` : null]
-      .filter(Boolean)
-      .join(" ");
+    return [kindPart, regionPart ? `in ${regionPart}` : null].filter(Boolean).join(" ");
   }, [disciplines, region, club, clubs, includeTraining]);
 
   function reset() {
@@ -196,7 +202,7 @@ export default function SubscribeSelector({
           )}
         </div>
         <p style={{ fontSize: 12, color: "#6B6B66", marginTop: 8, maxWidth: 420 }}>
-          The club filter narrows the feed to just this club — races, and training too if you include it below.
+          This only narrows training, not races and events — most races aren&apos;t tied to one club the way training is. Tick &ldquo;Also include club training sessions&rdquo; below to add just this club&apos;s sessions.
         </p>
       </div>
 

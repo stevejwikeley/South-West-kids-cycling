@@ -146,9 +146,24 @@ function feedName(
   // covers that below, so it's dropped here rather than showing up as a
   // bare "Training" alongside real disciplines (e.g. "Cyclocross/Training").
   const namedDisciplines = disciplines.filter((d) => d !== "training");
+
+  // Club only ever scopes training (see the query building in GET below) —
+  // a race isn't "this club's race" the way a training session is "this
+  // club's session". So `clubNames` here always means "the club(s) whose
+  // training is included", never "the club this whole feed belongs to",
+  // and the caller only ever passes a non-empty list when that's true
+  // (kind is "training" or "all" — never "race").
+  const trainingPart =
+    kind === "training"
+      ? clubNames.length
+        ? `${clubNames.join("/")} club training`
+        : "Club training"
+      : kind === "all" && clubNames.length
+        ? `${clubNames.join("/")} club training`
+        : null;
+
   const parts = [
-    clubNames.length ? clubNames.join("/") : null,
-    kind === "training" ? "Club training" : null,
+    trainingPart,
     namedDisciplines.length ? namedDisciplines.map((d) => DISCIPLINE_LABELS[d]).join("/") : null,
     regions.length ? regions.map((r) => REGION_LABELS[r]).join("/") : null,
   ].filter(Boolean);
@@ -168,27 +183,68 @@ export async function GET(request: NextRequest) {
   const { disciplines, regions, clubs, kind } = parseFilters(searchParams);
 
   const supabase = await createClient();
-  let query = supabase.from("events").select("*").eq("approved", true).neq("status", "cancelled");
-  if (kind !== "all") query = query.eq("kind", kind satisfies EventKind);
-  if (disciplines.length) query = query.in("discipline", disciplines);
-  if (regions.length) query = query.in("region", regionsToMatch(regions));
-  if (clubs.length) query = query.in("club_id", clubs);
-  const { data, error } = await query.order("start_datetime", { ascending: true });
 
-  if (error) {
-    return new Response("Failed to load events", { status: 500 });
+  // Club only ever narrows training — a race isn't "this club's race" the
+  // way a training session is "this club's session" (most races carry no
+  // club_id at all), so filtering races by club used to return next to
+  // nothing for anyone who picked a club without also including training.
+  //   kind=race     -> club is ignored outright; every matching race returns
+  //   kind=training -> club narrows training as before — exactly what
+  //                    ClubTrainingBand's per-club subscribe link relies on
+  //   kind=all      -> races return unfiltered by club; only the training
+  //                    half is narrowed to the chosen club(s). One flat
+  //                    query can't express "AND club_id IN (...)" on just
+  //                    part of a union, so this is two queries merged below
+  //                    rather than a hand-built OR filter string — simpler
+  //                    to get right (and keep right) for something
+  //                    long-lived subscribers pull from for years.
+  function baseQuery() {
+    let q = supabase.from("events").select("*").eq("approved", true).neq("status", "cancelled");
+    if (disciplines.length) q = q.in("discipline", disciplines);
+    if (regions.length) q = q.in("region", regionsToMatch(regions));
+    return q;
+  }
+
+  let data: EventRow[];
+  if (kind === "all" && clubs.length) {
+    const [races, training] = await Promise.all([
+      baseQuery().eq("kind", "race" satisfies EventKind).order("start_datetime", { ascending: true }),
+      baseQuery()
+        .eq("kind", "training" satisfies EventKind)
+        .in("club_id", clubs)
+        .order("start_datetime", { ascending: true }),
+    ]);
+    if (races.error || training.error) {
+      return new Response("Failed to load events", { status: 500 });
+    }
+    data = [...(races.data as EventRow[]), ...(training.data as EventRow[])].sort((a, b) =>
+      a.start_datetime.localeCompare(b.start_datetime)
+    );
+  } else {
+    let query = baseQuery();
+    if (kind !== "all") query = query.eq("kind", kind satisfies EventKind);
+    if (kind === "training" && clubs.length) query = query.in("club_id", clubs);
+    const { data: rows, error } = await query.order("start_datetime", { ascending: true });
+    if (error) {
+      return new Response("Failed to load events", { status: 500 });
+    }
+    data = rows as EventRow[];
   }
 
   // Names only — the filtering above already used the ids, so a club that has
   // since been deleted just drops out of the title without changing which
-  // events the feed contains.
-  const clubNames = clubs.length
-    ? ((await supabase.from("clubs").select("name").in("id", clubs).order("name")).data ?? []).map(
-        (c) => (c as { name: string }).name
-      )
-    : [];
+  // events the feed contains. Only looked up when club actually scopes
+  // something in this feed (training is included) — for kind="race" the
+  // club param has no effect on the query, so it must not appear in the
+  // feed's name either (see feedName above).
+  const clubNames =
+    clubs.length && kind !== "race"
+      ? ((await supabase.from("clubs").select("name").in("id", clubs).order("name")).data ?? []).map(
+          (c) => (c as { name: string }).name
+        )
+      : [];
 
-  const { error: icsError, value } = createEvents((data as EventRow[]).map(toIcsEvent), {
+  const { error: icsError, value } = createEvents(data.map(toIcsEvent), {
     calName: feedName(disciplines, regions, clubNames, kind),
     productId: "-//South West Kids Cycling//Calendar//EN",
   });
