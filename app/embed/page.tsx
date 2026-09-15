@@ -1,4 +1,7 @@
+import { after } from "next/server";
+import { headers } from "next/headers";
 import { getEvents } from "@/lib/data";
+import { logFeedHit } from "@/lib/feed-hits";
 import { eventDisc, ageLabel } from "@/lib/mock-data";
 import { fmtDay } from "@/lib/format";
 import type { DisciplineId, Region } from "@/lib/types";
@@ -16,6 +19,16 @@ export default async function EmbedPage({
   searchParams: Promise<{ region?: string; discipline?: string; club?: string; limit?: string; kind?: string }>;
 }) {
   const { region, discipline, club, limit, kind } = await searchParams;
+
+  // Read here, during render — a Server Component can't call headers()
+  // inside after() itself (Next.js needs to know at render time which part
+  // of the tree touches request data), so the header list is captured now
+  // and passed into the callback via closure instead. This is the one
+  // reliable way to learn which site iframed the widget: it reads the
+  // Referer header directly rather than relying on a client-side analytics
+  // script, which ad blockers and many club sites' CSPs strip anyway.
+  const headerList = await headers();
+  after(() => logFeedHit(headerList, "embed"));
 
   const disciplineFilter = discipline ? new Set(discipline.split(",") as DisciplineId[]) : null;
   // Races by default. Training reaches an embed only when it's explicitly

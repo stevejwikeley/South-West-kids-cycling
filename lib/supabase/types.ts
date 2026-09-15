@@ -230,6 +230,18 @@ export interface ProfileRow {
 
 export type WillSubscribeType = "yes" | "no" | "already";
 
+// Insert-only from the app's side (lib/feed-hits.ts) — `feed` distinguishes
+// a .ics fetch from an /embed pageload; `referer` is only ever populated
+// for the latter, since calendar client software doesn't send one.
+export interface CalendarFeedHitRow {
+  id: number;
+  fetched_at: string;
+  fingerprint: string;
+  user_agent: string | null;
+  referer: string | null;
+  feed: string;
+}
+
 export interface SiteFeedbackRow {
   id: string;
   raced_before: boolean | null;
@@ -271,6 +283,7 @@ export interface Database {
       attendees: { Row: AsRecord<AttendeeRow>; Insert: AsRecord<Partial<AttendeeRow>>; Update: AsRecord<Partial<AttendeeRow>>; Relationships: [] };
       bookings: { Row: AsRecord<BookingRow>; Insert: AsRecord<Partial<BookingRow>>; Update: AsRecord<Partial<BookingRow>>; Relationships: [] };
       booking_people: { Row: AsRecord<BookingPersonRow>; Insert: AsRecord<Partial<BookingPersonRow>>; Update: AsRecord<Partial<BookingPersonRow>>; Relationships: [] };
+      calendar_feed_hits: { Row: AsRecord<CalendarFeedHitRow>; Insert: AsRecord<Partial<CalendarFeedHitRow>>; Update: AsRecord<Partial<CalendarFeedHitRow>>; Relationships: [] };
     };
     Views: Record<string, never>;
     Functions: {

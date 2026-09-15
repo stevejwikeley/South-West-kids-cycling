@@ -1,6 +1,7 @@
-import { NextRequest } from "next/server";
+import { NextRequest, after } from "next/server";
 import { createEvents, type DateArray, type EventAttributes } from "ics";
 import { createClient } from "@/lib/supabase/server";
+import { logFeedHit } from "@/lib/feed-hits";
 import { EVENT_DISCIPLINES } from "@/lib/mock-data";
 import type { DisciplineType, EventKind, EventRow, RegionType } from "@/lib/supabase/types";
 
@@ -155,6 +156,14 @@ function feedName(
 }
 
 export async function GET(request: NextRequest) {
+  // Logged unconditionally, before we know whether the query below
+  // succeeds — a calendar app retries on its own schedule regardless of a
+  // transient failure, so "did something request this URL" is the useful
+  // signal here, not "did we manage to answer it". after() defers the
+  // write until the response has gone out, so it can never add latency to
+  // a subscriber's fetch.
+  after(() => logFeedHit(request.headers, "calendar.ics"));
+
   const searchParams = request.nextUrl.searchParams;
   const { disciplines, regions, clubs, kind } = parseFilters(searchParams);
 
