@@ -89,12 +89,12 @@ export default function CalendarPage({ events, clubs = [], training = [], isAdmi
   return (
     <>
       <header style={{ maxWidth: 1100, margin: "0 auto", padding: "56px 24px 40px" }}>
-        <div className="mono" style={{ fontSize: 11.5, letterSpacing: "0.12em", color: "#E0102A", marginBottom: 16, fontWeight: 700 }}>DEVON, CORNWALL, SOMERSET &amp; BRISTOL — AGES 5 TO 16</div>
+        <div className="mono" style={{ fontSize: 11.5, letterSpacing: "0.12em", color: "#E0102A", marginBottom: 16, fontWeight: 700 }}>DEVON, CORNWALL &amp; SOMERSET — AGES 5 TO 16</div>
         <h1 className="disp" style={{ fontSize: "clamp(32px, 5.2vw, 60px)", lineHeight: 1.02, margin: 0, letterSpacing: "-0.01em" }}>
           One calendar for all cycling races and events across the Southwest
         </h1>
         <p style={{ maxWidth: 480, fontSize: 16, lineHeight: 1.6, color: "#4A4A46", marginTop: 22 }}>
-          Every Under 8s–16s race from Exeter and Plymouth to Cornwall, Somerset and Bristol — Cross Country mountain biking, cyclocross, road and triathlon in one calendar. Club training lives on the <Link href="/clubs" style={{ borderBottom: "1px solid #111111" }}>clubs page</Link>.
+          Every Under 8s–16s race from Exeter and Plymouth to Cornwall and Somerset — Cross Country mountain biking, cyclocross, road and triathlon in one calendar. Club training lives on the <Link href="/clubs" style={{ borderBottom: "1px solid #111111" }}>clubs page</Link>.
         </p>
         <Link href="/getting-started" onClick={() => trackEvent("getting_started_click", { source: "calendar_hero" })} style={{ fontSize: 13.5, fontWeight: 700, display: "flex", alignItems: "center", gap: 5, borderBottom: "1px solid #111111", paddingBottom: 2, marginTop: 18, width: "fit-content" }}>
           New to racing? Start here <ArrowUpRight size={14} />
@@ -150,7 +150,7 @@ export default function CalendarPage({ events, clubs = [], training = [], isAdmi
             <>
               <div className="filter-controls-row">
                 <div className="filter-region-toggle">
-                  {[["all", "ALL"], ["devon", "DEVON"], ["cornwall", "CORNWALL"], ["somerset", "SOMERSET"], ["bristol", "BRISTOL"]].map(([val, label]) => (
+                  {[["all", "ALL"], ["devon", "DEVON"], ["cornwall", "CORNWALL"], ["somerset", "SOMERSET"]].map(([val, label]) => (
                     <button key={val} onClick={() => { setRegion(val); trackEvent("filter_region", { region: val }); }} className="mono" style={{ padding: "8px 15px", fontSize: 11, fontWeight: 700, letterSpacing: "0.03em", background: region === val ? "#111111" : "transparent", color: region === val ? "#FAFAF8" : "#6B6B66", border: "none", cursor: "pointer" }}>{label}</button>
                   ))}
                 </div>

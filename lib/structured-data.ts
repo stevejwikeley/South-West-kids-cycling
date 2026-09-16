@@ -11,7 +11,6 @@ const REGION_LABEL: Record<CalendarEvent["region"], string> = {
   devon: "Devon",
   cornwall: "Cornwall",
   somerset: "Somerset",
-  bristol: "Bristol",
   both: "Devon & Cornwall",
 };
 

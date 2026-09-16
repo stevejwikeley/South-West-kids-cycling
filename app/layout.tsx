@@ -28,7 +28,7 @@ const jetbrainsMono = JetBrains_Mono({
   subsets: ["latin"],
 });
 
-const description = "One calendar for all youth cycling races and events across Devon, Cornwall, Somerset & Bristol — XC, cyclocross, road, triathlon and club sessions for ages 5–16.";
+const description = "One calendar for all youth cycling races and events across Devon, Cornwall & Somerset — XC, cyclocross, road, triathlon and club sessions for ages 5–16.";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.southwestkidscycling.uk"),

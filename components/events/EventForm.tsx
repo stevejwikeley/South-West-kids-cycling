@@ -18,7 +18,6 @@ const REGION_OPTIONS = [
   ["devon", "Devon"],
   ["cornwall", "Cornwall"],
   ["somerset", "Somerset"],
-  ["bristol", "Bristol"],
   ["both", "Both (Devon & Cornwall)"],
 ] as const;
 const STATUS_OPTIONS = [

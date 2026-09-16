@@ -42,12 +42,12 @@ const handler = createMcpHandler(
         ]);
 
         const context = {
-          scope: "Youth cycling events (ages 5-16) in Devon, Cornwall, Somerset & Bristol, England — races, series rounds, and open events. Club coaching/training sessions are also in scope, but are listed per club on the clubs page rather than on the main calendar.",
+          scope: "Youth cycling events (ages 5-16) in Devon, Cornwall & Somerset, England — races, series rounds, and open events. Club coaching/training sessions are also in scope, but are listed per club on the clubs page rather than on the main calendar.",
           disciplines: EVENT_DISCIPLINES.map((d) => d.id),
           regions: ["devon", "cornwall", "somerset", "both"],
           age_categories: ["u8", "u10", "u12", "u14", "u16"],
           rules: [
-            "Only in-scope: youth/junior cycling races, club coaching sessions, or events with clear under-16 age categories, in Devon, Cornwall, Somerset, or Bristol.",
+            "Only in-scope: youth/junior cycling races, club coaching sessions, or events with clear under-16 age categories, in Devon, Cornwall, or Somerset.",
             "Skip adult-only racing and anything outside those counties.",
             "Only future events (today is " + today + ").",
             "Leave a field null rather than guessing — a human reviewer checks every submission before it goes live.",
