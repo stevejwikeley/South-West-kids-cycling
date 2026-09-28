@@ -8,26 +8,30 @@ import type {
   RegionType,
 } from "@/lib/supabase/types";
 
-export type EventFormValues = Pick<
-  EventRow,
-  | "title"
-  | "discipline"
-  | "status"
-  | "all_day"
-  | "start_datetime"
-  | "end_datetime"
-  | "venue_name"
-  | "address"
-  | "postcode"
-  | "region"
-  | "age_categories"
-  | "kids_only"
-  | "booking_status"
-  | "booking_link"
-  | "organiser_url"
-  | "organiser_name"
-  | "organiser_contact"
->;
+// The only event columns a form (or an approved change request) may write.
+// approveChange uses this as an allowlist, so a pending row inserted straight
+// through the API can't smuggle in approved/created_by/etc.
+export const EVENT_FORM_FIELDS = [
+  "title",
+  "discipline",
+  "status",
+  "all_day",
+  "start_datetime",
+  "end_datetime",
+  "venue_name",
+  "address",
+  "postcode",
+  "region",
+  "age_categories",
+  "kids_only",
+  "booking_status",
+  "booking_link",
+  "organiser_url",
+  "organiser_name",
+  "organiser_contact",
+] as const satisfies readonly (keyof EventRow)[];
+
+export type EventFormValues = Pick<EventRow, (typeof EVENT_FORM_FIELDS)[number]>;
 
 export function parseEventForm(
   formData: FormData

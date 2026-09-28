@@ -1,14 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { safeNextPath } from "@/lib/safe-next";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState("");
-  const searchParams = useSearchParams();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -16,10 +15,15 @@ export default function LoginPage() {
     setErrorMessage("");
 
     const supabase = createClient();
-    const next = searchParams.get("next") ?? "/admin";
+    // Read at submit time rather than via useSearchParams(), which would
+    // force a Suspense boundary and break static prerendering of /login.
+    const next = safeNextPath(new URLSearchParams(window.location.search).get("next"));
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
+        // Accounts are admin-invited only — never create one from this form,
+        // or anyone could sign themselves up as an organiser.
+        shouldCreateUser: false,
         emailRedirectTo: `${window.location.origin}/auth/confirm?next=${encodeURIComponent(next)}`,
       },
     });

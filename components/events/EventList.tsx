@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { deleteEvent } from "@/lib/actions/events";
 import { fmtDay } from "@/lib/format";
+import { ukDateOf } from "@/lib/uk-time";
 import { eventDisc } from "@/lib/mock-data";
 import type { EventRow } from "@/lib/supabase/types";
 import type { DisciplineId } from "@/lib/types";
@@ -24,7 +25,7 @@ export default function EventList({
     <div style={{ borderTop: "2px solid #111111" }}>
       {events.map((e) => {
         const d = eventDisc(e.discipline as DisciplineId);
-        const f = fmtDay(e.start_datetime.slice(0, 10));
+        const f = fmtDay(ukDateOf(e.start_datetime));
         return (
           <div key={e.id} className="row-hover" style={{ display: "flex", alignItems: "center", gap: 20, padding: "14px 6px", borderBottom: "1px solid #E4E2DD", flexWrap: "wrap" }}>
             <div className="mono" style={{ width: 80, flexShrink: 0, fontSize: 12.5, color: "#6B6B66" }}>{f.day}.{f.mon}</div>

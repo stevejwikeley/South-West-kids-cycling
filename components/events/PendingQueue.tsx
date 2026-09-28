@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useTransition } from "react";
 import { approveChange, rejectChange } from "@/lib/actions/pending";
 import type { EventPendingRow } from "@/lib/supabase/types";
 
@@ -11,6 +12,15 @@ function formatValue(v: unknown): string {
 }
 
 export default function PendingQueue({ pending, redirectTo }: { pending: EventPendingRow[]; redirectTo: string }) {
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isPending, startTransition] = useTransition();
+
+  const approve = (id: string) =>
+    startTransition(async () => {
+      const result = await approveChange(id, redirectTo);
+      if (result?.error) setErrors((prev) => ({ ...prev, [id]: result.error! }));
+    });
+
   if (pending.length === 0) {
     return <p style={{ color: "#9A9992", fontSize: 13.5 }}>No pending changes — you&apos;re all caught up.</p>;
   }
@@ -29,7 +39,8 @@ export default function PendingQueue({ pending, redirectTo }: { pending: EventPe
               <div style={{ display: "flex", gap: 8 }}>
                 <button
                   type="button"
-                  onClick={() => approveChange(p.id, redirectTo)}
+                  onClick={() => approve(p.id)}
+                  disabled={isPending}
                   className="mono"
                   style={{ fontSize: 11.5, fontWeight: 700, color: "#1F5D3A", background: "#EAF3EC", border: "1px solid #1F5D3A", padding: "7px 14px", cursor: "pointer" }}
                 >
@@ -61,6 +72,10 @@ export default function PendingQueue({ pending, redirectTo }: { pending: EventPe
                   ))}
                 </tbody>
               </table>
+            )}
+
+            {errors[p.id] && (
+              <p style={{ fontSize: 12.5, color: "#A13A2A", marginTop: 10 }}>{errors[p.id]}</p>
             )}
 
             {note && (
