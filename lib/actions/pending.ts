@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { parseEventForm, type EventFormValues } from "./parse-event-form";
+import { EVENT_FORM_FIELDS, parseEventForm, type EventFormValues } from "./parse-event-form";
 import type { EventPendingRow, EventRow } from "@/lib/supabase/types";
 
 export interface SuggestChangeState {
@@ -77,11 +77,13 @@ export async function approveChange(pendingId: string, redirectTo: string) {
 
   const diff = row.diff_against as Diff;
   const update: Partial<EventRow> = {};
-  (Object.keys(diff) as (keyof Diff)[]).forEach((key) => {
-    if (key === "_note") return;
+  EVENT_FORM_FIELDS.forEach((key) => {
     const change = diff[key];
-    if (change) (update as Record<string, unknown>)[key] = change.to;
+    if (change && typeof change === "object" && "to" in change) {
+      (update as Record<string, unknown>)[key] = change.to;
+    }
   });
+  if (Object.keys(update).length === 0) throw new Error("This change request has nothing to apply.");
 
   const {
     data: { user },

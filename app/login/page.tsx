@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { safeNextPath } from "@/lib/safe-next";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -16,10 +17,13 @@ export default function LoginPage() {
     setErrorMessage("");
 
     const supabase = createClient();
-    const next = searchParams.get("next") ?? "/admin";
+    const next = safeNextPath(searchParams.get("next"));
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
+        // Accounts are admin-invited only — never create one from this form,
+        // or anyone could sign themselves up as an organiser.
+        shouldCreateUser: false,
         emailRedirectTo: `${window.location.origin}/auth/confirm?next=${encodeURIComponent(next)}`,
       },
     });

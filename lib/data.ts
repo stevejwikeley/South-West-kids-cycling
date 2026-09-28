@@ -38,6 +38,9 @@ export async function getEvents(): Promise<CalendarEvent[]> {
   const { data, error } = await supabase
     .from("events")
     .select("*")
+    // Explicit, not left to RLS: a signed-in admin/organiser can read
+    // unapproved rows, and they must never leak onto the public calendar.
+    .eq("approved", true)
     .order("start_datetime", { ascending: true });
 
   if (error) throw error;
