@@ -35,7 +35,7 @@ function toIcsEvent(e: EventRow): EventAttributes {
       : { start: utcDateTime(e.start_datetime), startInputType: "utc" as const, duration: { hours: 2 } };
 
   return {
-    uid: `${e.id}@southwestkidscycling.co.uk`,
+    uid: `${e.id}@southwestkidscycling.uk`,
     title: e.title,
     location,
     description,

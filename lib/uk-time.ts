@@ -33,3 +33,9 @@ export function utcIsoToUkLocalParts(iso: string): { date: string; time: string 
   }, {});
   return { date: `${parts.year}-${parts.month}-${parts.day}`, time: `${parts.hour}:${parts.minute}` };
 }
+
+// The UK calendar day an event falls on. Don't slice the ISO string — that
+// gives the UTC day, which is wrong for timed events just after midnight BST.
+export function ukDateOf(iso: string): string {
+  return utcIsoToUkLocalParts(iso).date;
+}

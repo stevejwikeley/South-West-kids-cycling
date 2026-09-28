@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { ukDateOf } from "@/lib/uk-time";
 import type { CalendarEvent, Club } from "@/lib/types";
 import type { EventRow, ClubRow, EventPendingRow } from "@/lib/supabase/types";
 
@@ -7,7 +8,7 @@ function toCalendarEvent(row: EventRow): CalendarEvent {
     id: row.id,
     title: row.title,
     discipline: row.discipline,
-    date: row.start_datetime.slice(0, 10),
+    date: ukDateOf(row.start_datetime),
     venue: row.venue_name,
     region: row.region,
     status: row.status,
