@@ -3,7 +3,6 @@
 import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { safeNextPath } from "@/lib/safe-next";
 
 function LoginForm() {
   const [email, setEmail] = useState("");
@@ -17,13 +16,10 @@ function LoginForm() {
     setErrorMessage("");
 
     const supabase = createClient();
-    const next = safeNextPath(searchParams.get("next"));
+    const next = searchParams.get("next") ?? "/admin";
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
-        // Staff accounts are invite-only — never create one from this page.
-        // (Parents sign up through /my-events/login instead.)
-        shouldCreateUser: false,
         emailRedirectTo: `${window.location.origin}/auth/confirm?next=${encodeURIComponent(next)}`,
       },
     });
