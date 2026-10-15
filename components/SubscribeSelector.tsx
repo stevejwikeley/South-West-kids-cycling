@@ -24,6 +24,7 @@ const REGION_OPTIONS: [Region | "all", string][] = [
   ["devon", "Devon"],
   ["cornwall", "Cornwall"],
   ["somerset", "Somerset"],
+  ["bristol", "Bristol"],
 ];
 
 const stepStyle: React.CSSProperties = { fontSize: 14, lineHeight: 1.6, color: "#4A4A46", marginBottom: 10 };

@@ -29,7 +29,7 @@ const ClubResearchSchema = z.object({
 export type ClubResearchResult = z.infer<typeof ClubResearchSchema>;
 
 function buildSystemPrompt(): string {
-  return `You research youth cycling clubs for South West Kids Cycling, a directory of clubs with junior/youth sections (ages 5-16) in Devon, Cornwall & Somerset, England.
+  return `You research youth cycling clubs for South West Kids Cycling, a directory of clubs with junior/youth sections (ages 5-16) in Devon, Cornwall, Somerset & Bristol, England.
 
 Given a club name (and possibly an approximate area), search the web to find that specific club's own website or social presence and fill in what you can verify. Rules:
 - Only set found: true if you're confident you found the actual club, not a same-named club elsewhere in the country or an unrelated result.
@@ -53,7 +53,7 @@ export async function researchClub(name: string): Promise<ClubResearchResult> {
           system: buildSystemPrompt(),
           tools: [{ type: "web_search_20260318", name: "web_search", max_uses: 5 }],
           output_config: { effort: "medium", format: zodOutputFormat(ClubResearchSchema) },
-          messages: [{ role: "user", content: `Look up the youth cycling club "${name}" in Devon, Cornwall, or Somerset, England.` }],
+          messages: [{ role: "user", content: `Look up the youth cycling club "${name}" in Devon, Cornwall, Somerset, or Bristol, England.` }],
         });
       } catch (e) {
         Sentry.captureException(e, { tags: { operation: "research_club" } });
