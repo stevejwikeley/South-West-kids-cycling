@@ -1,6 +1,7 @@
 import type { EventRow } from "@/lib/supabase/types";
 import type { ExtractedEvent } from "./extract-events";
 import { pickSameEvent } from "./match-duplicate";
+import { assessMatch, type DedupFields } from "./dedup-score";
 
 // Shared dedup check used regardless of source — spec section 7.2: "runs
 // through one shared dedup check (title + venue + date proximity against
@@ -17,9 +18,10 @@ import { pickSameEvent } from "./match-duplicate";
 // coefficient) tolerates that kind of drift; a genuinely ambiguous case
 // (date matches, similarity is inconclusive either way) escalates to a
 // single bounded LLM call rather than guessing.
-const DATE_PROXIMITY_DAYS = 3;
-const CONFIDENT_SCORE = 0.55;
-const AMBIGUOUS_FLOOR = 0.25;
+//
+// Matching weighs name, organiser, venue and date together (see
+// dedup-score.ts) — dates and venues do change, so neither alone can rule a
+// match in or out.
 const MAX_LLM_CANDIDATES = 3;
 
 function normalize(s: string): string {
@@ -42,37 +44,47 @@ export function similarity(a: string, b: string): number {
   return (2 * shared) / (ta.size + tb.size);
 }
 
-// Guards the one failure mode token-overlap alone can't catch: two entries
-// in the same numbered series ("Round 1" vs "Round 2") can share almost
-// every other word. If both titles name a round and the numbers disagree,
-// it's never a match, regardless of similarity score.
-function roundNumbersConflict(a: string, b: string): boolean {
-  const ra = a.match(/round\s*(\d+)/i)?.[1];
-  const rb = b.match(/round\s*(\d+)/i)?.[1];
-  return !!ra && !!rb && ra !== rb;
+export function eventToDedupFields(e: EventRow): DedupFields {
+  return {
+    title: e.title,
+    date: e.start_datetime ? e.start_datetime.slice(0, 10) : null,
+    venue_name: e.venue_name,
+    postcode: e.postcode,
+    organiser_name: e.organiser_name,
+    club_id: e.club_id,
+    kind: e.kind,
+  };
 }
 
-function daysBetween(a: string, b: string): number {
-  const diff = Math.abs(new Date(a).getTime() - new Date(b).getTime());
-  return diff / (1000 * 60 * 60 * 24);
+export function candidateToDedupFields(c: ExtractedEvent): DedupFields {
+  return {
+    title: c.title,
+    date: c.date,
+    venue_name: c.venue_name,
+    postcode: c.postcode,
+    organiser_name: c.organiser_name,
+    club_id: c.club_id,
+    kind: c.kind,
+  };
 }
 
-export async function findDuplicate(candidate: ExtractedEvent, liveEvents: EventRow[]): Promise<EventRow | null> {
-  if (!candidate.date) return null;
-
+export async function findDuplicate(candidate: ExtractedEvent, pool: EventRow[]): Promise<EventRow | null> {
+  const fields = candidateToDedupFields(candidate);
   const ambiguous: { event: EventRow; score: number }[] = [];
+  const reschedules: { event: EventRow; score: number }[] = [];
 
-  for (const event of liveEvents) {
-    const eventDate = event.start_datetime.slice(0, 10);
-    if (daysBetween(candidate.date, eventDate) > DATE_PROXIMITY_DAYS) continue;
-    if (roundNumbersConflict(candidate.title, event.title)) continue;
-
-    const titleScore = similarity(candidate.title, event.title);
-    const venueScore = candidate.venue_name ? similarity(candidate.venue_name, event.venue_name) : 1;
-
-    if (titleScore >= CONFIDENT_SCORE && venueScore >= CONFIDENT_SCORE) return event;
-    if (titleScore >= AMBIGUOUS_FLOOR) ambiguous.push({ event, score: titleScore });
+  for (const event of pool) {
+    const { verdict, score } = assessMatch(fields, eventToDedupFields(event));
+    if (verdict === "match") return event;
+    if (verdict === "maybe") ambiguous.push({ event, score });
+    if (verdict === "reschedule") reschedules.push({ event, score });
   }
+
+  // A moved date only reads as a postponement when exactly one event of
+  // that name/organiser sits nearby. Several means it's a recurring series
+  // and this candidate is simply another date in it.
+  const rescheduleDates = new Set(reschedules.map((r) => r.event.start_datetime?.slice(0, 10)));
+  if (rescheduleDates.size === 1) ambiguous.push(...reschedules);
 
   if (ambiguous.length === 0) return null;
 

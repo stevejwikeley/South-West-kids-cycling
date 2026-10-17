@@ -37,19 +37,30 @@ export async function saveCandidates(
   // Already-queued smart_ingest candidates are dupe-checked the same way as
   // live events, so re-scanning a watched source before its last batch is
   // reviewed doesn't flood the queue with the same event every night.
-  const pendingAsEvents = ((pendingRows as EventPendingRow[]) ?? []).filter(
-    (p) => p.title && p.start_datetime && p.venue_name
-  ) as unknown as EventRow[];
+  //
+  // Only a title is required — undated weekly sessions and venue-less
+  // listings were previously left out of the pool, so they re-queued on
+  // every scan.
+  const pending = (pendingRows as EventPendingRow[]) ?? [];
+  const pendingAsEvents = pending.filter((p) => p.title) as unknown as EventRow[];
 
   const comparisonPool = [...((liveEvents as EventRow[]) ?? []), ...pendingAsEvents];
 
+  // Live events that already have a suggested change waiting. Re-scans keep
+  // matching the live event (not the pending row), so without this every
+  // scan added another "change" row for the same event — the same race
+  // showed up in the queue once per scan.
+  const liveIdsWithQueuedChange = new Set(pending.map((p) => p.duplicate_of).filter((id): id is string => !!id));
+
   let saved = 0;
-  for (const candidate of candidates) {
-    const duplicate = await findDuplicate(candidate, comparisonPool);
+  for (const [i, candidate] of candidates.entries()) {
+    const clubId = candidate.club_id ?? matchClubByName(candidate.organiser_name, clubs);
+    const duplicate = await findDuplicate({ ...candidate, club_id: clubId }, comparisonPool);
     // A match against another pending row just means "already queued, don't
     // insert again" — only a match against a *live* event should be recorded
     // as duplicate_of (merge target on approval).
     if (duplicate && !liveIds.has(duplicate.id)) continue;
+    if (duplicate && liveIdsWithQueuedChange.has(duplicate.id)) continue;
 
     const flags: Record<string, string> = Object.fromEntries(
       candidate.low_confidence_fields.map((f) => [f, "needs verification"])
@@ -86,7 +97,7 @@ export async function saveCandidates(
       // An explicit pick (the public structured form's club dropdown) wins;
       // otherwise fall back to matching the extracted organiser name against
       // a known club, since the AI extraction itself never sets club_id.
-      club_id: candidate.club_id ?? matchClubByName(candidate.organiser_name, clubs),
+      club_id: clubId,
     };
 
     // A re-scan that matches a live event and agrees with it on everything
@@ -122,7 +133,13 @@ export async function saveCandidates(
       watched_source_id: watchedSourceId ?? null,
     });
 
-    if (!error) saved++;
+    if (error) continue;
+    saved++;
+
+    // Later candidates in this same batch (a source listing an event twice,
+    // or two near-identical write-ups) dedup against this one too.
+    if (duplicate) liveIdsWithQueuedChange.add(duplicate.id);
+    else comparisonPool.push({ ...values, id: `batch-${i}` } as unknown as EventRow);
   }
 
   return saved;
