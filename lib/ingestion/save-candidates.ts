@@ -3,6 +3,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { findDuplicate } from "./dedup";
 import { bookingLinkTitleMismatch, LINK_TITLE_MISMATCH_FLAG } from "./link-check";
 import { normalizePostcode } from "@/lib/postcode";
+import { lookupPostcode } from "@/lib/geocode";
+import { borrowFromKnownVenue, checkPostcode, type KnownVenue, type LocationFields } from "./enrich-location";
 import { matchClubByName } from "@/lib/club-match";
 import type { ExtractedEvent } from "./extract-events";
 import type { Database, EventRow, EventPendingRow, SourceTypeEnum, ClubRow } from "@/lib/supabase/types";
@@ -33,6 +35,12 @@ export async function saveCandidates(
   const clubs = (clubRows as Pick<ClubRow, "id" | "name">[]) ?? [];
 
   const liveIds = new Set(((liveEvents as EventRow[]) ?? []).map((e) => e.id));
+
+  // Venues an admin has already approved a postcode for — the source of
+  // postcodes for candidates whose source page doesn't state one.
+  const knownVenues: KnownVenue[] = ((liveEvents as EventRow[]) ?? [])
+    .filter((e) => e.approved && e.postcode && e.venue_name)
+    .map((e) => ({ venue_name: e.venue_name, postcode: e.postcode!, address: e.address, region: e.region, club_id: e.club_id }));
 
   // Already-queued smart_ingest candidates are dupe-checked the same way as
   // live events, so re-scanning a watched source before its last batch is
@@ -70,8 +78,6 @@ export async function saveCandidates(
     if (bookingLinkTitleMismatch(candidate.title, candidate.booking_link)) {
       flags.booking_link = LINK_TITLE_MISMATCH_FLAG;
     }
-    const fieldFlags = Object.keys(flags).length ? flags : null;
-
     const values = {
       title: candidate.title,
       discipline: candidate.discipline,
@@ -100,6 +106,17 @@ export async function saveCandidates(
       club_id: clubId,
     };
 
+    // Fill location gaps (postcode, address, region) before anything is
+    // compared or saved, so a live event missing its postcode gets one
+    // suggested too.
+    const location = await enrichLocation(values, knownVenues);
+    Object.assign(values, location.values);
+    for (const [field, flag] of Object.entries(location.flags)) {
+      if (flag === null) delete flags[field];
+      else flags[field] = flag;
+    }
+    const fieldFlags = Object.keys(flags).length ? flags : null;
+
     // A re-scan that matches a live event and agrees with it on everything
     // it has an opinion about isn't a change worth reviewing again — even
     // when the extraction is uncertain about a field once more (field
@@ -124,6 +141,8 @@ export async function saveCandidates(
 
     const { error } = await supabase.from("events_pending").insert({
       ...values,
+      lat: location.coords?.lat ?? null,
+      lng: location.coords?.lng ?? null,
       source_type: sourceType,
       source_detail: rawSourceRef,
       raw_source_ref: rawSourceRef,
@@ -143,6 +162,33 @@ export async function saveCandidates(
   }
 
   return saved;
+}
+
+// Borrow a postcode from a known venue, then check it with postcodes.io.
+// A lookup that couldn't run (network) changes nothing — only a definite
+// "doesn't exist" gets flagged.
+async function enrichLocation(
+  values: LocationFields,
+  knownVenues: KnownVenue[]
+): Promise<{ values: LocationFields; flags: Record<string, string | null>; coords: { lat: number; lng: number } | null }> {
+  const fields: LocationFields = {
+    venue_name: values.venue_name,
+    address: values.address,
+    postcode: values.postcode,
+    region: values.region,
+    club_id: values.club_id,
+    kind: values.kind,
+  };
+  const borrowed = borrowFromKnownVenue(fields, knownVenues);
+  const lookup = await lookupPostcode(borrowed.values.postcode);
+  if (lookup === null) return { values: borrowed.values, flags: borrowed.flags, coords: null };
+
+  const checked = checkPostcode(borrowed.values, lookup === "not_found" ? null : lookup);
+  return {
+    values: checked.values,
+    flags: { ...borrowed.flags, ...checked.flags },
+    coords: lookup === "not_found" ? null : { lat: lookup.lat, lng: lookup.lng },
+  };
 }
 
 // title and venue_name are deliberately excluded — they're the two fields

@@ -119,13 +119,20 @@ export function venueSignal(a: DedupFields, b: DedupFields): boolean | null {
   const pb = compactPostcode(b.postcode);
   if (pa && pb && pa === pb) return true;
 
-  const va = tokens(a.venue_name, NAME_STOPWORDS);
-  const vb = tokens(b.venue_name, NAME_STOPWORDS);
-  if (va.size > 0 && vb.size > 0) {
-    return dice(va, vb) >= CONFIDENT_NAME || overlap(va, vb) >= 0.8;
-  }
+  const names = venueNamesMatch(a.venue_name, b.venue_name);
+  if (names !== null) return names;
   if (pa && pb) return false;
   return null;
+}
+
+// Venue names alone: true = same place, false = different, null = one is
+// missing. Also used to borrow a postcode from an earlier event at the same
+// venue (enrich-location.ts).
+export function venueNamesMatch(a: string | null, b: string | null): boolean | null {
+  const va = tokens(a, NAME_STOPWORDS);
+  const vb = tokens(b, NAME_STOPWORDS);
+  if (va.size === 0 || vb.size === 0) return null;
+  return dice(va, vb) >= CONFIDENT_NAME || overlap(va, vb) >= 0.8;
 }
 
 // Two entries in the same numbered series ("Round 1" vs "Round 2") share
