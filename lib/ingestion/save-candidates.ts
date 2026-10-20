@@ -3,6 +3,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { findDuplicate } from "./dedup";
 import { bookingLinkTitleMismatch, LINK_TITLE_MISMATCH_FLAG } from "./link-check";
 import { normalizePostcode } from "@/lib/postcode";
+import { lookupPostcode } from "@/lib/geocode";
+import { borrowFromKnownVenue, checkPostcode, type KnownVenue, type LocationFields } from "./enrich-location";
 import { matchClubByName } from "@/lib/club-match";
 import type { ExtractedEvent } from "./extract-events";
 import type { Database, EventRow, EventPendingRow, SourceTypeEnum, ClubRow } from "@/lib/supabase/types";
@@ -34,22 +36,39 @@ export async function saveCandidates(
 
   const liveIds = new Set(((liveEvents as EventRow[]) ?? []).map((e) => e.id));
 
+  // Venues an admin has already approved a postcode for — the source of
+  // postcodes for candidates whose source page doesn't state one.
+  const knownVenues: KnownVenue[] = ((liveEvents as EventRow[]) ?? [])
+    .filter((e) => e.approved && e.postcode && e.venue_name)
+    .map((e) => ({ venue_name: e.venue_name, postcode: e.postcode!, address: e.address, region: e.region, club_id: e.club_id }));
+
   // Already-queued smart_ingest candidates are dupe-checked the same way as
   // live events, so re-scanning a watched source before its last batch is
   // reviewed doesn't flood the queue with the same event every night.
-  const pendingAsEvents = ((pendingRows as EventPendingRow[]) ?? []).filter(
-    (p) => p.title && p.start_datetime && p.venue_name
-  ) as unknown as EventRow[];
+  //
+  // Only a title is required — undated weekly sessions and venue-less
+  // listings were previously left out of the pool, so they re-queued on
+  // every scan.
+  const pending = (pendingRows as EventPendingRow[]) ?? [];
+  const pendingAsEvents = pending.filter((p) => p.title) as unknown as EventRow[];
 
   const comparisonPool = [...((liveEvents as EventRow[]) ?? []), ...pendingAsEvents];
 
+  // Live events that already have a suggested change waiting. Re-scans keep
+  // matching the live event (not the pending row), so without this every
+  // scan added another "change" row for the same event — the same race
+  // showed up in the queue once per scan.
+  const liveIdsWithQueuedChange = new Set(pending.map((p) => p.duplicate_of).filter((id): id is string => !!id));
+
   let saved = 0;
-  for (const candidate of candidates) {
-    const duplicate = await findDuplicate(candidate, comparisonPool);
+  for (const [i, candidate] of candidates.entries()) {
+    const clubId = candidate.club_id ?? matchClubByName(candidate.organiser_name, clubs);
+    const duplicate = await findDuplicate({ ...candidate, club_id: clubId }, comparisonPool);
     // A match against another pending row just means "already queued, don't
     // insert again" — only a match against a *live* event should be recorded
     // as duplicate_of (merge target on approval).
     if (duplicate && !liveIds.has(duplicate.id)) continue;
+    if (duplicate && liveIdsWithQueuedChange.has(duplicate.id)) continue;
 
     const flags: Record<string, string> = Object.fromEntries(
       candidate.low_confidence_fields.map((f) => [f, "needs verification"])
@@ -59,8 +78,6 @@ export async function saveCandidates(
     if (bookingLinkTitleMismatch(candidate.title, candidate.booking_link)) {
       flags.booking_link = LINK_TITLE_MISMATCH_FLAG;
     }
-    const fieldFlags = Object.keys(flags).length ? flags : null;
-
     const values = {
       title: candidate.title,
       discipline: candidate.discipline,
@@ -86,8 +103,19 @@ export async function saveCandidates(
       // An explicit pick (the public structured form's club dropdown) wins;
       // otherwise fall back to matching the extracted organiser name against
       // a known club, since the AI extraction itself never sets club_id.
-      club_id: candidate.club_id ?? matchClubByName(candidate.organiser_name, clubs),
+      club_id: clubId,
     };
+
+    // Fill location gaps (postcode, address, region) before anything is
+    // compared or saved, so a live event missing its postcode gets one
+    // suggested too.
+    const location = await enrichLocation(values, knownVenues);
+    Object.assign(values, location.values);
+    for (const [field, flag] of Object.entries(location.flags)) {
+      if (flag === null) delete flags[field];
+      else flags[field] = flag;
+    }
+    const fieldFlags = Object.keys(flags).length ? flags : null;
 
     // A re-scan that matches a live event and agrees with it on everything
     // it has an opinion about isn't a change worth reviewing again — even
@@ -113,6 +141,8 @@ export async function saveCandidates(
 
     const { error } = await supabase.from("events_pending").insert({
       ...values,
+      lat: location.coords?.lat ?? null,
+      lng: location.coords?.lng ?? null,
       source_type: sourceType,
       source_detail: rawSourceRef,
       raw_source_ref: rawSourceRef,
@@ -122,10 +152,43 @@ export async function saveCandidates(
       watched_source_id: watchedSourceId ?? null,
     });
 
-    if (!error) saved++;
+    if (error) continue;
+    saved++;
+
+    // Later candidates in this same batch (a source listing an event twice,
+    // or two near-identical write-ups) dedup against this one too.
+    if (duplicate) liveIdsWithQueuedChange.add(duplicate.id);
+    else comparisonPool.push({ ...values, id: `batch-${i}` } as unknown as EventRow);
   }
 
   return saved;
+}
+
+// Borrow a postcode from a known venue, then check it with postcodes.io.
+// A lookup that couldn't run (network) changes nothing — only a definite
+// "doesn't exist" gets flagged.
+async function enrichLocation(
+  values: LocationFields,
+  knownVenues: KnownVenue[]
+): Promise<{ values: LocationFields; flags: Record<string, string | null>; coords: { lat: number; lng: number } | null }> {
+  const fields: LocationFields = {
+    venue_name: values.venue_name,
+    address: values.address,
+    postcode: values.postcode,
+    region: values.region,
+    club_id: values.club_id,
+    kind: values.kind,
+  };
+  const borrowed = borrowFromKnownVenue(fields, knownVenues);
+  const lookup = await lookupPostcode(borrowed.values.postcode);
+  if (lookup === null) return { values: borrowed.values, flags: borrowed.flags, coords: null };
+
+  const checked = checkPostcode(borrowed.values, lookup === "not_found" ? null : lookup);
+  return {
+    values: checked.values,
+    flags: { ...borrowed.flags, ...checked.flags },
+    coords: lookup === "not_found" ? null : { lat: lookup.lat, lng: lookup.lng },
+  };
 }
 
 // title and venue_name are deliberately excluded — they're the two fields

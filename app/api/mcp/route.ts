@@ -80,7 +80,7 @@ const handler = createMcpHandler(
       {
         title: "Submit an event candidate",
         description:
-          "Queues one event you found for human review on the admin pending page — it does not publish directly. Call get_search_context first so you know what's already covered. Duplicates of a live or already-queued event are silently skipped (checked by title/date/venue similarity), so it's safe to submit anything that looks like a plausible match.",
+          "Queues one event you found for human review on the admin pending page — it does not publish directly. Call get_search_context first so you know what's already covered. Duplicates of a live or already-queued event are silently skipped (checked by name, organiser, venue and date — allowing for reworded names and moved dates/venues), so it's safe to submit anything that looks like a plausible match. Fill in as much as you can find: if the event page doesn't give the venue's postcode or full address, look the venue up and include them (postcodes are checked automatically against the national postcode database). Always set organiser_name — for club training, the club's name.",
         inputSchema: z.object({
           // kind is required on ExtractedEventSchema itself (the AI
           // extraction path always sets it) but optional here, defaulting

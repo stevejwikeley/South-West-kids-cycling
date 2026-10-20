@@ -29,14 +29,22 @@ export async function pickSameEvent(candidate: ExtractedEvent, shortlist: EventR
       const client = new Anthropic();
 
       const listing = shortlist
-        .map((e, i) => `${i}. "${e.title}" — ${e.start_datetime.slice(0, 10)} at "${e.venue_name}"`)
+        .map(
+          (e, i) =>
+            `${i}. "${e.title}" — ${e.start_datetime?.slice(0, 10) ?? "(no date)"} at "${e.venue_name ?? "(no venue given)"}", organised by "${e.organiser_name ?? "(not stated)"}"`
+        )
         .join("\n");
 
-      const prompt = `A youth cycling calendar is re-checking a source it has scanned before. It just extracted this listing:
+      const prompt = `A youth cycling calendar is checking whether a newly found listing is an event it already has (published or already waiting for review). It just found this listing:
 
-"${candidate.title}" — ${candidate.date} at "${candidate.venue_name ?? "(no venue given)"}"
+"${candidate.title}" — ${candidate.date ?? "(no date)"} at "${candidate.venue_name ?? "(no venue given)"}", organised by "${candidate.organiser_name ?? "(not stated)"}"
 
-These are already-published events landing on the same or a nearby date. Source text (titles/venues) can be reworded slightly between scans of the same page — a season-year or qualifier dropped, a dash style changed, a word or two reordered — so don't require an exact match, only that it's clearly the same real-world event (same occasion, same date, same venue). Different rounds/days of the same series are NOT the same event even if most of the title matches.
+Judge on four things together: the event name, the organiser, the venue and the date. None of them has to match exactly:
+- Names get reworded between sources (a season year or qualifier dropped, the organiser's name prefixed, a dash changed, words reordered).
+- Organisers get written differently ("South West Cyclo-Cross League" vs "South West Cyclocross League (hosted by Dartmoor Velo)").
+- Venues change — an event can move to a different field or site and still be the same event.
+- Dates change — an event can be postponed or brought forward by days or weeks and still be the same event.
+It is the same event if it's clearly the same real-world occasion run by the same organiser, even if one of venue or date has moved. It is NOT the same event if it's a different round/day of the same series, or another week's session of a recurring club activity.
 
 ${listing}
 
