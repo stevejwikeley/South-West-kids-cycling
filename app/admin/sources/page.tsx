@@ -13,7 +13,7 @@ export default async function AdminSourcesPage() {
         Watched sources.
       </h1>
       <p style={{ maxWidth: 560, fontSize: 14, lineHeight: 1.6, color: "#4A4A46", marginTop: 22 }}>
-        Pages listed here are scanned automatically on a schedule and run through the same extraction engine as manual smart ingestion. Anything found lands in the pending queue for review — nothing publishes automatically.
+        Pages listed here are scanned automatically on a schedule and run through the same extraction engine as manual smart ingestion. Complete events publish straight to the calendar; anything missing details lands in the pending queue for review.
       </p>
 
       <div style={{ display: "flex", gap: 56, flexWrap: "wrap", marginTop: 40 }}>

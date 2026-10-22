@@ -5,6 +5,8 @@ import { getCurrentProfile, isAdminRole } from "@/lib/auth";
 import { parseEventForm, type EventFormValues } from "./parse-event-form";
 import { parsePendingForm, type PendingFormValues } from "./parse-pending-form";
 import { geocodeLocation } from "@/lib/geocode";
+import { PUBLIC_DIFF_KEYS, ADMIN_DIFF_KEYS } from "@/lib/pending-diff-keys";
+import { publishPendingRow } from "@/lib/ingestion/publish-candidate";
 import type { EventPendingRow, EventRow } from "@/lib/supabase/types";
 
 export interface SuggestChangeState {
@@ -18,44 +20,6 @@ export interface PendingActionResult {
 
 type Diff = Partial<Record<keyof EventFormValues | "_note", { from: unknown; to: unknown }>>;
 
-// events_pending accepts inserts from anyone, unauthenticated, so a diff
-// blob could in principle be crafted by hand (not just via submitChangeRequest)
-// to name columns the public form never exposes — approved, created_by,
-// source_type, etc. Applying only known EventFormValues keys on approval
-// means such a row can't touch anything beyond what the legitimate form
-// could have produced, regardless of what's actually stored in the diff.
-//
-// Two allowlists, not one: PUBLIC_DIFF_KEYS gates submitChangeRequest, the
-// only unauthenticated path — SuggestChangeForm has no bookable/
-// booking_capacity fields, so parseEventForm always returns false/null for
-// them from that form, and including them here would diff every public
-// suggest-change against a bookable event as a bogus "bookable: true→false"
-// change nobody actually made. ADMIN_DIFF_KEYS is the isAdminRole()-gated
-// superset (adds bookable/booking_capacity) used by the three paths that
-// only ever run for a signed-in admin: updatePending's change_request
-// branch, approveChange, and approveIngested.
-const PUBLIC_DIFF_KEYS = new Set<keyof EventFormValues>([
-  "title",
-  "discipline",
-  "status",
-  "all_day",
-  "start_datetime",
-  "end_datetime",
-  "venue_name",
-  "address",
-  "postcode",
-  "region",
-  "age_categories",
-  "kids_only",
-  "booking_status",
-  "booking_link",
-  "organiser_url",
-  "organiser_name",
-  "organiser_contact",
-  "description",
-]);
-
-const ADMIN_DIFF_KEYS = new Set<keyof EventFormValues>([...PUBLIC_DIFF_KEYS, "bookable", "booking_capacity", "club_id", "kind"]);
 
 function sameValue(a: unknown, b: unknown): boolean {
   if (Array.isArray(a) && Array.isArray(b)) {
@@ -206,97 +170,11 @@ export async function approveIngested(pendingId: string): Promise<PendingActionR
     return { error: "This pending row isn't a smart-ingested or publicly-submitted candidate." };
   }
 
-  const values: Record<string, unknown> = {};
-  ADMIN_DIFF_KEYS.forEach((key) => {
-    const v = (row as unknown as Record<string, unknown>)[key];
-    // Skip null/undefined so DB defaults apply on insert, and so a field the
-    // extraction wasn't confident about doesn't clobber good live data on
-    // merge — same "don't overwrite with uncertainty" spirit as spec 4.2.
-    if (v !== undefined && v !== null) values[key] = v;
-  });
-  // field_flags carries forward regardless — it's admin-only metadata (spec
-  // 4.2: "needs verification" markers), not a public-facing field, so it's
-  // not part of ADMIN_DIFF_KEYS but still belongs on the live row.
-  if (row.field_flags) values.field_flags = row.field_flags;
-
-  // Re-derived here rather than trusted from the pending row: events_pending
-  // accepts unauthenticated inserts (public submissions), so lat/lng always
-  // comes from our own lookup against the postcode that just passed the
-  // ADMIN_DIFF_KEYS sandbox above, never from arbitrary pending-row data.
-  if (values.postcode) {
-    const coords = await geocodeLocation({ postcode: values.postcode as string });
-    if (coords) {
-      values.lat = coords.lat;
-      values.lng = coords.lng;
-    }
-  }
-
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (row.duplicate_of) {
-    const { error } = await supabase
-      .from("events")
-      .update({ ...values, updated_by: user?.id })
-      .eq("id", row.duplicate_of);
-    if (error) return { error: error.message };
-  } else {
-    const required: (keyof EventFormValues)[] = ["title", "discipline", "start_datetime", "venue_name", "region", "organiser_url"];
-    const missing = required.filter((key) => values[key] === null || values[key] === undefined || values[key] === "");
-    if (missing.length > 0) {
-      return { error: `Can't approve as a new event — missing: ${missing.join(", ")}. Reject and add it manually via the event form instead.` };
-    }
-
-    // Mirrors the training_requires_club DB constraint, so approving a
-    // training candidate with no matched club shows a plain sentence
-    // instead of the raw Postgres constraint-violation message.
-    if (values.kind === "training" && !values.club_id) {
-      return { error: "Attach the club that runs this training session before approving it." };
-    }
-
-    const { error } = await supabase.from("events").insert({
-      ...values,
-      approved: true,
-      source_type: row.source_type,
-      published_via: "reviewed",
-      created_by: user?.id ?? null,
-      updated_by: user?.id ?? null,
-    });
-    if (error) return { error: error.message };
-  }
-
-  if (row.watched_source_id) await recordPublishOutcome(supabase, row.watched_source_id, row.was_edited);
-
-  await supabase.from("events_pending").delete().eq("id", pendingId);
-  return {};
-}
-
-// Spec 4.3: "self-tuning trust" — correction_rate is the rolling ratio of
-// admin edits to total publishes for a watched source, recomputed from
-// cumulative counters each time one of its candidates is approved. Only
-// candidates actually traced to a watched_source count; manual/ad-hoc
-// ingestion (paste URL, upload) has no source to tune.
-async function recordPublishOutcome(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  watchedSourceId: string,
-  wasEdited: boolean
-): Promise<void> {
-  const { data } = await supabase
-    .from("watched_sources")
-    .select("published_count, corrected_count")
-    .eq("id", watchedSourceId)
-    .single();
-  if (!data) return;
-
-  const published_count = data.published_count + 1;
-  const corrected_count = data.corrected_count + (wasEdited ? 1 : 0);
-  const correction_rate = corrected_count / published_count;
-
-  await supabase
-    .from("watched_sources")
-    .update({ published_count, corrected_count, correction_rate })
-    .eq("id", watchedSourceId);
+  return publishPendingRow(supabase, row, "reviewed", user?.id ?? null);
 }
 
 // Edits a pending row before approval — from the slide-out panel, not the

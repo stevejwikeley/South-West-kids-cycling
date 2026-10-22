@@ -4,7 +4,7 @@ import * as Sentry from "@sentry/nextjs";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentProfile, isAdminRole } from "@/lib/auth";
 import { extractEvents, type ExtractedEvent } from "@/lib/ingestion/extract-events";
-import { saveCandidates } from "@/lib/ingestion/save-candidates";
+import { saveCandidates, type SaveResult } from "@/lib/ingestion/save-candidates";
 import { htmlToText, isLikelyUrl } from "@/lib/ingestion/html-to-text";
 import { assertPublicHttpUrl } from "@/lib/ingestion/url-guard";
 
@@ -90,7 +90,7 @@ export async function ingestTextOrUrl(_prevState: IngestState, formData: FormDat
 
   const supabase = await createClient();
   const saved = await saveCandidates(supabase, candidates, sourceRef, organiserUrlFallback);
-  return { success: `${saved} event${saved === 1 ? "" : "s"} sent to the pending queue for review.` };
+  return { success: ingestSummary(saved) };
 }
 
 export async function ingestFile(_prevState: IngestState, formData: FormData): Promise<IngestState> {
@@ -146,5 +146,10 @@ export async function ingestFile(_prevState: IngestState, formData: FormData): P
 
   const supabase = await createClient();
   const saved = await saveCandidates(supabase, candidates, `upload: ${file.name}`, organiserUrl);
-  return { success: `${saved} event${saved === 1 ? "" : "s"} sent to the pending queue for review.` };
+  return { success: ingestSummary(saved) };
+}
+
+function ingestSummary({ published, queued }: SaveResult): string {
+  const plural = (n: number) => `${n} event${n === 1 ? "" : "s"}`;
+  return `${plural(published)} published to the calendar, ${plural(queued)} sent to the pending queue (missing details).`;
 }

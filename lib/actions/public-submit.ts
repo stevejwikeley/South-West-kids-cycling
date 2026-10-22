@@ -66,7 +66,7 @@ export async function submitEventText(input: string, channel = "public submissio
   }
 
   const supabase = await createClient();
-  const saved = await saveCandidates(supabase, candidates, sourceRef, organiserUrlFallback, undefined, "public_submission");
+  const { queued: saved } = await saveCandidates(supabase, candidates, sourceRef, organiserUrlFallback, undefined, "public_submission");
   if (saved === 0) {
     return { error: "That looks like it's already in the calendar or pending review." };
   }
@@ -115,7 +115,7 @@ export async function submitPublicEventForm(_prevState: PublicSubmitState, formD
   };
 
   const supabase = await createClient();
-  const saved = await saveCandidates(supabase, [candidate], "public submission (form)", undefined, undefined, "public_submission");
+  const { queued: saved } = await saveCandidates(supabase, [candidate], "public submission (form)", undefined, undefined, "public_submission");
   if (saved === 0) {
     return { error: "That looks like it's already in the calendar or pending review." };
   }

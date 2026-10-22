@@ -28,6 +28,7 @@ export interface CheckSourceResult {
   error?: string;
   found?: number;
   saved?: number;
+  published?: number;
 }
 
 export async function checkWatchedSource(
@@ -64,10 +65,11 @@ export async function checkWatchedSource(
 
         const text = htmlToText(await res.text(), res.url).slice(0, 60000);
         const candidates = await extractEvents({ text });
-        const saved = await saveCandidates(supabase, candidates, source.label, source.url, source.id);
+        const { queued: saved, published } = await saveCandidates(supabase, candidates, source.label, source.url, source.id);
 
         span.setAttribute("source.found", candidates.length);
         span.setAttribute("source.saved", saved);
+        span.setAttribute("source.published", published);
 
         await supabase
           .from("watched_sources")
@@ -80,7 +82,7 @@ export async function checkWatchedSource(
           })
           .eq("id", source.id);
 
-        return { status: "ok", found: candidates.length, saved };
+        return { status: "ok", found: candidates.length, saved, published };
       } catch (e) {
         const message = e instanceof Error ? e.message : "Unknown error";
         Sentry.captureException(e, { tags: { operation: "check_watched_source", source_id: source.id, source_label: source.label } });

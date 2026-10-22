@@ -6,6 +6,8 @@ import { normalizePostcode } from "@/lib/postcode";
 import { lookupPostcode } from "@/lib/geocode";
 import { borrowFromKnownVenue, checkPostcode, type KnownVenue, type LocationFields } from "./enrich-location";
 import { matchClubByName } from "@/lib/club-match";
+import { canAutoPublish } from "./publish-ready";
+import { publishPendingRow } from "./publish-candidate";
 import type { ExtractedEvent } from "./extract-events";
 import type { Database, EventRow, EventPendingRow, SourceTypeEnum, ClubRow } from "@/lib/supabase/types";
 
@@ -15,6 +17,16 @@ import type { Database, EventRow, EventPendingRow, SourceTypeEnum, ClubRow } fro
 // row is labeled (and which rows count as "already queued, don't duplicate"
 // below) — the insert/dedup/approve mechanics are otherwise identical for
 // smart_ingest and public_submission.
+//
+// smart_ingest candidates (watched sources, admin paste/upload, the MCP
+// search tool) that are complete enough to publish (see publish-ready.ts)
+// go straight live instead of waiting in the queue. public_submission rows
+// always wait — anyone can send those.
+export interface SaveResult {
+  queued: number;
+  published: number;
+}
+
 export async function saveCandidates(
   supabase: SupabaseClient<Database>,
   candidates: ExtractedEvent[],
@@ -22,7 +34,7 @@ export async function saveCandidates(
   sourceUrl?: string,
   watchedSourceId?: string,
   sourceType: SourceTypeEnum = "smart_ingest"
-): Promise<number> {
+): Promise<SaveResult> {
   const [{ data: liveEvents, error: liveError }, { data: pendingRows, error: pendingError }, { data: clubRows, error: clubsError }] = await Promise.all([
     supabase.from("events").select("*"),
     supabase.from("events_pending").select("*").in("source_type", ["smart_ingest", "public_submission"]),
@@ -60,7 +72,8 @@ export async function saveCandidates(
   // showed up in the queue once per scan.
   const liveIdsWithQueuedChange = new Set(pending.map((p) => p.duplicate_of).filter((id): id is string => !!id));
 
-  let saved = 0;
+  let queued = 0;
+  let published = 0;
   for (const [i, candidate] of candidates.entries()) {
     const clubId = candidate.club_id ?? matchClubByName(candidate.organiser_name, clubs);
     const duplicate = await findDuplicate({ ...candidate, club_id: clubId }, comparisonPool);
@@ -96,7 +109,11 @@ export async function saveCandidates(
       // link isn't live yet) but posters/pasted text rarely state one. When
       // the source itself was a URL, that page is a reasonable fallback —
       // it's genuinely "the organiser's own site" for a scraped listing.
-      organiser_url: candidate.organiser_url ?? sourceUrl ?? null,
+      //
+      // Not when this updates a live event, though: that event's own
+      // organiser_url (usually admin-corrected) beats a scraped page the
+      // candidate never actually named, and approving would overwrite it.
+      organiser_url: candidate.organiser_url ?? (duplicate ? duplicate.organiser_url : null) ?? sourceUrl ?? null,
       organiser_name: candidate.organiser_name,
       organiser_contact: candidate.organiser_contact,
       description: candidate.description,
@@ -139,7 +156,7 @@ export async function saveCandidates(
       continue;
     }
 
-    const { error } = await supabase.from("events_pending").insert({
+    const pendingRow = {
       ...values,
       lat: location.coords?.lat ?? null,
       lng: location.coords?.lng ?? null,
@@ -150,10 +167,23 @@ export async function saveCandidates(
       duplicate_of: duplicate?.id ?? null,
       field_flags: fieldFlags,
       watched_source_id: watchedSourceId ?? null,
-    });
+    };
 
-    if (error) continue;
-    saved++;
+    if (sourceType !== "smart_ingest" || !canAutoPublish(pendingRow)) {
+      // Plain insert, no read-back: public submissions run as an anonymous
+      // visitor, who may add to the queue but not read it.
+      const { error } = await supabase.from("events_pending").insert(pendingRow);
+      if (error) continue;
+      queued++;
+    } else {
+      // Queued first, then published through the same path as the admin
+      // Approve button — a failed publish just leaves the row queued.
+      const { data: inserted, error } = await supabase.from("events_pending").insert(pendingRow).select().single();
+      if (error || !inserted) continue;
+      const result = await publishPendingRow(supabase, inserted as EventPendingRow, "auto", null);
+      if (result.error) queued++;
+      else published++;
+    }
 
     // Later candidates in this same batch (a source listing an event twice,
     // or two near-identical write-ups) dedup against this one too.
@@ -161,7 +191,7 @@ export async function saveCandidates(
     else comparisonPool.push({ ...values, id: `batch-${i}` } as unknown as EventRow);
   }
 
-  return saved;
+  return { queued, published };
 }
 
 // Borrow a postcode from a known venue, then check it with postcodes.io.

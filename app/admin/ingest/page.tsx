@@ -17,8 +17,8 @@ export default async function AdminIngestPage({
         Add events.
       </h1>
       <p style={{ maxWidth: 560, fontSize: 14, lineHeight: 1.6, color: "#4A4A46", marginTop: 22 }}>
-        Paste a listing URL, paste text (e.g. a Facebook post), or upload a poster image or CSV spreadsheet. One shared extraction engine reads whatever you give it and sends every event it finds to the{" "}
-        <Link href="/admin/pending" style={{ borderBottom: "1px solid #111111" }}>pending queue</Link> for review — nothing publishes automatically. Or skip extraction and fill in an event yourself.
+        Paste a listing URL, paste text (e.g. a Facebook post), or upload a poster image or CSV spreadsheet. One shared extraction engine reads whatever you give it: complete events publish straight to the calendar, and anything missing details goes to the{" "}
+        <Link href="/admin/pending" style={{ borderBottom: "1px solid #111111" }}>pending queue</Link> for review. Or skip extraction and fill in an event yourself.
       </p>
 
       <div style={{ display: "flex", gap: 56, flexWrap: "wrap", marginTop: 40 }}>

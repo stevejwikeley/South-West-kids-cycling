@@ -50,7 +50,7 @@ const handler = createMcpHandler(
             "Only in-scope: youth/junior cycling races, club coaching sessions, or events with clear under-16 age categories, in Devon, Cornwall, Somerset, or Bristol.",
             "Skip adult-only racing and anything outside those counties.",
             "Only future events (today is " + today + ").",
-            "Leave a field null rather than guessing — a human reviewer checks every submission before it goes live.",
+            "Leave a field null rather than guessing — complete submissions publish without a human check, and a missing field is what sends one to review instead.",
             "Age categories default to every category (u8-u16) when unstated, except gravel which defaults to u12-u16 (usually unsuitable for the youngest riders).",
             "Every event is treated as all-day — don't extract or infer a time.",
           ],
@@ -80,7 +80,7 @@ const handler = createMcpHandler(
       {
         title: "Submit an event candidate",
         description:
-          "Queues one event you found for human review on the admin pending page — it does not publish directly. Call get_search_context first so you know what's already covered. Duplicates of a live or already-queued event are silently skipped (checked by name, organiser, venue and date — allowing for reworded names and moved dates/venues), so it's safe to submit anything that looks like a plausible match. Fill in as much as you can find: if the event page doesn't give the venue's postcode or full address, look the venue up and include them (postcodes are checked automatically against the national postcode database). Always set organiser_name — for club training, the club's name.",
+          "Submits one event you found. If it has every required field (title, discipline, date, venue, region, organiser URL, and a known club for training) it goes live on the calendar straight away; otherwise it waits in the admin review queue. Call get_search_context first so you know what's already covered. Duplicates of a live or already-queued event are silently skipped (checked by name, organiser, venue and date — allowing for reworded names and moved dates/venues), so it's safe to submit anything that looks like a plausible match. Fill in as much as you can find: if the event page doesn't give the venue's postcode or full address, look the venue up and include them (postcodes are checked automatically against the national postcode database). Always set organiser_name — for club training, the club's name.",
         inputSchema: z.object({
           // kind is required on ExtractedEventSchema itself (the AI
           // extraction path always sets it) but optional here, defaulting
@@ -94,14 +94,16 @@ const handler = createMcpHandler(
       },
       async ({ event, source_url }) => {
         const supabase = createAdminClient();
-        const saved = await saveCandidates(supabase, [event], "mcp-web-search", source_url);
+        const { queued, published } = await saveCandidates(supabase, [event], "mcp-web-search", source_url);
         return {
           content: [
             {
               type: "text",
               text:
-                saved > 0
-                  ? `Queued "${event.title}" for review.`
+                published > 0
+                  ? `Published "${event.title}" — it had every required field.`
+                  : queued > 0
+                  ? `Queued "${event.title}" for review — it's missing details a human needs to fill in.`
                   : `Skipped "${event.title}" — it matches a live or already-queued event.`,
             },
           ],
@@ -112,7 +114,7 @@ const handler = createMcpHandler(
   {
     serverInfo: { name: "sw-kids-cycling-ingestion", version: "1.0.0" },
     instructions:
-      "Tools for finding new youth cycling events for South West Kids Cycling (southwestkidscycling.uk). Call get_search_context first, search the web yourself for events matching the criteria it returns, then call submit_event_candidate for anything that looks like a genuine match. Submissions land in a human review queue, not the live calendar.",
+      "Tools for finding new youth cycling events for South West Kids Cycling (southwestkidscycling.uk). Call get_search_context first, search the web yourself for events matching the criteria it returns, then call submit_event_candidate for anything that looks like a genuine match. Complete submissions publish straight to the calendar; incomplete ones land in a human review queue.",
   }
 );
 

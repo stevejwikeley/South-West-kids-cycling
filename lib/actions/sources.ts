@@ -27,7 +27,7 @@ async function requireAdmin(): Promise<ProfileRow> {
 function summarize(result: Awaited<ReturnType<typeof checkWatchedSource>>): string {
   if (result.status === "ok") {
     return result.found
-      ? `Checked it now — found ${result.found} event${result.found === 1 ? "" : "s"} (${result.saved} new to the pending queue).`
+      ? `Checked it now — found ${result.found} event${result.found === 1 ? "" : "s"} (${result.published} published, ${result.saved} new to the pending queue).`
       : "Checked it now — reachable, but no youth cycling events found on the page right now.";
   }
   return `Added, but the first check failed: ${result.error}`;

@@ -2,6 +2,7 @@ import "server-only";
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { checkWatchedSource } from "@/lib/ingestion/check-source";
+import { autoPublishQueue } from "@/lib/ingestion/publish-candidate";
 import type { WatchedSourceRow } from "@/lib/supabase/types";
 
 // Sequential, not parallel: each source costs one Claude extraction call, and
@@ -35,5 +36,10 @@ export async function GET(request: NextRequest) {
     results.push({ label: source.label, result });
   }
 
-  return NextResponse.json({ checked: results.length, skipped: (data?.length ?? 0) - sources.length, results });
+  // Publishes anything still queued that's complete enough to skip review —
+  // rows queued before auto-publish existed, or ones an admin has since
+  // filled in.
+  const sweep = await autoPublishQueue(supabase);
+
+  return NextResponse.json({ checked: results.length, skipped: (data?.length ?? 0) - sources.length, results, sweep });
 }

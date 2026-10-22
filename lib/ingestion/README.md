@@ -61,7 +61,7 @@ The system prompt in `extract-events.ts` encodes several non-obvious decisions �
 
 ## Confidence tracking (Phase 4)
 
-`field_flags`, `was_edited`, and `watched_sources.published_count`/`corrected_count` (added in `0007_phase4_confidence_tracking.sql`) exist to accumulate data on how often extraction needs correcting, per source. This is data collection only — nothing currently auto-publishes based on it. See the comment at the top of that migration before wiring up an auto-publish path; it's intentionally gated on having enough real correction-rate data first.
+`field_flags`, `was_edited`, and `watched_sources.published_count`/`corrected_count` (added in `0007_phase4_confidence_tracking.sql`) exist to accumulate data on how often extraction needs correcting, per source. Auto-publishing (see `publish-ready.ts` / `publish-candidate.ts`) is gated on completeness, not on correction rate — complete smart_ingest candidates skip review regardless of source. Auto-published candidates still count towards `published_count` (with `was_edited` false), so correction-rate data keeps accumulating if a per-source trust threshold is wanted later.
 
 ## Observability
 
