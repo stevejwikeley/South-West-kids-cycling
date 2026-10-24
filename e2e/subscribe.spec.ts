@@ -1,8 +1,17 @@
 import { test, expect, type Page } from "@playwright/test";
 
-// The feed URL is shown in a readonly field (components/CopyLink.tsx), and
-// Apple's panel renders two of them — the first is the one under test.
-const feedLink = (page: Page) => page.getByRole("textbox", { name: "Calendar feed link" }).first();
+// The feed URL is shown in a readonly field (components/CopyLink.tsx) under
+// the "set it up by hand" fallback, so reaching it means walking the
+// device → calendar decision tree first.
+const feedLink = (page: Page) => page.getByRole("textbox", { name: "Calendar feed link" });
+
+async function openGoogleManual(page: Page) {
+  await page.getByRole("button", { name: /On my computer/ }).click();
+  await page.getByRole("button", { name: /Google Calendar/ }).click();
+  await page.getByRole("button", { name: /Set it up by hand/ }).click();
+}
+
+const advanced = (page: Page) => page.getByRole("button", { name: /Advanced options/ }).click();
 
 // Runs against whatever is in the dev Supabase project (see playwright.config.ts)
 // — assertions here are about the feed URL the page builds and the shape of
@@ -11,15 +20,32 @@ test.describe("Subscribe page feed builder", () => {
   test("defaults to the unfiltered feed link", async ({ page }) => {
     await page.goto("/subscribe");
     await expect(page.getByText(/You'll get:/)).toContainText("Races and events");
+    // Filters are tucked away until asked for.
+    await expect(page.getByRole("button", { name: "Devon", exact: true })).toBeHidden();
 
-    await page.getByRole("button", { name: /Google Calendar/ }).click();
+    await openGoogleManual(page);
     await expect(feedLink(page)).toHaveValue("https://www.southwestkidscycling.uk/calendar.ics");
+    await expect(page.getByRole("link", { name: /Add to Google Calendar/ })).toHaveAttribute(
+      "href",
+      "https://calendar.google.com/calendar/render?cid=" + encodeURIComponent("webcal://www.southwestkidscycling.uk/calendar.ics")
+    );
+  });
+
+  test("Apple leaves get a one-tap webcal subscribe link", async ({ page }) => {
+    await page.goto("/subscribe");
+    await page.getByRole("button", { name: /On my phone/ }).click();
+    await page.getByRole("button", { name: /iPhone or iPad/ }).click();
+    await expect(page.getByRole("link", { name: /Add to iPhone Calendar/ })).toHaveAttribute(
+      "href",
+      "webcal://www.southwestkidscycling.uk/calendar.ics"
+    );
   });
 
   test("picking a discipline narrows the feed link", async ({ page }) => {
     await page.goto("/subscribe");
+    await advanced(page);
     await page.getByRole("button", { name: "Cyclocross", exact: true }).click();
-    await page.getByRole("button", { name: /Google Calendar/ }).click();
+    await openGoogleManual(page);
 
     // `kind` is only set when it's semantically needed (club training
     // included) — a discipline chip on its own stays at the default "race"
@@ -30,8 +56,9 @@ test.describe("Subscribe page feed builder", () => {
 
   test("picking a county adds region, and RESET clears everything", async ({ page }) => {
     await page.goto("/subscribe");
+    await advanced(page);
     await page.getByRole("button", { name: "Devon", exact: true }).click();
-    await page.getByRole("button", { name: /Google Calendar/ }).click();
+    await openGoogleManual(page);
 
     await expect(feedLink(page)).toHaveValue(/\/calendar\.ics\?region=devon$/);
 
@@ -45,6 +72,7 @@ test.describe("Subscribe page feed builder", () => {
   // scheduled in the dev dataset — no dev-DB dependency to keep in sync.
   test("filters arriving as query params are preselected", async ({ page }) => {
     await page.goto("/subscribe?discipline=xc&region=cornwall");
+    await advanced(page);
     await expect(page.getByRole("button", { name: "XC", exact: true })).toHaveAttribute("aria-pressed", "true");
     await expect(page.getByRole("button", { name: "Cornwall", exact: true })).toHaveAttribute("aria-pressed", "true");
     await expect(page.getByText(/You'll get:/)).toContainText("XC events in Cornwall");
@@ -56,6 +84,7 @@ test.describe("Subscribe page feed builder", () => {
   // test of the pure function.
   test("offers a discipline chip that has no upcoming events", async ({ page }) => {
     await page.goto("/subscribe");
+    await advanced(page);
     await expect(page.getByRole("button", { name: "XC", exact: true })).toBeVisible();
   });
 });
@@ -70,6 +99,7 @@ test.describe("Calendar page hands filters to /subscribe", () => {
     await expect(subscribeLink).toHaveAttribute("href", "/subscribe?region=devon");
 
     await subscribeLink.click();
+    await advanced(page);
     await expect(page.getByRole("button", { name: "Devon", exact: true })).toHaveAttribute("aria-pressed", "true");
   });
 });

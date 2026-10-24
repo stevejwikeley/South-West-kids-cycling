@@ -1,8 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useSyncExternalStore } from "react";
+import { CalendarCheck, Laptop, Smartphone } from "lucide-react";
 import CopyLink from "./CopyLink";
 import { trackEvent } from "@/lib/analytics";
+import { fmtDay } from "@/lib/format";
 import { eventDisc } from "@/lib/mock-data";
 import type { Club, Discipline, DisciplineId, Region } from "@/lib/types";
 
@@ -10,14 +12,33 @@ import type { Club, Discipline, DisciplineId, Region } from "@/lib/types";
 // into someone's calendar app and stays there for years, so it must never be
 // a preview or localhost origin. Same reasoning as the embed builder.
 const SITE_URL = "https://www.southwestkidscycling.uk";
+const CALENDAR_NAME = "South West Kids Cycling";
 
-type Platform = "google" | "apple" | "outlook";
+// The decision tree: device first, then the calendar app on that device.
+// Each leaf gets exactly one primary action — a link that opens the app's
+// own "subscribe to this calendar" flow — so nobody has to pick between
+// options they don't understand. The copy-and-paste route is still there,
+// folded away, for when the one-tap link doesn't take.
+type Device = "phone" | "computer";
+type Platform = "iphone" | "android" | "google" | "mac" | "outlook" | "other";
 
-const PLATFORMS: { id: Platform; label: string; sub: string }[] = [
-  { id: "google", label: "Google Calendar", sub: "Gmail, Android" },
-  { id: "apple", label: "Apple Calendar", sub: "Mac, iPhone, iPad" },
-  { id: "outlook", label: "Outlook / other", sub: "Outlook.com, Office 365, other apps" },
+const DEVICES: { id: Device; label: string; Icon: typeof Smartphone }[] = [
+  { id: "phone", label: "On my phone", Icon: Smartphone },
+  { id: "computer", label: "On my computer", Icon: Laptop },
 ];
+
+const PLATFORMS: Record<Device, { id: Platform; label: string; sub: string }[]> = {
+  phone: [
+    { id: "iphone", label: "iPhone or iPad", sub: "Apple Calendar" },
+    { id: "android", label: "Android", sub: "Google Calendar" },
+  ],
+  computer: [
+    { id: "google", label: "Google Calendar", sub: "Gmail, Android" },
+    { id: "mac", label: "Apple Calendar", sub: "Mac" },
+    { id: "outlook", label: "Outlook", sub: "Outlook.com, Microsoft 365" },
+    { id: "other", label: "Something else", sub: "Any app that takes a link" },
+  ],
+};
 
 const REGION_OPTIONS: [Region | "all", string][] = [
   ["all", "All"],
@@ -27,10 +48,25 @@ const REGION_OPTIONS: [Region | "all", string][] = [
   ["bristol", "Bristol"],
 ];
 
+// Just the fields the "in your calendar" preview draws — the page passes
+// these rather than whole CalendarEvents so the client bundle stays small.
+export interface PreviewEvent {
+  id: string;
+  title: string;
+  date: string;
+  discipline: DisciplineId;
+  region: Region;
+  venue: string;
+}
+
+const PREVIEW_COUNT = 3;
+
 const stepStyle: React.CSSProperties = { fontSize: 14, lineHeight: 1.6, color: "#4A4A46", marginBottom: 10 };
 const stepNumStyle: React.CSSProperties = { fontWeight: 700, color: "#111111" };
-const subheadStyle: React.CSSProperties = { fontWeight: 700, fontSize: 14.5, marginBottom: 10, marginTop: 24 };
 const labelStyle: React.CSSProperties = { fontSize: 10.5, color: "#6B6B66", display: "block", marginBottom: 8, letterSpacing: "0.03em" };
+const questionStyle: React.CSSProperties = { fontSize: 11, letterSpacing: "0.08em", color: "#6B6B66", marginBottom: 12 };
+const primaryButtonStyle: React.CSSProperties = { display: "inline-flex", alignItems: "center", gap: 8, background: "#E0102A", color: "#FAFAF8", padding: "15px 26px", fontWeight: 700, fontSize: 15, textDecoration: "none" };
+const disclosureStyle: React.CSSProperties = { display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", padding: 0, fontSize: 11, fontWeight: 700, letterSpacing: "0.03em", color: "#6B6B66", cursor: "pointer" };
 
 function Callout({ children }: { children: React.ReactNode }) {
   return (
@@ -40,14 +76,76 @@ function Callout({ children }: { children: React.ReactNode }) {
   );
 }
 
+function Disclosure({ label, open, onToggle, children }: { label: string; open: boolean; onToggle: () => void; children: React.ReactNode }) {
+  return (
+    <div>
+      <button type="button" aria-expanded={open} onClick={onToggle} className="mono" style={disclosureStyle}>
+        <span aria-hidden style={{ display: "inline-block", transform: open ? "rotate(90deg)" : "none", transition: "transform 120ms" }}>
+          ▸
+        </span>
+        {label}
+      </button>
+      {open && <div style={{ marginTop: 14 }}>{children}</div>}
+    </div>
+  );
+}
+
+function ChoiceCard({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      type="button"
+      aria-pressed={active}
+      onClick={onClick}
+      style={{
+        textAlign: "left",
+        padding: "14px 18px",
+        background: active ? "#111111" : "#FFFFFF",
+        color: active ? "#FAFAF8" : "#111111",
+        border: `1px solid ${active ? "#111111" : "#D8D6D0"}`,
+        cursor: "pointer",
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+
+// Best-guess starting point from the browser, so most people only have to
+// confirm rather than choose. It only ever preselects the device — the
+// calendar app is still the visitor's call (plenty of iPhone owners live in
+// Google Calendar).
+const noopSubscribe = () => () => {};
+
+function guessDevice(): Device | null {
+  if (typeof navigator === "undefined") return null;
+  const ua = navigator.userAgent;
+  if (/iPhone|iPad|iPod|Android/i.test(ua)) return "phone";
+  if (/Macintosh|Windows|Linux|CrOS/i.test(ua)) return "computer";
+  return null;
+}
+
+// Mirrors the feed's own filtering (app/calendar.ics/route.ts) closely
+// enough to give an honest preview: races only, cancelled dropped, and a
+// "both" event counts as Devon and as Cornwall. Training isn't in the
+// page's event list at all, so it's described in words instead.
+function matchesFeed(e: PreviewEvent, disciplines: Set<DisciplineId>, region: Region | "all") {
+  if (disciplines.size > 0 && !disciplines.has(e.discipline)) return false;
+  if (region === "all") return true;
+  if (e.region === region) return true;
+  return e.region === "both" && (region === "devon" || region === "cornwall");
+}
+
 export default function SubscribeSelector({
   clubs = [],
+  events = [],
   disciplines: availableDisciplines = [],
   initialDisciplines = [],
   initialRegion = "all",
   initialClub = "all",
 }: {
   clubs?: Club[];
+  // Upcoming, non-cancelled races, for the "in your calendar" preview.
+  events?: PreviewEvent[];
   // The chips to render — the full curated discipline list (see
   // app/subscribe/page.tsx and lib/subscribable-disciplines.ts), plus any
   // discipline genuinely present in the data that isn't in that curated list
@@ -62,12 +160,35 @@ export default function SubscribeSelector({
   initialRegion?: Region | "all";
   initialClub?: string;
 }) {
+  const [chosenDevice, setChosenDevice] = useState<Device | null>(null);
+  // navigator only exists in the browser, so the server snapshot is null and
+  // the guess appears after hydration without a server/client mismatch.
+  const guessedDevice = useSyncExternalStore(noopSubscribe, guessDevice, () => null);
+  const device = chosenDevice ?? guessedDevice;
   const [platform, setPlatform] = useState<Platform | null>(null);
   const [disciplines, setDisciplines] = useState<Set<DisciplineId>>(new Set(initialDisciplines));
   const [region, setRegion] = useState<Region | "all">(initialRegion);
   const [club, setClub] = useState(initialClub);
   const [includeTraining, setIncludeTraining] = useState(false);
   const [trainingOpen, setTrainingOpen] = useState(false);
+  // Always starts closed: the default is every race and event (no club
+  // training), which is what most people want. Filters carried over from
+  // the calendar page still apply — the "You'll get" line spells them out.
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [manualOpen, setManualOpen] = useState(false);
+
+  function chooseDevice(d: Device) {
+    setChosenDevice(d);
+    setPlatform(null);
+    setManualOpen(false);
+    trackEvent("subscribe_device_select", { device: d, guessed: d === guessedDevice });
+  }
+
+  function choosePlatform(p: Platform) {
+    setPlatform(p);
+    setManualOpen(false);
+    trackEvent("subscribe_platform_select", { platform: p });
+  }
 
   function toggleDiscipline(id: DisciplineId) {
     setDisciplines((prev) => {
@@ -96,6 +217,14 @@ export default function SubscribeSelector({
     const query = params.toString();
     return `${SITE_URL}/calendar.ics${query ? `?${query}` : ""}`;
   }, [disciplines, region, club, includeTraining]);
+
+  // webcal:// is what tells Apple Calendar (and Outlook on the desktop) to
+  // *subscribe* rather than import a one-off copy. Google and Outlook on the
+  // web take the feed through their own "add by URL" pages instead.
+  const webcalUrl = feedUrl.replace(/^https:/, "webcal:");
+  const googleUrl = `https://calendar.google.com/calendar/render?cid=${encodeURIComponent(webcalUrl)}`;
+  const outlookUrl = (host: string) =>
+    `https://${host}/calendar/0/addfromweb?url=${encodeURIComponent(feedUrl)}&name=${encodeURIComponent(CALENDAR_NAME)}`;
 
   const isFiltered = disciplines.size > 0 || region !== "all" || club !== "all" || includeTraining;
 
@@ -131,6 +260,10 @@ export default function SubscribeSelector({
     return [kindPart, regionPart ? `in ${regionPart}` : null].filter(Boolean).join(" ");
   }, [disciplines, region, club, clubs, includeTraining]);
 
+  const matching = useMemo(() => events.filter((e) => matchesFeed(e, disciplines, region)), [events, disciplines, region]);
+  const preview = matching.slice(0, PREVIEW_COUNT);
+  const moreCount = matching.length - preview.length;
+
   function reset() {
     setDisciplines(new Set());
     setRegion("all");
@@ -139,204 +272,290 @@ export default function SubscribeSelector({
     trackEvent("subscribe_filter_reset", {});
   }
 
+  const oneClick = (href: string, label: string, external = false) => (
+    <a
+      href={href}
+      {...(external ? { target: "_blank", rel: "noreferrer" } : {})}
+      onClick={() => trackEvent("subscribe_one_click", { platform })}
+      style={primaryButtonStyle}
+    >
+      <CalendarCheck size={17} /> {label}
+    </a>
+  );
+
+  const copyStep = (
+    <>
+      <p style={stepStyle}><span style={stepNumStyle}>1.</span> Copy this link:</p>
+      <CopyLink url={feedUrl} />
+    </>
+  );
+
   return (
     <div>
-      <p className="mono" style={{ fontSize: 11, letterSpacing: "0.08em", color: "#6B6B66", marginBottom: 6 }}>
-        WHAT DO YOU WANT IN YOUR CALENDAR?
-      </p>
-      <p style={{ fontSize: 13.5, lineHeight: 1.6, color: "#6B6B66", marginBottom: 20, maxWidth: 480 }}>
-        Leave everything as it is for the full calendar, or narrow it down — pick a club, a discipline, a county, or any combination. Your subscription updates itself either way.
-      </p>
-
-      <div style={{ marginBottom: 22 }}>
-        <label className="mono" style={labelStyle}>DISCIPLINE</label>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          {availableDisciplines.map((d) => {
-            const active = disciplines.has(d.id);
+      {/* What's going in — shown as it'll look in a calendar app, so it's
+          obvious the events land in *their* calendar, not on this site. */}
+      <div style={{ border: "1px solid #E4E2DD", background: "#FFFFFF" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 16px", borderBottom: "1px solid #E4E2DD", background: "#F3F2EE" }}>
+          <span aria-hidden style={{ width: 10, height: 10, borderRadius: 3, background: "#E0102A" }} />
+          <span style={{ fontSize: 13, fontWeight: 700 }}>{CALENDAR_NAME}</span>
+          <span className="mono" style={{ marginLeft: "auto", fontSize: 10, letterSpacing: "0.08em", color: "#6B6B66" }}>IN YOUR CALENDAR</span>
+        </div>
+        <ul aria-label="Coming up in this calendar" style={{ listStyle: "none", margin: 0, padding: "6px 0" }}>
+          {preview.map((e) => {
+            const d = fmtDay(e.date);
+            const disc = eventDisc(e.discipline);
             return (
-              <button
-                key={d.id}
-                type="button"
-                aria-pressed={active}
-                onClick={() => toggleDiscipline(d.id)}
-                style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 13px", borderRadius: 999, border: `1px solid ${active ? d.color : "#D8D6D0"}`, background: active ? d.color : "transparent", color: active ? "#FAFAF8" : "#4A4A46", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
-              >
-                <span style={{ width: 6, height: 6, borderRadius: "50%", background: active ? "#FAFAF8" : d.color }} />
-                {d.label}
-              </button>
+              <li key={e.id} style={{ display: "flex", gap: 14, alignItems: "center", padding: "8px 16px" }}>
+                <div style={{ width: 40, textAlign: "center", flexShrink: 0 }}>
+                  <div className="mono" style={{ fontSize: 9.5, color: "#6B6B66", letterSpacing: "0.06em" }}>{d.dow}</div>
+                  <div style={{ fontSize: 19, fontWeight: 700, lineHeight: 1.1 }}>{d.day}</div>
+                  <div className="mono" style={{ fontSize: 9.5, color: "#6B6B66" }}>{d.mon}</div>
+                </div>
+                <div style={{ flex: 1, minWidth: 0, borderLeft: `3px solid ${disc.color}`, background: "#F7F6F3", padding: "7px 10px" }}>
+                  <div style={{ fontSize: 13.5, fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{e.title}</div>
+                  <div style={{ fontSize: 12, color: "#6B6B66", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>All day · {e.venue}</div>
+                </div>
+              </li>
             );
           })}
+          {preview.length === 0 && (
+            <li style={{ padding: "10px 16px", fontSize: 13, color: "#6B6B66" }}>
+              Nothing scheduled for this selection right now — new events appear automatically as they&apos;re added.
+            </li>
+          )}
+        </ul>
+        <div style={{ padding: "10px 16px 14px", borderTop: "1px solid #E4E2DD", fontSize: 13, color: "#4A4A46", lineHeight: 1.6 }}>
+          <span>
+            You&apos;ll get: <strong style={{ color: "#111111" }}>{summary}</strong>
+          </span>
+          {moreCount > 0 && <span> — {moreCount} more coming up</span>}
+          <span>, plus anything new as it&apos;s added.</span>
+          <div style={{ display: "flex", gap: 14, alignItems: "center", marginTop: 10 }}>
+            <button type="button" aria-expanded={filtersOpen} onClick={() => setFiltersOpen((o) => !o)} className="mono" style={disclosureStyle}>
+              <span aria-hidden style={{ display: "inline-block", transform: filtersOpen ? "rotate(90deg)" : "none", transition: "transform 120ms" }}>
+                ▸
+              </span>
+              Advanced options
+            </button>
+            {isFiltered && (
+              <button
+                type="button"
+                onClick={reset}
+                className="mono"
+                style={{ marginLeft: "auto", background: "none", border: "1px solid #D8D6D0", padding: "5px 10px", fontSize: 10.5, fontWeight: 700, color: "#6B6B66", cursor: "pointer" }}
+              >
+                RESET
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
-      <div style={{ marginBottom: 22 }}>
-        <label className="mono" style={labelStyle}>COUNTY</label>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          {REGION_OPTIONS.map(([val, label]) => (
-            <button
-              key={val}
-              type="button"
-              aria-pressed={region === val}
-              onClick={() => { setRegion(val); trackEvent("subscribe_filter_region", { region: val }); }}
-              className="mono"
-              style={{ padding: "8px 15px", fontSize: 11, fontWeight: 700, letterSpacing: "0.03em", background: region === val ? "#111111" : "transparent", color: region === val ? "#FAFAF8" : "#6B6B66", border: "1px solid #D8D6D0", cursor: "pointer" }}
-            >
-              {label}
-            </button>
+      {filtersOpen && (
+        <div style={{ border: "1px solid #E4E2DD", borderTop: "none", padding: "18px 16px 4px" }}>
+          <div style={{ marginBottom: 22 }}>
+            <label className="mono" style={labelStyle}>DISCIPLINE</label>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              {availableDisciplines.map((d) => {
+                const active = disciplines.has(d.id);
+                return (
+                  <button
+                    key={d.id}
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() => toggleDiscipline(d.id)}
+                    style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 13px", borderRadius: 999, border: `1px solid ${active ? d.color : "#D8D6D0"}`, background: active ? d.color : "transparent", color: active ? "#FAFAF8" : "#4A4A46", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
+                  >
+                    <span style={{ width: 6, height: 6, borderRadius: "50%", background: active ? "#FAFAF8" : d.color }} />
+                    {d.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div style={{ marginBottom: 22 }}>
+            <label className="mono" style={labelStyle}>COUNTY</label>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              {REGION_OPTIONS.map(([val, label]) => (
+                <button
+                  key={val}
+                  type="button"
+                  aria-pressed={region === val}
+                  onClick={() => { setRegion(val); trackEvent("subscribe_filter_region", { region: val }); }}
+                  className="mono"
+                  style={{ padding: "8px 15px", fontSize: 11, fontWeight: 700, letterSpacing: "0.03em", background: region === val ? "#111111" : "transparent", color: region === val ? "#FAFAF8" : "#6B6B66", border: "1px solid #D8D6D0", cursor: "pointer" }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div style={{ marginBottom: 22 }}>
+            <Disclosure label="Club training" open={trainingOpen} onToggle={() => setTrainingOpen((o) => !o)}>
+              <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13.5, color: "#4A4A46", cursor: "pointer" }}>
+                <input
+                  type="checkbox"
+                  checked={includeTraining}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    setIncludeTraining(checked);
+                    trackEvent("subscribe_filter_training", { active: checked });
+                  }}
+                />
+                Also include club training sessions
+              </label>
+              {/* Club only ever narrows training (see app/calendar.ics/
+                  route.ts), so it lives here rather than beside the race
+                  filters where it'd read as narrowing races too. */}
+              {clubs.length > 0 && (
+                <div style={{ marginTop: 14 }}>
+                  <label className="mono" style={labelStyle} htmlFor="subscribe-club">CLUB</label>
+                  <select
+                    id="subscribe-club"
+                    value={club}
+                    onChange={(e) => { setClub(e.target.value); trackEvent("subscribe_filter_club", { club_id: e.target.value }); }}
+                    style={{ width: "100%", maxWidth: 360, background: "#FFFFFF", border: "1px solid #D8D6D0", color: "#111111", padding: "9px 11px", fontSize: 13.5 }}
+                  >
+                    <option value="all">All clubs</option>
+                    {clubs.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                  <p style={{ fontSize: 12, color: "#6B6B66", marginTop: 8, maxWidth: 420 }}>
+                    Narrows training to one club&apos;s sessions. Races and events aren&apos;t affected.
+                  </p>
+                </div>
+              )}
+            </Disclosure>
+          </div>
+        </div>
+      )}
+
+      <div style={{ marginTop: 40 }}>
+        <p className="mono" style={questionStyle}>WHERE DO YOU WANT IT?</p>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 10 }}>
+          {DEVICES.map(({ id, label, Icon }) => (
+            <ChoiceCard key={id} active={device === id} onClick={() => chooseDevice(id)}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, fontWeight: 700, fontSize: 15 }}>
+                <Icon size={18} /> {label}
+              </div>
+            </ChoiceCard>
           ))}
         </div>
       </div>
 
-      <div style={{ marginBottom: 22 }}>
-        <label className="mono" style={labelStyle} htmlFor={clubs.length > 0 ? "subscribe-club" : undefined}>CLUB</label>
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
-          {clubs.length > 0 && (
-            <select
-              id="subscribe-club"
-              value={club}
-              onChange={(e) => { setClub(e.target.value); trackEvent("subscribe_filter_club", { club_id: e.target.value }); }}
-              style={{ flex: "1 1 220px", maxWidth: 360, background: "#FFFFFF", border: "1px solid #D8D6D0", color: "#111111", padding: "9px 11px", fontSize: 13.5 }}
-            >
-              <option value="all">All clubs</option>
-              {clubs.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
+      {device && (
+        <div style={{ marginTop: 28 }}>
+          <p className="mono" style={questionStyle}>WHICH CALENDAR?</p>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 10 }}>
+            {PLATFORMS[device].map((p) => (
+              <ChoiceCard key={p.id} active={platform === p.id} onClick={() => choosePlatform(p.id)}>
+                <div style={{ fontWeight: 700, fontSize: 15 }}>{p.label}</div>
+                <div className="mono" style={{ fontSize: 10.5, color: platform === p.id ? "#D8D6D0" : "#6B6B66", marginTop: 3 }}>{p.sub}</div>
+              </ChoiceCard>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {platform && (
+        <div style={{ marginTop: 28, padding: "24px 20px", border: "2px solid #111111", background: "#FFFFFF" }}>
+          {platform === "iphone" && (
+            <>
+              {oneClick(webcalUrl, "Add to iPhone Calendar")}
+              <p style={{ ...stepStyle, marginTop: 16 }}>Tap <strong>Subscribe</strong> when your phone asks, then <strong>Add</strong>. That&apos;s it — events show up in the Calendar app and keep themselves up to date.</p>
+              <Disclosure label="Didn't work? Set it up by hand" open={manualOpen} onToggle={() => setManualOpen((o) => !o)}>
+                {copyStep}
+                <p style={{ ...stepStyle, marginTop: 14 }}><span style={stepNumStyle}>2.</span> Open <strong>Settings → Calendar → Accounts → Add Account → Other → Add Subscribed Calendar</strong>.</p>
+                <p style={stepStyle}><span style={stepNumStyle}>3.</span> Paste the link into the &ldquo;Server&rdquo; field, then tap <strong>Next</strong> → <strong>Save</strong>.</p>
+                <p style={{ fontSize: 12, color: "#6B6B66" }}>The exact menu wording moves around slightly between iOS versions — look for &ldquo;Add Subscribed Calendar&rdquo; under Calendar accounts if this doesn&apos;t match exactly.</p>
+              </Disclosure>
+            </>
           )}
-        </div>
-        <p style={{ fontSize: 12, color: "#6B6B66", marginTop: 8, maxWidth: 420 }}>
-          This only narrows training, not races and events — most races aren&apos;t tied to one club the way training is. Tick &ldquo;Also include club training sessions&rdquo; below to add just this club&apos;s sessions.
-        </p>
-      </div>
 
-      <div style={{ marginBottom: 22 }}>
-        <button
-          type="button"
-          aria-expanded={trainingOpen}
-          onClick={() => setTrainingOpen((o) => !o)}
-          className="mono"
-          style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", padding: 0, fontSize: 11, fontWeight: 700, letterSpacing: "0.03em", color: "#6B6B66", cursor: "pointer" }}
-        >
-          <span aria-hidden style={{ display: "inline-block", transform: trainingOpen ? "rotate(90deg)" : "none", transition: "transform 120ms" }}>
-            ▸
-          </span>
-          Club training
-        </button>
-        {trainingOpen && (
-          <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 10, fontSize: 13.5, color: "#4A4A46", cursor: "pointer" }}>
-            <input
-              type="checkbox"
-              checked={includeTraining}
-              onChange={(e) => {
-                const checked = e.target.checked;
-                setIncludeTraining(checked);
-                trackEvent("subscribe_filter_training", { active: checked });
-              }}
-            />
-            Also include club training sessions
-          </label>
-        )}
-      </div>
+          {(platform === "android" || platform === "google") && (
+            <>
+              {oneClick(googleUrl, "Add to Google Calendar", true)}
+              <p style={{ ...stepStyle, marginTop: 16 }}>
+                Google Calendar opens and asks to add the calendar — click <strong>Add</strong>. It then appears on every device signed in to that Google account, and Google checks for updates roughly once a day.
+              </p>
+              {platform === "android" && (
+                <Callout>
+                  Not showing in the Calendar app on your phone? Open the app → <strong>Settings</strong> → tap <strong>{CALENDAR_NAME}</strong> → turn on <strong>Sync</strong>. Google leaves new subscriptions switched off on Android until you do.
+                </Callout>
+              )}
+              <div style={{ marginTop: 18 }}>
+                <Disclosure label="Didn't work? Set it up by hand" open={manualOpen} onToggle={() => setManualOpen((o) => !o)}>
+                  {copyStep}
+                  <p style={{ ...stepStyle, marginTop: 18 }}><span style={stepNumStyle}>2.</span> Open <a href="https://calendar.google.com" target="_blank" rel="noreferrer" style={{ borderBottom: "1px solid #111111" }}>calendar.google.com</a> in a web browser — on a phone, switch to the desktop site, as the app can&apos;t add calendars by link.</p>
+                  <p style={stepStyle}><span style={stepNumStyle}>3.</span> On the left, next to &ldquo;Other calendars&rdquo;, click <strong>+</strong> → <strong>From URL</strong>.</p>
+                  <p style={stepStyle}><span style={stepNumStyle}>4.</span> Paste the link and click <strong>Add calendar</strong>.</p>
+                  <Callout>
+                    <strong>Don&apos;t use &ldquo;Import&rdquo;</strong> — that adds a one-off snapshot that won&apos;t update. Use <strong>Other calendars → From URL</strong> instead, so it keeps itself current.
+                  </Callout>
+                </Disclosure>
+              </div>
+            </>
+          )}
 
-      <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", padding: "12px 14px", background: "#F3F2EE", border: "1px solid #E4E2DD", marginBottom: 32 }}>
-        <span style={{ fontSize: 13.5, color: "#4A4A46" }}>
-          You&apos;ll get: <strong style={{ color: "#111111" }}>{summary}</strong>
-        </span>
-        {isFiltered && (
-          <button
-            type="button"
-            onClick={reset}
-            className="mono"
-            style={{ marginLeft: "auto", background: "none", border: "1px solid #D8D6D0", padding: "5px 10px", fontSize: 10.5, fontWeight: 700, color: "#6B6B66", cursor: "pointer" }}
-          >
-            RESET
-          </button>
-        )}
-      </div>
+          {platform === "mac" && (
+            <>
+              {oneClick(webcalUrl, "Add to Apple Calendar")}
+              <p style={{ ...stepStyle, marginTop: 16 }}>Calendar opens and asks to subscribe — click <strong>Subscribe</strong>, set <strong>Auto-refresh</strong> to &ldquo;Every day&rdquo;, then click <strong>OK</strong>.</p>
+              <Disclosure label="Didn't work? Set it up by hand" open={manualOpen} onToggle={() => setManualOpen((o) => !o)}>
+                {copyStep}
+                <p style={{ ...stepStyle, marginTop: 14 }}><span style={stepNumStyle}>2.</span> Open the <strong>Calendar</strong> app → menu bar → <strong>File → New Calendar Subscription…</strong></p>
+                <p style={stepStyle}><span style={stepNumStyle}>3.</span> Paste the link and click <strong>Subscribe</strong>.</p>
+                <p style={stepStyle}><span style={stepNumStyle}>4.</span> Set <strong>Auto-refresh</strong> to &ldquo;Every day&rdquo;, then click <strong>OK</strong>.</p>
+              </Disclosure>
+            </>
+          )}
 
-      <p className="mono" style={{ fontSize: 11, letterSpacing: "0.08em", color: "#6B6B66", marginBottom: 12 }}>
-        WHICH CALENDAR DO YOU USE?
-      </p>
-      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 28 }}>
-        {PLATFORMS.map((p) => {
-          const active = platform === p.id;
-          return (
-            <button
-              key={p.id}
-              type="button"
-              onClick={() => { setPlatform(p.id); trackEvent("subscribe_platform_select", { platform: p.id }); }}
-              style={{
-                textAlign: "left",
-                padding: "14px 18px",
-                background: active ? "#111111" : "#FFFFFF",
-                color: active ? "#FAFAF8" : "#111111",
-                border: `1px solid ${active ? "#111111" : "#D8D6D0"}`,
-                cursor: "pointer",
-                minWidth: 160,
-              }}
-            >
-              <div style={{ fontWeight: 700, fontSize: 15 }}>{p.label}</div>
-              <div className="mono" style={{ fontSize: 10.5, color: active ? "#D8D6D0" : "#6B6B66", marginTop: 3 }}>{p.sub}</div>
-            </button>
-          );
-        })}
-      </div>
+          {platform === "outlook" && (
+            <>
+              {oneClick(outlookUrl("outlook.live.com"), "Add to Outlook", true)}
+              <p style={{ ...stepStyle, marginTop: 16 }}>
+                Outlook opens with the calendar ready to add — click <strong>Import</strong> (despite the name, this subscribes, so it keeps itself up to date).
+              </p>
+              <p style={{ fontSize: 13, color: "#6B6B66", marginBottom: 18 }}>
+                Work or school account?{" "}
+                <a href={outlookUrl("outlook.office.com")} target="_blank" rel="noreferrer" onClick={() => trackEvent("subscribe_one_click", { platform: "outlook365" })} style={{ borderBottom: "1px solid #6B6B66" }}>
+                  Use this link instead
+                </a>
+                .
+              </p>
+              <Disclosure label="Didn't work? Set it up by hand" open={manualOpen} onToggle={() => setManualOpen((o) => !o)}>
+                {copyStep}
+                <p style={{ ...stepStyle, marginTop: 18 }}><span style={stepNumStyle}>2.</span> In Outlook, go to <strong>Add calendar → Subscribe from web</strong>.</p>
+                <p style={stepStyle}><span style={stepNumStyle}>3.</span> Paste the link, then click <strong>Import</strong>.</p>
+              </Disclosure>
+            </>
+          )}
 
-      {platform === "google" && (
-        <div>
-          <p style={stepStyle}><span style={stepNumStyle}>1.</span> Copy this link:</p>
-          <CopyLink url={feedUrl} />
-          <p style={{ ...stepStyle, marginTop: 18 }}><span style={stepNumStyle}>2.</span> On a computer, open <a href="https://calendar.google.com" target="_blank" rel="noreferrer" style={{ borderBottom: "1px solid #111111" }}>calendar.google.com</a> — this step needs a desktop browser, not the phone app.</p>
-          <p style={stepStyle}><span style={stepNumStyle}>3.</span> On the left, next to &ldquo;Other calendars&rdquo;, click <strong>+</strong> → <strong>From URL</strong>.</p>
-          <p style={stepStyle}><span style={stepNumStyle}>4.</span> Paste the link and click <strong>Add calendar</strong>.</p>
-          <p style={stepStyle}><span style={stepNumStyle}>5.</span> It&apos;ll appear on your phone too once it syncs — Google checks for updates roughly once a day.</p>
-          <Callout>
-            <strong>Don&apos;t use &ldquo;Import&rdquo;</strong> — that adds a one-off snapshot that won&apos;t update. Use <strong>Other calendars → From URL</strong> instead, so it keeps itself current.
-          </Callout>
-        </div>
-      )}
+          {platform === "other" && (
+            <>
+              {copyStep}
+              <p style={{ ...stepStyle, marginTop: 18 }}><span style={stepNumStyle}>2.</span> In your calendar app, look for an option along the lines of <strong>&ldquo;Subscribe from web&rdquo;</strong>, <strong>&ldquo;Add calendar from URL&rdquo;</strong>, or <strong>&ldquo;Add by link&rdquo;</strong>.</p>
+              <p style={stepStyle}><span style={stepNumStyle}>3.</span> Paste the link and confirm.</p>
+            </>
+          )}
 
-      {platform === "apple" && (
-        <div>
-          <div style={subheadStyle}>On a Mac</div>
-          <p style={stepStyle}>Two ways to do this — pick based on whether you want it to stay up to date:</p>
-          <p style={{ ...stepStyle, fontWeight: 700 }}>Quick, one-off (won&apos;t update)</p>
-          <p style={stepStyle}>
-            <a
-              href={feedUrl}
-              style={{ display: "inline-block", background: "#111111", color: "#FAFAF8", padding: "9px 18px", fontWeight: 700, fontSize: 13, textDecoration: "none" }}
-            >
-              Open in Calendar
-            </a>
-            {" "}— downloads today&apos;s events into Calendar as a one-time import. New events and booking links added later won&apos;t show up.
+          {/* The one-off import is deliberately the quietest thing here:
+              it's a snapshot that never updates, which is almost never what
+              anyone actually wants. */}
+          <p style={{ fontSize: 12, color: "#6B6B66", marginTop: 24, marginBottom: 0 }}>
+            Only want a one-off copy?{" "}
+            <a href={feedUrl} download="south-west-kids-cycling.ics" onClick={() => trackEvent("subscribe_oneoff_download", { platform })} style={{ borderBottom: "1px solid #6B6B66" }}>
+              Download the file
+            </a>{" "}
+            instead — it won&apos;t pick up new events or changes.
           </p>
-          <p style={{ ...stepStyle, fontWeight: 700, marginTop: 18 }}>Recommended — stays up to date automatically</p>
-          <p style={stepStyle}><span style={stepNumStyle}>1.</span> Copy this link:</p>
-          <CopyLink url={feedUrl} />
-          <p style={{ ...stepStyle, marginTop: 14 }}><span style={stepNumStyle}>2.</span> Open the <strong>Calendar</strong> app → menu bar → <strong>File → New Calendar Subscription…</strong></p>
-          <p style={stepStyle}><span style={stepNumStyle}>3.</span> Paste the link and click <strong>Subscribe</strong>.</p>
-          <p style={stepStyle}><span style={stepNumStyle}>4.</span> In the dialog that appears, set <strong>Auto-refresh</strong> to &ldquo;Every day&rdquo;, then click <strong>OK</strong>.</p>
-
-          <div style={subheadStyle}>On iPhone / iPad</div>
-          <p style={stepStyle}><span style={stepNumStyle}>1.</span> Copy this link:</p>
-          <CopyLink url={feedUrl} />
-          <p style={{ ...stepStyle, marginTop: 14 }}><span style={stepNumStyle}>2.</span> Open <strong>Settings → Calendar → Accounts → Add Account → Other → Add Subscribed Calendar</strong>.</p>
-          <p style={stepStyle}><span style={stepNumStyle}>3.</span> Paste the link into the &ldquo;Server&rdquo; field, then tap <strong>Next</strong> → <strong>Save</strong>.</p>
-          <p style={{ fontSize: 12, color: "#6B6B66" }}>The exact menu wording moves around slightly between iOS versions — look for &ldquo;Add Subscribed Calendar&rdquo; under Calendar accounts if this doesn&apos;t match exactly.</p>
         </div>
       )}
 
-      {platform === "outlook" && (
-        <div>
-          <p style={stepStyle}><span style={stepNumStyle}>1.</span> Copy this link:</p>
-          <CopyLink url={feedUrl} />
-          <p style={{ ...stepStyle, marginTop: 18 }}><span style={stepNumStyle}>2.</span> In your calendar app, look for an option along the lines of <strong>&ldquo;Subscribe from web&rdquo;</strong>, <strong>&ldquo;Add calendar from URL&rdquo;</strong>, or <strong>&ldquo;Add by link&rdquo;</strong> — the exact wording depends on the app.</p>
-          <p style={stepStyle}><span style={stepNumStyle}>3.</span> Paste the link and confirm.</p>
-          <p style={{ ...stepStyle, marginTop: 14 }}>For Outlook.com specifically: <strong>Add calendar → Subscribe from web</strong>, paste the link, then <strong>Import</strong>.</p>
-        </div>
-      )}
-
-      {isFiltered && (
+      {isFiltered && platform && (
         <p style={{ fontSize: 12.5, color: "#6B6B66", marginTop: 24, lineHeight: 1.6, maxWidth: 520 }}>
-          Changing the filters above changes the link — if you&apos;ve already subscribed and want something different, copy the new link and add it as a second calendar (or remove the old one first).
+          Already subscribed and want a different selection? Add this as a second calendar, or remove the old one first.
         </p>
       )}
     </div>
