@@ -122,7 +122,6 @@ export default function CalendarPage({ events, clubs = [], training = [], isAdmi
             More ways to subscribe
           </Link>
         </div>
-        <TrainingThisWeek sessions={training} clubs={clubs} />
       </header>
 
       <div style={{ position: "sticky", top: 0, zIndex: 20, background: "#FAFAF8", borderTop: "1px solid #E4E2DD", borderBottom: "1px solid #E4E2DD" }}>
@@ -336,6 +335,7 @@ export default function CalendarPage({ events, clubs = [], training = [], isAdmi
             </Link>
           </div>
         </div>
+        <TrainingThisWeek sessions={training} clubs={clubs} />
       </main>
 
       {isAdmin && <EditEventPanel eventId={editingId} clubs={clubs} onClose={() => setEditingId(null)} />}
