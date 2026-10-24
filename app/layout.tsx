@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Analytics } from "@vercel/analytics/next";
-import { Archivo, Inter, JetBrains_Mono } from "next/font/google";
+import { Archivo, Caveat, Inter, JetBrains_Mono } from "next/font/google";
 import TopNav from "@/components/TopNav";
 import Footer from "@/components/Footer";
 import BetaBanner from "@/components/BetaBanner";
@@ -24,6 +24,14 @@ const inter = Inter({
 const jetbrainsMono = JetBrains_Mono({
   variable: "--font-jetbrains-mono",
   weight: ["400", "500", "700"],
+  subsets: ["latin"],
+});
+
+// Handwriting, used only for the hand-drawn callout on the calendar's
+// subscribe button (components/HandDrawnCallout.tsx).
+const caveat = Caveat({
+  variable: "--font-caveat",
+  weight: ["600"],
   subsets: ["latin"],
 });
 
@@ -55,7 +63,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   const profile = await getCurrentProfile();
 
   return (
-    <html lang="en" className={`${archivo.variable} ${inter.variable} ${jetbrainsMono.variable}`}>
+    <html lang="en" className={`${archivo.variable} ${inter.variable} ${jetbrainsMono.variable} ${caveat.variable}`}>
       <body style={{ fontFamily: "var(--font-inter), sans-serif" }}>
         <GoogleAnalytics />
         <BetaBanner />

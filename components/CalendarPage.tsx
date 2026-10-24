@@ -14,6 +14,7 @@ import EditEventPanel from "@/components/admin/EditEventPanel";
 import SuggestChangePanel from "@/components/events/SuggestChangePanel";
 import TrainingThisWeek from "@/components/TrainingThisWeek";
 import AddToCalendarButton from "@/components/AddToCalendarButton";
+import HandDrawnCallout from "@/components/HandDrawnCallout";
 import type { TrainingSession } from "@/lib/training";
 
 export default function CalendarPage({ events, clubs = [], training = [], isAdmin = false }: { events: CalendarEvent[]; clubs?: Club[]; training?: TrainingSession[]; isAdmin?: boolean }) {
@@ -108,16 +109,18 @@ export default function CalendarPage({ events, clubs = [], training = [], isAdmi
         <Link href="/getting-started" onClick={() => trackEvent("getting_started_click", { source: "calendar_hero" })} style={{ fontSize: 13.5, fontWeight: 700, display: "flex", alignItems: "center", gap: 5, borderBottom: "1px solid #111111", paddingBottom: 2, marginTop: 18, width: "fit-content" }}>
           New to racing? Start here <ArrowUpRight size={14} />
         </Link>
-        <div style={{ marginTop: 26, maxWidth: 420 }}>
-          <p style={{ fontSize: 13.5, color: "#4A4A46", marginBottom: 10, lineHeight: 1.5 }}>
+        <div style={{ marginTop: 26, maxWidth: 520 }}>
+          <p style={{ fontSize: 13.5, color: "#4A4A46", marginBottom: 10, lineHeight: 1.5, maxWidth: 420 }}>
             Get new events the moment they&apos;re added — subscribe once by email or calendar and never miss a race.
           </p>
-          <AddToCalendarButton
-            feedParams={feedParams}
-            fallbackHref={subscribeHref}
-            source="calendar_hero"
-            style={{ background: "#E0102A", color: "#FAFAF8", border: "none", padding: "13px 24px", fontWeight: 700, fontSize: 13.5, display: "flex", alignItems: "center", gap: 8, cursor: "pointer", width: "fit-content" }}
-          />
+          <HandDrawnCallout note="One tap and you'll never miss a race">
+            <AddToCalendarButton
+              feedParams={feedParams}
+              fallbackHref={subscribeHref}
+              source="calendar_hero"
+              style={{ background: "#E0102A", color: "#FAFAF8", border: "none", padding: "13px 24px", fontWeight: 700, fontSize: 13.5, display: "flex", alignItems: "center", gap: 8, cursor: "pointer", width: "fit-content" }}
+            />
+          </HandDrawnCallout>
           <Link href={subscribeHref} onClick={() => trackEvent("subscribe_click", { source: "calendar_hero_advanced", filtered: subscribeIsFiltered })} style={{ display: "inline-block", marginTop: 10, fontSize: 12.5, color: "#6B6B66", borderBottom: "1px solid #D8D6D0" }}>
             More ways to subscribe
           </Link>
