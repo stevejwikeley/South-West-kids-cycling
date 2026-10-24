@@ -1,27 +1,18 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { MessageCircle, ChevronDown } from "lucide-react";
 import { submitFeedback, type FeedbackFormState } from "@/lib/actions/feedback";
 import { trackEvent } from "@/lib/analytics";
 import { OPEN_FEEDBACK_EVENT } from "@/components/BetaBanner";
 
-// DONE_KEY persists across sessions (localStorage) — once someone submits,
-// the bubble stays put permanently, but we stop auto-expanding the full
-// popup on them so they're not nagged again. VISIT_COUNT_KEY also persists,
-// incremented once per browser session (guarded by the sessionStorage flag)
-// so we can trigger the full popup to auto-open on a second visit even if
-// it happens well within the auto-expand delay. The collapsed bubble itself
-// shows immediately — only the auto-expand into the full popup waits on
-// this delay.
-const DONE_KEY = "swkc_feedback_done";
-const VISIT_COUNT_KEY = "swkc_visit_count";
-const SESSION_COUNTED_KEY = "swkc_session_counted";
-const AUTO_EXPAND_DELAY_MS = 30 * 1000;
+// Only ever opened by the visitor — the bubble or the beta banner's link —
+// never on a timer or visit count. It used to auto-expand, which got in the
+// way more than it gathered feedback.
 const HIDDEN_PREFIXES = ["/admin", "/organiser", "/login", "/auth", "/oauth"];
 
-type Stage = "hidden" | "collapsed" | "expanded";
+type Stage = "collapsed" | "expanded";
 
 const pillBase: React.CSSProperties = {
   border: "1px solid #D8D6D0",
@@ -49,7 +40,7 @@ const questionLabel: React.CSSProperties = {
 
 export default function FeedbackPopup() {
   const pathname = usePathname();
-  const [stage, setStage] = useState<Stage>("hidden");
+  const [stage, setStage] = useState<Stage>("collapsed");
   const [racedBefore, setRacedBefore] = useState<"yes" | "no" | null>(null);
   const [usefulness, setUsefulness] = useState<number | null>(null);
   const [willSubscribe, setWillSubscribe] = useState<"yes" | "no" | "already" | null>(null);
@@ -59,38 +50,9 @@ export default function FeedbackPopup() {
   // plain prefix, so it doesn't also match "/embed-builder" — a normal,
   // fully-chromed page that just happens to share the "/embed" prefix.
   const hidden = HIDDEN_PREFIXES.some((p) => pathname?.startsWith(p)) || pathname === "/embed" || !!pathname?.startsWith("/embed/");
-  // Tracks whether the user has already engaged with the bubble/popup
-  // themselves, so the delayed auto-expand doesn't override a deliberate
-  // collapse.
-  const interactedRef = useRef(false);
-
-  useEffect(() => {
-    if (hidden) return;
-    if (typeof window === "undefined") return;
-
-    setStage("collapsed");
-
-    if (window.localStorage.getItem(DONE_KEY)) return;
-
-    if (!window.sessionStorage.getItem(SESSION_COUNTED_KEY)) {
-      window.sessionStorage.setItem(SESSION_COUNTED_KEY, "1");
-      const nextCount = Number(window.localStorage.getItem(VISIT_COUNT_KEY) ?? "0") + 1;
-      window.localStorage.setItem(VISIT_COUNT_KEY, String(nextCount));
-    }
-    const visitCount = Number(window.localStorage.getItem(VISIT_COUNT_KEY) ?? "1");
-    const isSecondVisit = visitCount >= 2;
-
-    const timer = setTimeout(() => {
-      if (interactedRef.current) return;
-      setStage("expanded");
-      trackEvent("feedback_popup_auto_shown", { trigger: isSecondVisit ? "second_visit" : "time_delay" });
-    }, isSecondVisit ? 0 : AUTO_EXPAND_DELAY_MS);
-    return () => clearTimeout(timer);
-  }, [hidden]);
 
   useEffect(() => {
     if (state.success) {
-      window.localStorage.setItem(DONE_KEY, "1");
       trackEvent("feedback_submit", { raced_before: racedBefore, usefulness, will_subscribe: willSubscribe });
       const timer = setTimeout(() => setStage("collapsed"), 2500);
       return () => clearTimeout(timer);
@@ -100,7 +62,6 @@ export default function FeedbackPopup() {
 
   useEffect(() => {
     function handleOpen() {
-      interactedRef.current = true;
       setStage("expanded");
       trackEvent("feedback_bubble_expand", { trigger: "banner" });
     }
@@ -108,13 +69,13 @@ export default function FeedbackPopup() {
     return () => window.removeEventListener(OPEN_FEEDBACK_EVENT, handleOpen);
   }, []);
 
-  if (hidden || stage === "hidden") return null;
+  if (hidden) return null;
 
   if (stage === "collapsed") {
     return (
       <button
         type="button"
-        onClick={() => { interactedRef.current = true; setStage("expanded"); trackEvent("feedback_bubble_expand"); }}
+        onClick={() => { setStage("expanded"); trackEvent("feedback_bubble_expand"); }}
         aria-label="Open feedback form"
         className="mono"
         style={{
@@ -159,7 +120,7 @@ export default function FeedbackPopup() {
     >
       <button
         type="button"
-        onClick={() => { interactedRef.current = true; setStage("collapsed"); }}
+        onClick={() => { setStage("collapsed"); }}
         aria-label="Collapse feedback"
         style={{
           position: "absolute",
