@@ -158,10 +158,8 @@ test.describe("calendar.ics club filtering", () => {
   async function aTrainingClubId(page: import("@playwright/test").Page): Promise<string> {
     await page.goto("/clubs");
     const band = page.getByTestId("club-training").first();
-    const feedLink = band.getByRole("link", { name: /add this club's training/i });
-    const href = await feedLink.getAttribute("href");
-    const clubId = href?.match(/[?&]club=([0-9a-f-]{36})/)?.[1];
-    if (!clubId) throw new Error("Expected at least one club with a training subscribe link on /clubs");
+    const clubId = await band.getAttribute("data-club-id");
+    if (!clubId) throw new Error("Expected at least one club with training listed on /clubs");
     return clubId;
   }
 
@@ -189,9 +187,9 @@ test.describe("calendar.ics club filtering", () => {
     const clubTrainingUids = uidsOf(clubTrainingBody);
     const trainingUids = uidsOf(trainingBody);
     // Non-empty (this club genuinely trains, or /clubs wouldn't have shown
-    // its subscribe link) and a subset of all training — the regression
-    // guard for the case that must NOT change: ClubTrainingBand's own
-    // per-club feed link relies on exactly this scoping.
+    // its training) and a subset of all training — the regression guard for
+    // the case that must NOT change: per-club training subscriptions that
+    // people already hold rely on exactly this scoping.
     expect(clubTrainingUids.size).toBeGreaterThan(0);
     for (const uid of clubTrainingUids) expect(trainingUids.has(uid)).toBe(true);
   });
@@ -250,13 +248,11 @@ test.describe("Training this week strip", () => {
 });
 
 test.describe("Clubs page training", () => {
-  test("a club that trains shows its next session and a subscribe link", async ({ page }) => {
+  test("a club that trains shows its next session", async ({ page }) => {
     await page.goto("/clubs");
     const band = page.getByTestId("club-training").first();
     await expect(band).toBeVisible();
     await expect(band).toContainText(/Next:/);
-    const feed = band.getByRole("link", { name: /add this club's training/i });
-    await expect(feed).toHaveAttribute("href", /\/calendar\.ics\?club=[0-9a-f-]{36}&kind=training/);
   });
 
   test("a club with no training listed is prompted for", async ({ page }) => {
@@ -278,19 +274,16 @@ test.describe("Clubs page training", () => {
     await expect(anchors).toHaveCount(rowCount);
 
     // Pick a club whose training band independently states its own club id
-    // (via the "add this club's training" feed link's `?club=` param), then
-    // confirm that exact link lives inside the row anchored at that same
-    // id — i.e. the anchor on THIS row matches THIS club, not merely that
-    // anchors exist in general.
+    // (its data-club-id), then confirm that band lives inside the row
+    // anchored at that same id — i.e. the anchor on THIS row matches THIS
+    // club, not merely that anchors exist in general.
     const band = page.getByTestId("club-training").first();
-    const feedLink = band.getByRole("link", { name: /add this club's training/i });
-    const feedHref = await feedLink.getAttribute("href");
-    const clubId = feedHref?.match(/[?&]club=([0-9a-f-]{36})/)?.[1];
+    const clubId = await band.getAttribute("data-club-id");
     expect(clubId).toBeTruthy();
 
     const ownRow = page.locator(`main #club-${clubId}`);
     await expect(ownRow).toHaveCount(1);
-    await expect(ownRow.getByRole("link", { name: /add this club's training/i })).toHaveAttribute("href", feedHref!);
+    await expect(ownRow.locator(`[data-testid="club-training"][data-club-id="${clubId}"]`)).toHaveCount(1);
   });
 });
 
@@ -402,9 +395,7 @@ test.describe("embed club filtering", () => {
   test("a club filter alone does not narrow the embedded race list", async ({ page }) => {
     await page.goto("/clubs");
     const band = page.getByTestId("club-training").first();
-    const feedLink = band.getByRole("link", { name: /add this club's training/i });
-    const href = await feedLink.getAttribute("href");
-    const clubId = href?.match(/[?&]club=([0-9a-f-]{36})/)?.[1];
+    const clubId = await band.getAttribute("data-club-id");
     expect(clubId).toBeTruthy();
 
     await page.goto("/embed");

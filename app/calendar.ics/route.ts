@@ -190,7 +190,7 @@ export async function GET(request: NextRequest) {
   // nothing for anyone who picked a club without also including training.
   //   kind=race     -> club is ignored outright; every matching race returns
   //   kind=training -> club narrows training as before — exactly what
-  //                    ClubTrainingBand's per-club subscribe link relies on
+  //                    existing per-club training subscriptions rely on
   //   kind=all      -> races return unfiltered by club; only the training
   //                    half is narrowed to the chosen club(s). One flat
   //                    query can't express "AND club_id IN (...)" on just
