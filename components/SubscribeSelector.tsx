@@ -1,18 +1,14 @@
 "use client";
 
-import { useMemo, useState, useSyncExternalStore } from "react";
+import { useMemo, useState } from "react";
 import { CalendarCheck, Laptop, Smartphone } from "lucide-react";
 import CopyLink from "./CopyLink";
 import { trackEvent } from "@/lib/analytics";
 import { fmtDay } from "@/lib/format";
 import { eventDisc } from "@/lib/mock-data";
+import { CALENDAR_NAME, feedUrlFor, outlookAddUrl, subscribeLinkFor, type Platform } from "@/lib/subscribe-links";
+import { useDetectedPlatform } from "./useDetectedPlatform";
 import type { Club, Discipline, DisciplineId, Region } from "@/lib/types";
-
-// Always production, whatever this page is running on — a feed URL is copied
-// into someone's calendar app and stays there for years, so it must never be
-// a preview or localhost origin. Same reasoning as the embed builder.
-const SITE_URL = "https://www.southwestkidscycling.uk";
-const CALENDAR_NAME = "South West Kids Cycling";
 
 // The decision tree: device first, then the calendar app on that device.
 // Each leaf gets exactly one primary action — a link that opens the app's
@@ -20,7 +16,6 @@ const CALENDAR_NAME = "South West Kids Cycling";
 // options they don't understand. The copy-and-paste route is still there,
 // folded away, for when the one-tap link doesn't take.
 type Device = "phone" | "computer";
-type Platform = "iphone" | "android" | "google" | "mac" | "outlook" | "other";
 
 const DEVICES: { id: Device; label: string; Icon: typeof Smartphone }[] = [
   { id: "phone", label: "On my phone", Icon: Smartphone },
@@ -110,19 +105,12 @@ function ChoiceCard({ active, onClick, children }: { active: boolean; onClick: (
   );
 }
 
-// Best-guess starting point from the browser, so most people only have to
-// confirm rather than choose. It only ever preselects the device — the
-// calendar app is still the visitor's call (plenty of iPhone owners live in
-// Google Calendar).
-const noopSubscribe = () => () => {};
-
-function guessDevice(): Device | null {
-  if (typeof navigator === "undefined") return null;
-  const ua = navigator.userAgent;
-  if (/iPhone|iPad|iPod|Android/i.test(ua)) return "phone";
-  if (/Macintosh|Windows|Linux|CrOS/i.test(ua)) return "computer";
-  return null;
-}
+// Only ever preselects the device from the browser's guess — the calendar
+// app is still the visitor's call here (plenty of iPhone owners live in
+// Google Calendar). This page is the advanced route; the calendar's own
+// button already went with the guess.
+const deviceFor = (p: Platform | null): Device | null =>
+  p === "iphone" || p === "android" ? "phone" : p ? "computer" : null;
 
 // Mirrors the feed's own filtering (app/calendar.ics/route.ts) closely
 // enough to give an honest preview: races only, cancelled dropped, and a
@@ -163,7 +151,7 @@ export default function SubscribeSelector({
   const [chosenDevice, setChosenDevice] = useState<Device | null>(null);
   // navigator only exists in the browser, so the server snapshot is null and
   // the guess appears after hydration without a server/client mismatch.
-  const guessedDevice = useSyncExternalStore(noopSubscribe, guessDevice, () => null);
+  const guessedDevice = deviceFor(useDetectedPlatform());
   const device = chosenDevice ?? guessedDevice;
   const [platform, setPlatform] = useState<Platform | null>(null);
   const [disciplines, setDisciplines] = useState<Set<DisciplineId>>(new Set(initialDisciplines));
@@ -214,17 +202,12 @@ export default function SubscribeSelector({
     if (region !== "all") params.set("region", region);
     if (club !== "all") params.set("club", club);
     if (includeTraining) params.set("kind", "all");
-    const query = params.toString();
-    return `${SITE_URL}/calendar.ics${query ? `?${query}` : ""}`;
+    return feedUrlFor(params);
   }, [disciplines, region, club, includeTraining]);
 
-  // webcal:// is what tells Apple Calendar (and Outlook on the desktop) to
-  // *subscribe* rather than import a one-off copy. Google and Outlook on the
-  // web take the feed through their own "add by URL" pages instead.
-  const webcalUrl = feedUrl.replace(/^https:/, "webcal:");
-  const googleUrl = `https://calendar.google.com/calendar/render?cid=${encodeURIComponent(webcalUrl)}`;
-  const outlookUrl = (host: string) =>
-    `https://${host}/calendar/0/addfromweb?url=${encodeURIComponent(feedUrl)}&name=${encodeURIComponent(CALENDAR_NAME)}`;
+  const webcalUrl = subscribeLinkFor("iphone", feedUrl)!.href;
+  const googleUrl = subscribeLinkFor("google", feedUrl)!.href;
+  const outlookUrl = (host: string) => outlookAddUrl(host, feedUrl);
 
   const isFiltered = disciplines.size > 0 || region !== "all" || club !== "all" || includeTraining;
 

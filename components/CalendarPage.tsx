@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { MapPin, Search, X, Calendar, ArrowUpRight, Filter, Download, Repeat } from "lucide-react";
+import { MapPin, Search, X, ArrowUpRight, Filter, Download, Repeat } from "lucide-react";
 import { eventDisc, ageLabel } from "@/lib/mock-data";
 import { visibleDisciplinesFor } from "@/lib/visible-disciplines";
 import type { DisciplineId, CalendarEvent, Club } from "@/lib/types";
@@ -13,6 +13,7 @@ import { mapsUrl } from "@/lib/maps";
 import EditEventPanel from "@/components/admin/EditEventPanel";
 import SuggestChangePanel from "@/components/events/SuggestChangePanel";
 import TrainingThisWeek from "@/components/TrainingThisWeek";
+import AddToCalendarButton from "@/components/AddToCalendarButton";
 import type { TrainingSession } from "@/lib/training";
 
 export default function CalendarPage({ events, clubs = [], training = [], isAdmin = false }: { events: CalendarEvent[]; clubs?: Club[]; training?: TrainingSession[]; isAdmin?: boolean }) {
@@ -62,7 +63,15 @@ export default function CalendarPage({ events, clubs = [], training = [], isAdmi
     return query ? `/subscribe?${query}` : "/subscribe";
   }, [activeDisc, region, clubFilter]);
   const subscribeIsFiltered = subscribeHref !== "/subscribe";
-  const subscribeLabel = subscribeIsFiltered ? "Subscribe to these events" : "Subscribe to calendar";
+  // The feed the one-tap button subscribes to. Club is left off: the feed
+  // only uses club to narrow training (see app/calendar.ics/route.ts), and
+  // this is a races feed, so it would change nothing.
+  const feedParams = useMemo(() => {
+    const params = new URLSearchParams();
+    if (activeDisc.size > 0) params.set("discipline", [...activeDisc].join(","));
+    if (region !== "all") params.set("region", region);
+    return params;
+  }, [activeDisc, region]);
 
   const filtered = useMemo(
     () =>
@@ -103,8 +112,14 @@ export default function CalendarPage({ events, clubs = [], training = [], isAdmi
           <p style={{ fontSize: 13.5, color: "#4A4A46", marginBottom: 10, lineHeight: 1.5 }}>
             Get new events the moment they&apos;re added — subscribe once by email or calendar and never miss a race.
           </p>
-          <Link href={subscribeHref} onClick={() => trackEvent("subscribe_click", { source: "calendar_hero", filtered: subscribeIsFiltered })} style={{ background: "#E0102A", color: "#FAFAF8", border: "none", padding: "13px 24px", fontWeight: 700, fontSize: 13.5, display: "flex", alignItems: "center", gap: 8, cursor: "pointer", width: "fit-content" }}>
-            <Calendar size={15} /> {subscribeLabel}
+          <AddToCalendarButton
+            feedParams={feedParams}
+            fallbackHref={subscribeHref}
+            source="calendar_hero"
+            style={{ background: "#E0102A", color: "#FAFAF8", border: "none", padding: "13px 24px", fontWeight: 700, fontSize: 13.5, display: "flex", alignItems: "center", gap: 8, cursor: "pointer", width: "fit-content" }}
+          />
+          <Link href={subscribeHref} onClick={() => trackEvent("subscribe_click", { source: "calendar_hero_advanced", filtered: subscribeIsFiltered })} style={{ display: "inline-block", marginTop: 10, fontSize: 12.5, color: "#6B6B66", borderBottom: "1px solid #D8D6D0" }}>
+            More ways to subscribe
           </Link>
         </div>
         <TrainingThisWeek sessions={training} clubs={clubs} />
@@ -135,14 +150,13 @@ export default function CalendarPage({ events, clubs = [], training = [], isAdmi
               >
                 <Download size={13} /> Download CSV
               </button>
-              <Link
-                href={subscribeHref}
-                onClick={() => trackEvent("subscribe_click", { source: "filter_bar", filtered: subscribeIsFiltered })}
+              <AddToCalendarButton
+                feedParams={feedParams}
+                fallbackHref={subscribeHref}
+                source="filter_bar"
+                style={{ display: "flex", alignItems: "center", gap: 6, background: subscribeIsFiltered ? "#111111" : "none", color: subscribeIsFiltered ? "#FAFAF8" : "#111111", border: `1px solid ${subscribeIsFiltered ? "#111111" : "#D8D6D0"}`, padding: "8px 12px", fontSize: 11, fontWeight: 700}}
                 className="mono"
-                style={{ display: "flex", alignItems: "center", gap: 6, background: subscribeIsFiltered ? "#111111" : "none", color: subscribeIsFiltered ? "#FAFAF8" : "#111111", border: `1px solid ${subscribeIsFiltered ? "#111111" : "#D8D6D0"}`, padding: "8px 12px", fontSize: 11, fontWeight: 700 }}
-              >
-                <Calendar size={13} /> {subscribeLabel}
-              </Link>
+              />
             </div>
           </div>
 
@@ -310,9 +324,17 @@ export default function CalendarPage({ events, clubs = [], training = [], isAdmi
           <p style={{ fontSize: 13.5, lineHeight: 1.6, color: "#D8D6D0", marginBottom: 16 }}>
             It&apos;s better to be in your calendar than checking a website. Subscribe once by email or calendar feed and every new event lands automatically.
           </p>
-          <Link href={subscribeHref} onClick={() => trackEvent("subscribe_click", { source: "calendar_footer", filtered: subscribeIsFiltered })} style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "#E0102A", color: "#FAFAF8", padding: "10px 20px", fontWeight: 700, fontSize: 13, width: "fit-content" }}>
-            <Calendar size={14} /> {subscribeLabel}
-          </Link>
+          <AddToCalendarButton
+            feedParams={feedParams}
+            fallbackHref={subscribeHref}
+            source="calendar_footer"
+            style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "#E0102A", color: "#FAFAF8", padding: "10px 20px", fontWeight: 700, fontSize: 13, width: "fit-content" }}
+          />
+          <div>
+            <Link href={subscribeHref} onClick={() => trackEvent("subscribe_click", { source: "calendar_footer_advanced", filtered: subscribeIsFiltered })} style={{ display: "inline-block", marginTop: 12, fontSize: 12.5, color: "#D8D6D0", borderBottom: "1px solid #6B6B66" }}>
+              More ways to subscribe
+            </Link>
+          </div>
         </div>
       </main>
 

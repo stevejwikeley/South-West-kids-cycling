@@ -89,16 +89,25 @@ test.describe("Subscribe page feed builder", () => {
   });
 });
 
-test.describe("Calendar page hands filters to /subscribe", () => {
-  test("an active region filter changes the subscribe link and label", async ({ page }) => {
+test.describe("Calendar page subscribe buttons", () => {
+  // Playwright's desktop Chromium reports Linux, which guesses Google
+  // Calendar; the mobile project is a Pixel, which guesses Android — Google
+  // Calendar either way, so one assertion covers both projects.
+  test("the one-tap button and the advanced link both follow the filters", async ({ page }) => {
     await page.goto("/");
     await page.getByRole("button", { name: /toggle filters/i }).click();
     await page.getByRole("button", { name: "DEVON", exact: true }).click();
 
-    const subscribeLink = page.getByRole("link", { name: /Subscribe to these events/ }).first();
-    await expect(subscribeLink).toHaveAttribute("href", "/subscribe?region=devon");
+    const oneTap = page.getByRole("link", { name: /Add to Google Calendar/ }).first();
+    await expect(oneTap).toHaveAttribute(
+      "href",
+      "https://calendar.google.com/calendar/render?cid=" + encodeURIComponent("webcal://www.southwestkidscycling.uk/calendar.ics?region=devon")
+    );
 
-    await subscribeLink.click();
+    const advancedLink = page.getByRole("link", { name: /More ways to subscribe/ }).first();
+    await expect(advancedLink).toHaveAttribute("href", "/subscribe?region=devon");
+
+    await advancedLink.click();
     await advanced(page);
     await expect(page.getByRole("button", { name: "Devon", exact: true })).toHaveAttribute("aria-pressed", "true");
   });
