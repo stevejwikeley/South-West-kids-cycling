@@ -39,7 +39,8 @@ export default function AddToCalendarButton({
   return (
     <a
       href={link.href}
-      {...(link.external ? { target: "_blank", rel: "noreferrer" } : {})}
+      target="_blank"
+      rel="noreferrer"
       onClick={() => trackEvent("subscribe_one_click", { source, platform, filtered })}
       className={className}
       style={style}

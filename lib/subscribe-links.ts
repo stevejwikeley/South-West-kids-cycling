@@ -31,12 +31,11 @@ export function feedUrlFor(params: URLSearchParams): string {
   return `${SITE_URL}/calendar.ics${query ? `?${query}` : ""}`;
 }
 
+// Every one-tap link opens in a new tab, so the calendar stays where the
+// visitor left it whichever app takes over.
 export interface SubscribeLink {
   href: string;
   label: string;
-  // Google and Outlook are web pages, so they open in a new tab; webcal://
-  // hands straight off to the calendar app.
-  external: boolean;
 }
 
 // webcal:// is what tells Apple Calendar to *subscribe* rather than import a
@@ -46,14 +45,14 @@ export function subscribeLinkFor(platform: Platform, feedUrl: string): Subscribe
   const webcalUrl = feedUrl.replace(/^https:/, "webcal:");
   switch (platform) {
     case "iphone":
-      return { href: webcalUrl, label: "Add to iPhone Calendar", external: false };
+      return { href: webcalUrl, label: "Add to iPhone Calendar" };
     case "mac":
-      return { href: webcalUrl, label: "Add to Apple Calendar", external: false };
+      return { href: webcalUrl, label: "Add to Apple Calendar" };
     case "android":
     case "google":
-      return { href: `https://calendar.google.com/calendar/render?cid=${encodeURIComponent(webcalUrl)}`, label: "Add to Google Calendar", external: true };
+      return { href: `https://calendar.google.com/calendar/render?cid=${encodeURIComponent(webcalUrl)}`, label: "Add to Google Calendar" };
     case "outlook":
-      return { href: outlookAddUrl("outlook.live.com", feedUrl), label: "Add to Outlook", external: true };
+      return { href: outlookAddUrl("outlook.live.com", feedUrl), label: "Add to Outlook" };
     case "other":
       return null;
   }

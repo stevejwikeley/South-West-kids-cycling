@@ -254,10 +254,11 @@ export default function SubscribeSelector({
     trackEvent("subscribe_filter_reset", {});
   }
 
-  const oneClick = (href: string, label: string, external = false) => (
+  const oneClick = (href: string, label: string) => (
     <a
       href={href}
-      {...(external ? { target: "_blank", rel: "noreferrer" } : {})}
+      target="_blank"
+      rel="noreferrer"
       onClick={() => trackEvent("subscribe_one_click", { platform })}
       style={primaryButtonStyle}
     >
@@ -457,7 +458,7 @@ export default function SubscribeSelector({
 
           {(platform === "android" || platform === "google") && (
             <>
-              {oneClick(googleUrl, "Add to Google Calendar", true)}
+              {oneClick(googleUrl, "Add to Google Calendar")}
               <p style={{ ...stepStyle, marginTop: 16 }}>
                 Google Calendar opens and asks to add the calendar — click <strong>Add</strong>. It then appears on every device signed in to that Google account, and Google checks for updates roughly once a day.
               </p>
@@ -495,7 +496,7 @@ export default function SubscribeSelector({
 
           {platform === "outlook" && (
             <>
-              {oneClick(outlookUrl("outlook.live.com"), "Add to Outlook", true)}
+              {oneClick(outlookUrl("outlook.live.com"), "Add to Outlook")}
               <p style={{ ...stepStyle, marginTop: 16 }}>
                 Outlook opens with the calendar ready to add — click <strong>Import</strong> (despite the name, this subscribes, so it keeps itself up to date).
               </p>
