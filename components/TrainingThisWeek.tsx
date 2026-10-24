@@ -23,7 +23,7 @@ export default function TrainingThisWeek({
   return (
     <div
       data-testid="training-this-week"
-      style={{ border: "1px solid #E4E2DD", background: "#FFFFFF", padding: "14px 16px", marginTop: 26, maxWidth: 560 }}
+      style={{ border: "1px solid #E4E2DD", background: "#FFFFFF", padding: "14px 16px" }}
     >
       <div style={{ fontSize: 16, fontWeight: 700, color: "#111111", lineHeight: 1.3, marginBottom: 8 }}>
         Looking for a club for your child to join?

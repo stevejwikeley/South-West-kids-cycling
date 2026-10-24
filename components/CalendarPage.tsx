@@ -318,24 +318,29 @@ export default function CalendarPage({ events, clubs = [], training = [], isAdmi
           </div>
         ))}
 
-        <div style={{ marginTop: 40, padding: "24px 28px", background: "#111111", color: "#FAFAF8", maxWidth: 560 }}>
-          <h2 className="disp" style={{ fontSize: 18, margin: 0, marginBottom: 10 }}>Want these on your own calendar too?</h2>
-          <p style={{ fontSize: 13.5, lineHeight: 1.6, color: "#D8D6D0", marginBottom: 16 }}>
-            It&apos;s better to be in your calendar than checking a website. Subscribe once by email or calendar feed and every new event lands automatically.
-          </p>
-          <AddToCalendarButton
-            feedParams={feedParams}
-            fallbackHref={subscribeHref}
-            source="calendar_footer"
-            style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "#E0102A", color: "#FAFAF8", padding: "10px 20px", fontWeight: 700, fontSize: 13, width: "fit-content" }}
-          />
-          <div>
-            <Link href={subscribeHref} onClick={() => trackEvent("subscribe_click", { source: "calendar_footer_advanced", filtered: subscribeIsFiltered })} style={{ display: "inline-block", marginTop: 12, fontSize: 12.5, color: "#D8D6D0", borderBottom: "1px solid #6B6B66" }}>
-              More ways to subscribe
-            </Link>
+        {/* Two columns side by side on wider screens, stacking on phones.
+            The training box renders nothing in a week with no sessions, and
+            the subscribe box then has the row to itself. */}
+        <div style={{ marginTop: 40, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 20, alignItems: "start" }}>
+          <div style={{ padding: "24px 28px", background: "#111111", color: "#FAFAF8" }}>
+            <h2 className="disp" style={{ fontSize: 18, margin: 0, marginBottom: 10 }}>Want these on your own calendar too?</h2>
+            <p style={{ fontSize: 13.5, lineHeight: 1.6, color: "#D8D6D0", marginBottom: 16 }}>
+              It&apos;s better to be in your calendar than checking a website. Subscribe once by email or calendar feed and every new event lands automatically.
+            </p>
+            <AddToCalendarButton
+              feedParams={feedParams}
+              fallbackHref={subscribeHref}
+              source="calendar_footer"
+              style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "#E0102A", color: "#FAFAF8", padding: "10px 20px", fontWeight: 700, fontSize: 13, width: "fit-content" }}
+            />
+            <div>
+              <Link href={subscribeHref} onClick={() => trackEvent("subscribe_click", { source: "calendar_footer_advanced", filtered: subscribeIsFiltered })} style={{ display: "inline-block", marginTop: 12, fontSize: 12.5, color: "#D8D6D0", borderBottom: "1px solid #6B6B66" }}>
+                More ways to subscribe
+              </Link>
+            </div>
           </div>
+          <TrainingThisWeek sessions={training} clubs={clubs} />
         </div>
-        <TrainingThisWeek sessions={training} clubs={clubs} />
       </main>
 
       {isAdmin && <EditEventPanel eventId={editingId} clubs={clubs} onClose={() => setEditingId(null)} />}
