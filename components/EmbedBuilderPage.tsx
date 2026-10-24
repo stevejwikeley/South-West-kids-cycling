@@ -13,7 +13,6 @@ const REGION_OPTIONS: [Region | "all", string][] = [
   ["devon", "Devon"],
   ["cornwall", "Cornwall"],
   ["somerset", "Somerset"],
-  ["bristol", "Bristol"],
 ];
 
 export default function EmbedBuilderPage({

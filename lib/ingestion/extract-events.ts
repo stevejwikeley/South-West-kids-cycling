@@ -17,6 +17,9 @@ import * as Sentry from "@sentry/nextjs";
 // value, which is what caught "coaching" missing here.
 const DISCIPLINES = ["cx", "xc", "road", "tri", "gravel", "duathlon", "clusters", "coaching", "training", "other"] as const;
 const STATUSES = ["confirmed", "provisional", "cancelled"] as const;
+// "bristol" stays a valid value because it's still in the database enum and
+// shared event types; the prompt below no longer puts Bristol in scope, so
+// it shouldn't be produced for new events.
 const REGIONS = ["devon", "cornwall", "somerset", "bristol", "both"] as const;
 const AGE_CATEGORIES = ["u8", "u10", "u12", "u14", "u16"] as const;
 const BOOKING_STATUSES = ["open", "planned"] as const;
@@ -36,7 +39,7 @@ const ExtractedEventSchema = z.object({
   venue_name: z.string().nullable(),
   address: z.string().nullable(),
   postcode: z.string().nullable(),
-  region: z.enum(REGIONS).nullable().describe("Infer from venue/address if it clearly indicates Devon, Cornwall, Somerset, or Bristol; otherwise null. \"both\" means specifically Devon and Cornwall (a legacy label) — use it only when the event serves those two, not Somerset or Bristol."),
+  region: z.enum(REGIONS).nullable().describe("Infer from venue/address if it clearly indicates Devon, Cornwall, or Somerset; otherwise null. \"both\" means specifically Devon and Cornwall (a legacy label) — use it only when the event serves those two, not Somerset."),
   age_categories: z.array(z.enum(AGE_CATEGORIES)),
   kids_only: z.boolean().nullable(),
   booking_status: z.enum(BOOKING_STATUSES).nullable(),
@@ -70,13 +73,13 @@ export { ExtractedEventSchema, KIND_DESCRIPTION };
 function buildSystemPrompt(): string {
   const today = new Date().toISOString().slice(0, 10);
 
-  return `You extract youth cycling event listings for South West Kids Cycling, a calendar covering ages 5-16 in Devon, Cornwall, Somerset & Bristol, England. Today's date is ${today}.
+  return `You extract youth cycling event listings for South West Kids Cycling, a calendar covering ages 5-16 in Devon, Cornwall & Somerset, England. Today's date is ${today}.
 
 Extract every distinct event you find in the given content (a page, poster, or pasted text may list several rounds of a series — extract each as a separate entry).
 
 Rules:
 - Only extract events happening on or after ${today}. Skip anything dated in the past — this calendar only lists upcoming events, so a past listing (e.g. last year's round of a series, an old training session) is not useful even if it's otherwise a good match. If a date can't be determined at all, still extract the event (a human will confirm the date).
-- Only extract youth/junior cycling events, club coaching sessions, or events that clearly include age-group categories for under-16s. Skip adult-only road racing, enduro, and anything outside Devon/Cornwall/Somerset/Bristol.
+- Only extract youth/junior cycling events, club coaching sessions, or events that clearly include age-group categories for under-16s. Skip adult-only road racing, enduro, and anything outside Devon/Cornwall/Somerset.
 - Leave a field null rather than guessing. A poster rarely states exact time, address, or a booking link — leave those null for a human reviewer rather than inventing plausible-looking values.
 - One exception: postcode. If the source names a specific, well-known venue (a country park, bike park, showground, leisure centre, school) and you genuinely know its postcode, fill it in and list "postcode" in low_confidence_fields. It's checked automatically against the national postcode database and the event's region, so a wrong one gets caught — but don't produce one for a vague location ("near Exeter", "local trails") or a venue you don't actually recognise.
 - region: if the source doesn't name the county, infer it from the town or venue (Truro, Wadebridge, Perranporth → cornwall; Plymouth, Exeter, Barnstaple, Torquay → devon; Taunton, Yeovil, Bath → somerset). Only list region in low_confidence_fields if the place itself is ambiguous — a region you inferred from a clearly-named town is not uncertain.

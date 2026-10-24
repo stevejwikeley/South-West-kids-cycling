@@ -40,7 +40,6 @@ const REGION_OPTIONS: [Region | "all", string][] = [
   ["devon", "Devon"],
   ["cornwall", "Cornwall"],
   ["somerset", "Somerset"],
-  ["bristol", "Bristol"],
 ];
 
 // Just the fields the "in your calendar" preview draws — the page passes

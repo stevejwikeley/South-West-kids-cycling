@@ -38,7 +38,7 @@ export default function ClubsPage({ clubs, training = [] }: { clubs: Club[]; tra
   return (
     <>
       <header style={{ maxWidth: 1100, margin: "0 auto", padding: "56px 24px 0" }}>
-        <div className="mono" style={{ fontSize: 11.5, letterSpacing: "0.12em", color: "#E0102A", marginBottom: 16, fontWeight: 700 }}>DEVON, CORNWALL, SOMERSET &amp; BRISTOL</div>
+        <div className="mono" style={{ fontSize: 11.5, letterSpacing: "0.12em", color: "#E0102A", marginBottom: 16, fontWeight: 700 }}>DEVON, CORNWALL &amp; SOMERSET</div>
         <h1 className="disp" style={{ fontSize: "clamp(38px, 6.5vw, 76px)", lineHeight: 0.98, margin: 0, letterSpacing: "-0.01em" }}>
           Youth cycling clubs in Devon, Cornwall &amp; Somerset.
         </h1>

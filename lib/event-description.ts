@@ -44,7 +44,7 @@ export async function generateEventDescription(url: string, title: string, venue
         response = await client.messages.create({
           model: "claude-opus-5",
           max_tokens: 500,
-          system: `You write the description shown on an event's page on South West Kids Cycling, a calendar of youth cycling events (ages 5-16) in Devon, Cornwall, Somerset & Bristol, England. Most readers are a parent or a young rider deciding whether to turn up, often for the very first time.
+          system: `You write the description shown on an event's page on South West Kids Cycling, a calendar of youth cycling events (ages 5-16) in Devon, Cornwall & Somerset, England. Most readers are a parent or a young rider deciding whether to turn up, often for the very first time.
 
 Given the text of an event's own page and its title/venue, write a warm, welcoming, 2-4 sentence description that makes someone new want to come along: what actually happens (the format, rounds if it's part of a series, what riders can expect on the day), what makes it worth attending, and — if the source mentions it — anything that lowers the barrier for a first-timer (no experience needed, beginner-friendly, coached, sociable atmosphere, what to bring). Plain, accessible language, not jargon-heavy racing-insider language. Second or third person is both fine, but keep it genuinely inviting rather than corporate or promotional-sounding.
 
