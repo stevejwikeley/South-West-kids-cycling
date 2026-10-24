@@ -1,16 +1,21 @@
 import { test, expect } from "@playwright/test";
 import type { Page } from "@playwright/test";
 
-// The popup is rendered on every non-admin page and starts collapsed; the
-// auto-expand timer is 30s, so these tests click the bubble rather than
-// waiting for it.
+// The form only opens from the beta banner's link — there's no floating
+// bubble and nothing opens it on its own.
 async function openFeedback(page: Page) {
   await page.goto("/");
-  await page.getByRole("button", { name: "Open feedback form" }).click();
+  await page.getByRole("button", { name: /tell us what you think/i }).click();
   await expect(page.getByText("QUICK FEEDBACK")).toBeVisible();
 }
 
 test.describe("Feedback popup", () => {
+  test("stays out of sight until the banner link is clicked", async ({ page }) => {
+    await page.goto("/");
+    await expect(page.getByText("QUICK FEEDBACK")).toBeHidden();
+    await expect(page.getByRole("button", { name: "Open feedback form" })).toHaveCount(0);
+  });
+
   test("submitting with nothing answered is rejected", async ({ page }) => {
     await openFeedback(page);
     await page.getByRole("button", { name: /send feedback/i }).click();

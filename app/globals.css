@@ -137,3 +137,8 @@ input:focus {
     stroke-dashoffset: 0;
   }
 }
+@media (max-width: 640px) {
+  .callout-arrow {
+    display: none;
+  }
+}

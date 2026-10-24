@@ -2,14 +2,15 @@
 
 import { useActionState, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import { MessageCircle, ChevronDown } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { submitFeedback, type FeedbackFormState } from "@/lib/actions/feedback";
 import { trackEvent } from "@/lib/analytics";
 import { OPEN_FEEDBACK_EVENT } from "@/components/BetaBanner";
 
-// Only ever opened by the visitor — the bubble or the beta banner's link —
-// never on a timer or visit count. It used to auto-expand, which got in the
-// way more than it gathered feedback.
+// Only ever opened by the visitor, from the beta banner's "tell us what you
+// think" link — never on a timer or visit count, and there's no floating
+// bubble any more either. Closing it hides it completely until the banner
+// link is clicked again.
 const HIDDEN_PREFIXES = ["/admin", "/organiser", "/login", "/auth", "/oauth"];
 
 type Stage = "collapsed" | "expanded";
@@ -71,37 +72,7 @@ export default function FeedbackPopup() {
 
   if (hidden) return null;
 
-  if (stage === "collapsed") {
-    return (
-      <button
-        type="button"
-        onClick={() => { setStage("expanded"); trackEvent("feedback_bubble_expand"); }}
-        aria-label="Open feedback form"
-        className="mono"
-        style={{
-          position: "fixed",
-          bottom: 20,
-          right: 20,
-          zIndex: 1000,
-          display: "flex",
-          alignItems: "center",
-          gap: 8,
-          background: "#111111",
-          color: "#FAFAF8",
-          border: "none",
-          borderRadius: 999,
-          padding: "12px 18px",
-          fontSize: 12.5,
-          fontWeight: 700,
-          letterSpacing: "0.02em",
-          cursor: "pointer",
-          boxShadow: "0 8px 28px rgba(17,17,17,0.22)",
-        }}
-      >
-        <MessageCircle size={16} /> FEEDBACK
-      </button>
-    );
-  }
+  if (stage === "collapsed") return null;
 
   return (
     <div
@@ -121,7 +92,7 @@ export default function FeedbackPopup() {
       <button
         type="button"
         onClick={() => { setStage("collapsed"); }}
-        aria-label="Collapse feedback"
+        aria-label="Close feedback"
         style={{
           position: "absolute",
           top: 10,

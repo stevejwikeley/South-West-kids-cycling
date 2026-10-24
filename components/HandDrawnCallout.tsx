@@ -3,12 +3,12 @@
 // handwritten note with an arrow pointing back at it. Every mark is
 // decorative (aria-hidden) — the button inside carries its own label.
 //
-// The note sits to the right of the button when there's room and wraps
-// underneath on a phone; its arrow curves up and to the left, so it points
-// at the button from either spot.
+// The note sits to the right of the button when there's room, with an arrow
+// pointing back at it, and wraps underneath on a phone, where the arrow is
+// dropped (globals.css) — directly below the button it has nothing to add.
 export default function HandDrawnCallout({ note, children }: { note: string; children: React.ReactNode }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", columnGap: 26, rowGap: 10, padding: "16px 0 8px 18px" }}>
+    <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", columnGap: 26, rowGap: 28, padding: "22px 0 8px 18px" }}>
       <div style={{ position: "relative", display: "inline-block" }}>
         {children}
         <svg
@@ -40,7 +40,7 @@ export default function HandDrawnCallout({ note, children }: { note: string; chi
       </div>
 
       <div aria-hidden style={{ display: "flex", alignItems: "flex-start", gap: 4, transform: "rotate(-3deg)" }}>
-        <svg viewBox="0 0 46 34" width={42} height={31} style={{ flexShrink: 0, overflow: "visible", marginTop: -6 }}>
+        <svg className="callout-arrow" viewBox="0 0 46 34" width={42} height={31} style={{ flexShrink: 0, overflow: "visible", marginTop: -6 }}>
           <path className="scribble-draw-late" pathLength={1} d="M 42 30 C 34 10, 20 4, 5 9" fill="none" stroke="#111111" strokeWidth={2.2} strokeLinecap="round" />
           <path className="scribble-draw-late" pathLength={1} d="M 13 3 L 5 9 L 13 15" fill="none" stroke="#111111" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" />
         </svg>
