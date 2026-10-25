@@ -15,6 +15,7 @@ import SuggestChangePanel from "@/components/events/SuggestChangePanel";
 import TrainingThisWeek from "@/components/TrainingThisWeek";
 import AddToCalendarButton from "@/components/AddToCalendarButton";
 import HandDrawnCallout from "@/components/HandDrawnCallout";
+import GoogleMonthView from "@/components/GoogleMonthView";
 import type { TrainingSession } from "@/lib/training";
 
 export default function CalendarPage({ events, clubs = [], training = [], isAdmin = false }: { events: CalendarEvent[]; clubs?: Club[]; training?: TrainingSession[]; isAdmin?: boolean }) {
@@ -23,6 +24,7 @@ export default function CalendarPage({ events, clubs = [], training = [], isAdmi
   const [clubFilter, setClubFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [view, setView] = useState<"list" | "month">("list");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [suggestingId, setSuggestingId] = useState<string | null>(null);
 
@@ -213,10 +215,27 @@ export default function CalendarPage({ events, clubs = [], training = [], isAdmi
         </div>
       </div>
 
-      <main style={{ maxWidth: 1100, margin: "0 auto", padding: "36px 24px 100px" }}>
-        {filtered.length === 0 && <div style={{ textAlign: "center", padding: "80px 0", color: "#6B6B66" }}>No events match those filters.</div>}
+      <main style={{ maxWidth: 1100, margin: "0 auto", padding: "28px 24px 100px" }}>
+        <div role="group" aria-label="Calendar view" style={{ display: "flex", justifyContent: "flex-end", marginBottom: 20 }}>
+          {(["list", "month"] as const).map((v) => (
+            <button
+              key={v}
+              type="button"
+              aria-pressed={view === v}
+              onClick={() => { setView(v); trackEvent("calendar_view", { view: v }); }}
+              className="mono"
+              style={{ padding: "7px 14px", fontSize: 11, fontWeight: 700, letterSpacing: "0.03em", background: view === v ? "#111111" : "transparent", color: view === v ? "#FAFAF8" : "#6B6B66", border: "1px solid #111111", marginLeft: v === "month" ? -1 : 0, cursor: "pointer" }}
+            >
+              {v === "list" ? "LIST" : "MONTH"}
+            </button>
+          ))}
+        </div>
 
-        {Object.entries(grouped).map(([month, evts]) => (
+        {view === "month" && <GoogleMonthView />}
+
+        {view === "list" && filtered.length === 0 && <div style={{ textAlign: "center", padding: "80px 0", color: "#6B6B66" }}>No events match those filters.</div>}
+
+        {view === "list" && Object.entries(grouped).map(([month, evts]) => (
           <div key={month} style={{ marginBottom: 40 }}>
             <div className="disp" style={{ fontSize: 22, marginBottom: 6, letterSpacing: "-0.01em" }}>{month}</div>
             <div style={{ borderTop: "2px solid #111111" }}>
