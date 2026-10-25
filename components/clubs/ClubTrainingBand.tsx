@@ -2,7 +2,6 @@
 
 import { weekdayPattern, nextDistinctDates, commonVenue, type TrainingSession } from "@/lib/training";
 import { fmtDay } from "@/lib/format";
-import { trackEvent } from "@/lib/analytics";
 import type { Club } from "@/lib/types";
 
 const GREEN = "#1F5D3A";
@@ -36,11 +35,11 @@ export default function ClubTrainingBand({ club, sessions }: { club: Club; sessi
   const pattern = weekdayPattern(sessions);
   const venue = commonVenue(sessions);
   const [next, ...rest] = upcomingDates;
-  const feedUrl = `/calendar.ics?club=${club.id}&kind=training`;
 
   return (
     <div
       data-testid="club-training"
+      data-club-id={club.id}
       style={{ background: "#EAF3EC", borderLeft: `3px solid ${GREEN}`, padding: "8px 10px", marginTop: 9, fontSize: 12.5, color: GREEN, lineHeight: 1.55 }}
     >
       <span style={{ fontWeight: 700 }}>{pattern ? `Trains ${pattern}` : "Training sessions"}</span>
@@ -50,13 +49,6 @@ export default function ClubTrainingBand({ club, sessions }: { club: Club; sessi
         Next: <strong>{dateLabel(next)}</strong>
         {rest.length > 0 && ` · then ${rest.map((d) => `${fmtDay(d).day} ${fmtDay(d).mon}`).join(", ")}`}
       </div>
-      <a
-        href={feedUrl}
-        onClick={() => trackEvent("club_training_subscribe", { club_id: club.id, club_name: club.name })}
-        style={{ display: "inline-block", marginTop: 6, fontSize: 11.5, fontWeight: 700, color: GREEN, borderBottom: `1px solid ${GREEN}`, paddingBottom: 1 }}
-      >
-        Add this club&apos;s training to my calendar
-      </a>
     </div>
   );
 }

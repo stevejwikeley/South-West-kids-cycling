@@ -14,11 +14,13 @@ import type { EventRow } from "@/lib/supabase/types";
 import type { AgeCategory, Club } from "@/lib/types";
 
 const AGE_OPTIONS: AgeCategory[] = ["u8", "u10", "u12", "u14", "u16"];
+// Bristol is no longer covered, but some existing rows may still carry it —
+// it's only offered when this record already has it, so saving can't
+// silently move it to another region.
 const REGION_OPTIONS = [
   ["devon", "Devon"],
   ["cornwall", "Cornwall"],
   ["somerset", "Somerset"],
-  ["bristol", "Bristol"],
   ["both", "Both (Devon & Cornwall)"],
 ] as const;
 const STATUS_OPTIONS = [
@@ -277,6 +279,7 @@ export default function EventForm({
         <select style={input} name="region" defaultValue={event?.region ?? ""} required>
           <option value="" disabled>Select…</option>
           {REGION_OPTIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+          {event?.region === "bristol" && <option value="bristol">Bristol</option>}
         </select>
       </div>
 

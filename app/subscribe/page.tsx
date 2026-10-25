@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Calendar, Mail } from "lucide-react";
-import SubscribeSelector from "@/components/SubscribeSelector";
+import SubscribeSelector, { type PreviewEvent } from "@/components/SubscribeSelector";
 import EmailSubscribeForm from "@/components/EmailSubscribeForm";
 import { getClubs, getEvents } from "@/lib/data";
 import { subscribableDisciplinesFor } from "@/lib/subscribable-disciplines";
@@ -8,7 +8,7 @@ import type { DisciplineId, Region } from "@/lib/types";
 
 // "both" is a storage value (an event that counts as Devon *and* Cornwall),
 // not something anyone picks — the selector offers the three counties only.
-const REGIONS = new Set<Region>(["devon", "cornwall", "somerset", "bristol"]);
+const REGIONS = new Set<Region>(["devon", "cornwall", "somerset"]);
 
 export const metadata = {
   title: "Subscribe to the calendar",
@@ -56,6 +56,12 @@ export default async function SubscribePage({
   const initialRegion = REGIONS.has(region as Region) ? (region as Region) : "all";
   const initialClub = club && clubs.some((c) => c.id === club) ? club : "all";
 
+  // Upcoming races as the feed would send them (cancelled dropped),
+  // trimmed to what the "in your calendar" preview draws.
+  const previewEvents: PreviewEvent[] = events
+    .filter((e) => e.status !== "cancelled")
+    .map(({ id, title, date, discipline, region, venue }) => ({ id, title, date, discipline, region, venue }));
+
   return (
     <header style={{ maxWidth: 720, margin: "0 auto", padding: "56px 24px 120px" }}>
       <div className="mono" style={{ fontSize: 11.5, letterSpacing: "0.12em", color: "#E0102A", marginBottom: 16, fontWeight: 700, display: "flex", alignItems: "center", gap: 8 }}>
@@ -68,12 +74,13 @@ export default async function SubscribePage({
         Subscribe once and every event lands in the calendar you already use — on your phone, your computer, wherever. When a booking link goes live, a date changes, or a new race gets added, it updates itself. No app to check, nothing to remember.
       </p>
       <p style={{ maxWidth: 520, fontSize: 14, lineHeight: 1.6, color: "#6B6B66", marginTop: 12 }}>
-        The setup below takes a couple of minutes and only needs doing once — most calendar apps then check for updates automatically, roughly once a day.
+        Answer two quick questions below and you&apos;ll get a single button that adds it — it only needs doing once.
       </p>
 
       <div style={{ marginTop: 44 }}>
         <SubscribeSelector
           clubs={clubs}
+          events={previewEvents}
           disciplines={disciplines}
           initialDisciplines={initialDisciplines}
           initialRegion={initialRegion}

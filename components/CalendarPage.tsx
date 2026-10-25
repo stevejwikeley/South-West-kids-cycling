@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { MapPin, Search, X, Calendar, ArrowUpRight, Filter, Download, Repeat } from "lucide-react";
+import { MapPin, Search, X, ArrowUpRight, Filter, Download, Repeat } from "lucide-react";
 import { eventDisc, ageLabel } from "@/lib/mock-data";
 import { visibleDisciplinesFor } from "@/lib/visible-disciplines";
 import type { DisciplineId, CalendarEvent, Club } from "@/lib/types";
@@ -13,6 +13,9 @@ import { mapsUrl } from "@/lib/maps";
 import EditEventPanel from "@/components/admin/EditEventPanel";
 import SuggestChangePanel from "@/components/events/SuggestChangePanel";
 import TrainingThisWeek from "@/components/TrainingThisWeek";
+import AddToCalendarButton from "@/components/AddToCalendarButton";
+import HandDrawnCallout from "@/components/HandDrawnCallout";
+import GoogleMonthView from "@/components/GoogleMonthView";
 import type { TrainingSession } from "@/lib/training";
 
 export default function CalendarPage({ events, clubs = [], training = [], isAdmin = false }: { events: CalendarEvent[]; clubs?: Club[]; training?: TrainingSession[]; isAdmin?: boolean }) {
@@ -21,6 +24,7 @@ export default function CalendarPage({ events, clubs = [], training = [], isAdmi
   const [clubFilter, setClubFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [view, setView] = useState<"list" | "month">("list");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [suggestingId, setSuggestingId] = useState<string | null>(null);
 
@@ -62,7 +66,15 @@ export default function CalendarPage({ events, clubs = [], training = [], isAdmi
     return query ? `/subscribe?${query}` : "/subscribe";
   }, [activeDisc, region, clubFilter]);
   const subscribeIsFiltered = subscribeHref !== "/subscribe";
-  const subscribeLabel = subscribeIsFiltered ? "Subscribe to these events" : "Subscribe to calendar";
+  // The feed the one-tap button subscribes to. Club is left off: the feed
+  // only uses club to narrow training (see app/calendar.ics/route.ts), and
+  // this is a races feed, so it would change nothing.
+  const feedParams = useMemo(() => {
+    const params = new URLSearchParams();
+    if (activeDisc.size > 0) params.set("discipline", [...activeDisc].join(","));
+    if (region !== "all") params.set("region", region);
+    return params;
+  }, [activeDisc, region]);
 
   const filtered = useMemo(
     () =>
@@ -89,25 +101,32 @@ export default function CalendarPage({ events, clubs = [], training = [], isAdmi
   return (
     <>
       <header style={{ maxWidth: 1100, margin: "0 auto", padding: "56px 24px 40px" }}>
-        <div className="mono" style={{ fontSize: 11.5, letterSpacing: "0.12em", color: "#E0102A", marginBottom: 16, fontWeight: 700 }}>DEVON, CORNWALL, SOMERSET &amp; BRISTOL — AGES 5 TO 16</div>
-        <h1 className="disp" style={{ fontSize: "clamp(32px, 5.2vw, 60px)", lineHeight: 1.02, margin: 0, letterSpacing: "-0.01em" }}>
-          One calendar for all cycling races and events across the Southwest
+        <div className="mono" style={{ fontSize: 11.5, letterSpacing: "0.12em", color: "#E0102A", marginBottom: 16, fontWeight: 700 }}>DEVON, CORNWALL &amp; SOMERSET — AGES 5 TO 16</div>
+        <h1 className="disp" style={{ fontSize: "clamp(32px, 5.2vw, 60px)", lineHeight: 1.02, margin: 0, letterSpacing: "-0.01em", maxWidth: 820 }}>
+          Every kids&apos; cycling race in the South West, in one calendar
         </h1>
-        <p style={{ maxWidth: 480, fontSize: 16, lineHeight: 1.6, color: "#4A4A46", marginTop: 22 }}>
-          Every Under 8s–16s race from Exeter and Plymouth to Cornwall, Somerset and Bristol — Cross Country mountain biking, cyclocross, road and triathlon in one calendar. Club training lives on the <Link href="/clubs" style={{ borderBottom: "1px solid #111111" }}>clubs page</Link>.
+        {/* Kept to one sentence and one button on purpose — disciplines are
+            in the filters below and clubs are in the top nav, so the hero
+            only has to sell subscribing. */}
+        <p style={{ maxWidth: 740, fontSize: 16, lineHeight: 1.6, color: "#4A4A46", marginTop: 18, marginBottom: 0 }}>
+          Add it to your phone once and new races appear on their own.{" "}
+          <Link href="/getting-started" onClick={() => trackEvent("getting_started_click", { source: "calendar_hero" })} style={{ fontWeight: 700, color: "#111111", borderBottom: "1px solid #111111", whiteSpace: "nowrap" }}>
+            New to racing? Start here <ArrowUpRight size={14} style={{ verticalAlign: "-2px" }} />
+          </Link>
         </p>
-        <Link href="/getting-started" onClick={() => trackEvent("getting_started_click", { source: "calendar_hero" })} style={{ fontSize: 13.5, fontWeight: 700, display: "flex", alignItems: "center", gap: 5, borderBottom: "1px solid #111111", paddingBottom: 2, marginTop: 18, width: "fit-content" }}>
-          New to racing? Start here <ArrowUpRight size={14} />
-        </Link>
-        <div style={{ marginTop: 26, maxWidth: 420 }}>
-          <p style={{ fontSize: 13.5, color: "#4A4A46", marginBottom: 10, lineHeight: 1.5 }}>
-            Get new events the moment they&apos;re added — subscribe once by email or calendar and never miss a race.
-          </p>
-          <Link href={subscribeHref} onClick={() => trackEvent("subscribe_click", { source: "calendar_hero", filtered: subscribeIsFiltered })} style={{ background: "#E0102A", color: "#FAFAF8", border: "none", padding: "13px 24px", fontWeight: 700, fontSize: 13.5, display: "flex", alignItems: "center", gap: 8, cursor: "pointer", width: "fit-content" }}>
-            <Calendar size={15} /> {subscribeLabel}
+        <div style={{ marginTop: 8 }}>
+          <HandDrawnCallout note="One tap and you're done">
+            <AddToCalendarButton
+              feedParams={feedParams}
+              fallbackHref={subscribeHref}
+              source="calendar_hero"
+              style={{ background: "#E0102A", color: "#FAFAF8", border: "none", padding: "13px 24px", fontWeight: 700, fontSize: 13.5, display: "flex", alignItems: "center", gap: 8, cursor: "pointer", width: "fit-content" }}
+            />
+          </HandDrawnCallout>
+          <Link href={subscribeHref} onClick={() => trackEvent("subscribe_click", { source: "calendar_hero_advanced", filtered: subscribeIsFiltered })} style={{ display: "inline-block", marginTop: 10, fontSize: 12.5, color: "#6B6B66", borderBottom: "1px solid #D8D6D0" }}>
+            More ways to subscribe
           </Link>
         </div>
-        <TrainingThisWeek sessions={training} clubs={clubs} />
       </header>
 
       <div style={{ position: "sticky", top: 0, zIndex: 20, background: "#FAFAF8", borderTop: "1px solid #E4E2DD", borderBottom: "1px solid #E4E2DD" }}>
@@ -135,14 +154,14 @@ export default function CalendarPage({ events, clubs = [], training = [], isAdmi
               >
                 <Download size={13} /> Download CSV
               </button>
-              <Link
-                href={subscribeHref}
-                onClick={() => trackEvent("subscribe_click", { source: "filter_bar", filtered: subscribeIsFiltered })}
+              <AddToCalendarButton
+                feedParams={feedParams}
+                fallbackHref={subscribeHref}
+                source="filter_bar"
+                menuAlign="right"
+                style={{ display: "flex", alignItems: "center", gap: 6, background: subscribeIsFiltered ? "#111111" : "none", color: subscribeIsFiltered ? "#FAFAF8" : "#111111", border: `1px solid ${subscribeIsFiltered ? "#111111" : "#D8D6D0"}`, padding: "8px 12px", fontSize: 11, fontWeight: 700}}
                 className="mono"
-                style={{ display: "flex", alignItems: "center", gap: 6, background: subscribeIsFiltered ? "#111111" : "none", color: subscribeIsFiltered ? "#FAFAF8" : "#111111", border: `1px solid ${subscribeIsFiltered ? "#111111" : "#D8D6D0"}`, padding: "8px 12px", fontSize: 11, fontWeight: 700 }}
-              >
-                <Calendar size={13} /> {subscribeLabel}
-              </Link>
+              />
             </div>
           </div>
 
@@ -150,7 +169,7 @@ export default function CalendarPage({ events, clubs = [], training = [], isAdmi
             <>
               <div className="filter-controls-row">
                 <div className="filter-region-toggle">
-                  {[["all", "ALL"], ["devon", "DEVON"], ["cornwall", "CORNWALL"], ["somerset", "SOMERSET"], ["bristol", "BRISTOL"]].map(([val, label]) => (
+                  {[["all", "ALL"], ["devon", "DEVON"], ["cornwall", "CORNWALL"], ["somerset", "SOMERSET"]].map(([val, label]) => (
                     <button key={val} onClick={() => { setRegion(val); trackEvent("filter_region", { region: val }); }} className="mono" style={{ padding: "8px 15px", fontSize: 11, fontWeight: 700, letterSpacing: "0.03em", background: region === val ? "#111111" : "transparent", color: region === val ? "#FAFAF8" : "#6B6B66", border: "none", cursor: "pointer" }}>{label}</button>
                   ))}
                 </div>
@@ -197,10 +216,27 @@ export default function CalendarPage({ events, clubs = [], training = [], isAdmi
         </div>
       </div>
 
-      <main style={{ maxWidth: 1100, margin: "0 auto", padding: "36px 24px 100px" }}>
-        {filtered.length === 0 && <div style={{ textAlign: "center", padding: "80px 0", color: "#6B6B66" }}>No events match those filters.</div>}
+      <main style={{ maxWidth: 1100, margin: "0 auto", padding: "28px 24px 100px" }}>
+        <div role="group" aria-label="Calendar view" style={{ display: "flex", justifyContent: "flex-end", marginBottom: 20 }}>
+          {(["list", "month"] as const).map((v) => (
+            <button
+              key={v}
+              type="button"
+              aria-pressed={view === v}
+              onClick={() => { setView(v); trackEvent("calendar_view", { view: v }); }}
+              className="mono"
+              style={{ padding: "7px 14px", fontSize: 11, fontWeight: 700, letterSpacing: "0.03em", background: view === v ? "#111111" : "transparent", color: view === v ? "#FAFAF8" : "#6B6B66", border: "1px solid #111111", marginLeft: v === "month" ? -1 : 0, cursor: "pointer" }}
+            >
+              {v === "list" ? "LIST" : "MONTH"}
+            </button>
+          ))}
+        </div>
 
-        {Object.entries(grouped).map(([month, evts]) => (
+        {view === "month" && <GoogleMonthView />}
+
+        {view === "list" && filtered.length === 0 && <div style={{ textAlign: "center", padding: "80px 0", color: "#6B6B66" }}>No events match those filters.</div>}
+
+        {view === "list" && Object.entries(grouped).map(([month, evts]) => (
           <div key={month} style={{ marginBottom: 40 }}>
             <div className="disp" style={{ fontSize: 22, marginBottom: 6, letterSpacing: "-0.01em" }}>{month}</div>
             <div style={{ borderTop: "2px solid #111111" }}>
@@ -305,14 +341,28 @@ export default function CalendarPage({ events, clubs = [], training = [], isAdmi
           </div>
         ))}
 
-        <div style={{ marginTop: 40, padding: "24px 28px", background: "#111111", color: "#FAFAF8", maxWidth: 560 }}>
-          <h2 className="disp" style={{ fontSize: 18, margin: 0, marginBottom: 10 }}>Want these on your own calendar too?</h2>
-          <p style={{ fontSize: 13.5, lineHeight: 1.6, color: "#D8D6D0", marginBottom: 16 }}>
-            It&apos;s better to be in your calendar than checking a website. Subscribe once by email or calendar feed and every new event lands automatically.
-          </p>
-          <Link href={subscribeHref} onClick={() => trackEvent("subscribe_click", { source: "calendar_footer", filtered: subscribeIsFiltered })} style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "#E0102A", color: "#FAFAF8", padding: "10px 20px", fontWeight: 700, fontSize: 13, width: "fit-content" }}>
-            <Calendar size={14} /> {subscribeLabel}
-          </Link>
+        {/* Two columns side by side on wider screens, stacking on phones.
+            The training box renders nothing in a week with no sessions, and
+            the subscribe box then has the row to itself. */}
+        <div style={{ marginTop: 40, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 20, alignItems: "start" }}>
+          <div style={{ padding: "24px 28px", background: "#111111", color: "#FAFAF8" }}>
+            <h2 className="disp" style={{ fontSize: 18, margin: 0, marginBottom: 10 }}>Want these on your own calendar too?</h2>
+            <p style={{ fontSize: 13.5, lineHeight: 1.6, color: "#D8D6D0", marginBottom: 16 }}>
+              It&apos;s better to be in your calendar than checking a website. Subscribe once by email or calendar feed and every new event lands automatically.
+            </p>
+            <AddToCalendarButton
+              feedParams={feedParams}
+              fallbackHref={subscribeHref}
+              source="calendar_footer"
+              style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "#E0102A", color: "#FAFAF8", padding: "10px 20px", fontWeight: 700, fontSize: 13, width: "fit-content" }}
+            />
+            <div>
+              <Link href={subscribeHref} onClick={() => trackEvent("subscribe_click", { source: "calendar_footer_advanced", filtered: subscribeIsFiltered })} style={{ display: "inline-block", marginTop: 12, fontSize: 12.5, color: "#D8D6D0", borderBottom: "1px solid #6B6B66" }}>
+                More ways to subscribe
+              </Link>
+            </div>
+          </div>
+          <TrainingThisWeek sessions={training} clubs={clubs} />
         </div>
       </main>
 
