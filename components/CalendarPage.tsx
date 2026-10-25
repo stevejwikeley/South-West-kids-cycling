@@ -100,20 +100,20 @@ export default function CalendarPage({ events, clubs = [], training = [], isAdmi
     <>
       <header style={{ maxWidth: 1100, margin: "0 auto", padding: "56px 24px 40px" }}>
         <div className="mono" style={{ fontSize: 11.5, letterSpacing: "0.12em", color: "#E0102A", marginBottom: 16, fontWeight: 700 }}>DEVON, CORNWALL &amp; SOMERSET — AGES 5 TO 16</div>
-        <h1 className="disp" style={{ fontSize: "clamp(32px, 5.2vw, 60px)", lineHeight: 1.02, margin: 0, letterSpacing: "-0.01em" }}>
-          One calendar for all cycling races and events across the Southwest
+        <h1 className="disp" style={{ fontSize: "clamp(32px, 5.2vw, 60px)", lineHeight: 1.02, margin: 0, letterSpacing: "-0.01em", maxWidth: 820 }}>
+          Every kids&apos; cycling race in the South West, in one calendar
         </h1>
-        <p style={{ maxWidth: 480, fontSize: 16, lineHeight: 1.6, color: "#4A4A46", marginTop: 22 }}>
-          Every Under 8s–16s race from Exeter and Plymouth to Cornwall and Somerset — Cross Country mountain biking, cyclocross, road and triathlon in one calendar. Club training lives on the <Link href="/clubs" style={{ borderBottom: "1px solid #111111" }}>clubs page</Link>.
+        {/* Kept to one sentence and one button on purpose — disciplines are
+            in the filters below and clubs are in the top nav, so the hero
+            only has to sell subscribing. */}
+        <p style={{ maxWidth: 740, fontSize: 16, lineHeight: 1.6, color: "#4A4A46", marginTop: 18, marginBottom: 0 }}>
+          Add it to your phone once and new races appear on their own.{" "}
+          <Link href="/getting-started" onClick={() => trackEvent("getting_started_click", { source: "calendar_hero" })} style={{ fontWeight: 700, color: "#111111", borderBottom: "1px solid #111111", whiteSpace: "nowrap" }}>
+            New to racing? Start here <ArrowUpRight size={14} style={{ verticalAlign: "-2px" }} />
+          </Link>
         </p>
-        <Link href="/getting-started" onClick={() => trackEvent("getting_started_click", { source: "calendar_hero" })} style={{ fontSize: 13.5, fontWeight: 700, display: "flex", alignItems: "center", gap: 5, borderBottom: "1px solid #111111", paddingBottom: 2, marginTop: 18, width: "fit-content" }}>
-          New to racing? Start here <ArrowUpRight size={14} />
-        </Link>
-        <div style={{ marginTop: 26, maxWidth: 520 }}>
-          <p style={{ fontSize: 13.5, color: "#4A4A46", marginBottom: 10, lineHeight: 1.5, maxWidth: 420 }}>
-            Get new events the moment they&apos;re added — subscribe once by email or calendar and never miss a race.
-          </p>
-          <HandDrawnCallout note="One tap and you'll never miss a race">
+        <div style={{ marginTop: 8 }}>
+          <HandDrawnCallout note="One tap and you're done">
             <AddToCalendarButton
               feedParams={feedParams}
               fallbackHref={subscribeHref}
