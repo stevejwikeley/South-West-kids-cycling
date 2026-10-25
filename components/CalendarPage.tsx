@@ -158,6 +158,7 @@ export default function CalendarPage({ events, clubs = [], training = [], isAdmi
                 feedParams={feedParams}
                 fallbackHref={subscribeHref}
                 source="filter_bar"
+                menuAlign="right"
                 style={{ display: "flex", alignItems: "center", gap: 6, background: subscribeIsFiltered ? "#111111" : "none", color: subscribeIsFiltered ? "#FAFAF8" : "#111111", border: `1px solid ${subscribeIsFiltered ? "#111111" : "#D8D6D0"}`, padding: "8px 12px", fontSize: 11, fontWeight: 700}}
                 className="mono"
               />
