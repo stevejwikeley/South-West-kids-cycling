@@ -40,8 +40,7 @@ export default function AddToCalendarButton({
   return (
     <a
       href={link.href}
-      target="_blank"
-      rel="noreferrer"
+      {...(link.newTab ? { target: "_blank", rel: "noreferrer" } : {})}
       onClick={() => trackAddToCalendar({ method: "one_tap", platform, source, feedUrl })}
       className={className}
       style={style}

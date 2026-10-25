@@ -257,8 +257,8 @@ export default function SubscribeSelector({
   const oneClick = (href: string, label: string) => (
     <a
       href={href}
-      target="_blank"
-      rel="noreferrer"
+      // webcal:// stays in this tab — see SubscribeLink in lib/subscribe-links.ts.
+      {...(href.startsWith("webcal:") ? {} : { target: "_blank", rel: "noreferrer" })}
       onClick={() => trackAddToCalendar({ method: "one_tap", platform, source: "subscribe_page", feedUrl })}
       style={primaryButtonStyle}
     >
