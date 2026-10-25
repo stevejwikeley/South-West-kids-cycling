@@ -33,7 +33,16 @@ function clientIp(headerList: Headers): string {
 // or an embedding site's page load. Errors are swallowed rather than
 // surfaced: there's no reasonable user-facing response to a failed
 // analytics write on either route.
-export async function logFeedHit(headerList: Headers, feed: "calendar.ics" | "embed"): Promise<void> {
+//
+// `search` is the request's query string (URL.search, leading "?" and all,
+// or "" when there is none) — passed by /calendar.ics so
+// calendar_feed_queries can tell the full calendar apart from each filtered
+// feed. Stored without the "?", and as null for the unfiltered feed.
+export async function logFeedHit(
+  headerList: Headers,
+  feed: "calendar.ics" | "embed",
+  search = ""
+): Promise<void> {
   try {
     const userAgent = headerList.get("user-agent");
     // Referer is embed-only data by design: calendar client software
@@ -50,6 +59,7 @@ export async function logFeedHit(headerList: Headers, feed: "calendar.ics" | "em
       user_agent: userAgent,
       referer,
       feed,
+      query: search.replace(/^\?/, "") || null,
     });
   } catch {
     // Swallow — see the comment above the function.

@@ -177,7 +177,7 @@ export async function GET(request: NextRequest) {
   // signal here, not "did we manage to answer it". after() defers the
   // write until the response has gone out, so it can never add latency to
   // a subscriber's fetch.
-  after(() => logFeedHit(request.headers, "calendar.ics"));
+  after(() => logFeedHit(request.headers, "calendar.ics", request.nextUrl.search));
 
   const searchParams = request.nextUrl.searchParams;
   const { disciplines, regions, clubs, kind } = parseFilters(searchParams);

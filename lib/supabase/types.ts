@@ -240,6 +240,7 @@ export interface CalendarFeedHitRow {
   user_agent: string | null;
   referer: string | null;
   feed: string;
+  query: string | null;
 }
 
 export interface SiteFeedbackRow {
