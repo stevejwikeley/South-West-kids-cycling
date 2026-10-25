@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { CalendarCheck, Laptop, Smartphone } from "lucide-react";
 import CopyLink from "./CopyLink";
-import { trackEvent } from "@/lib/analytics";
+import { trackAddToCalendar, trackEvent } from "@/lib/analytics";
 import { fmtDay } from "@/lib/format";
 import { eventDisc } from "@/lib/mock-data";
 import { CALENDAR_NAME, feedUrlFor, outlookAddUrl, subscribeLinkFor, type Platform } from "@/lib/subscribe-links";
@@ -259,7 +259,7 @@ export default function SubscribeSelector({
       href={href}
       target="_blank"
       rel="noreferrer"
-      onClick={() => trackEvent("subscribe_one_click", { platform })}
+      onClick={() => trackAddToCalendar({ method: "one_tap", platform, source: "subscribe_page", feedUrl })}
       style={primaryButtonStyle}
     >
       <CalendarCheck size={17} /> {label}
@@ -269,7 +269,7 @@ export default function SubscribeSelector({
   const copyStep = (
     <>
       <p style={stepStyle}><span style={stepNumStyle}>1.</span> Copy this link:</p>
-      <CopyLink url={feedUrl} />
+      <CopyLink url={feedUrl} platform={platform} />
     </>
   );
 
@@ -502,7 +502,7 @@ export default function SubscribeSelector({
               </p>
               <p style={{ fontSize: 13, color: "#6B6B66", marginBottom: 18 }}>
                 Work or school account?{" "}
-                <a href={outlookUrl("outlook.office.com")} target="_blank" rel="noreferrer" onClick={() => trackEvent("subscribe_one_click", { platform: "outlook365" })} style={{ borderBottom: "1px solid #6B6B66" }}>
+                <a href={outlookUrl("outlook.office.com")} target="_blank" rel="noreferrer" onClick={() => trackAddToCalendar({ method: "one_tap", platform: "outlook365", source: "subscribe_page", feedUrl })} style={{ borderBottom: "1px solid #6B6B66" }}>
                   Use this link instead
                 </a>
                 .
@@ -528,7 +528,7 @@ export default function SubscribeSelector({
               anyone actually wants. */}
           <p style={{ fontSize: 12, color: "#6B6B66", marginTop: 24, marginBottom: 0 }}>
             Only want a one-off copy?{" "}
-            <a href={feedUrl} download="south-west-kids-cycling.ics" onClick={() => trackEvent("subscribe_oneoff_download", { platform })} style={{ borderBottom: "1px solid #6B6B66" }}>
+            <a href={feedUrl} download="south-west-kids-cycling.ics" onClick={() => trackAddToCalendar({ method: "download", platform, source: "subscribe_page", feedUrl })} style={{ borderBottom: "1px solid #6B6B66" }}>
               Download the file
             </a>{" "}
             instead — it won&apos;t pick up new events or changes.

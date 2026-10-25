@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Calendar } from "lucide-react";
-import { trackEvent } from "@/lib/analytics";
+import { trackAddToCalendar, trackEvent } from "@/lib/analytics";
 import { feedUrlFor, subscribeLinkFor } from "@/lib/subscribe-links";
 import { useDetectedPlatform } from "./useDetectedPlatform";
 
@@ -25,7 +25,8 @@ export default function AddToCalendarButton({
   className?: string;
 }) {
   const platform = useDetectedPlatform();
-  const link = platform ? subscribeLinkFor(platform, feedUrlFor(feedParams)) : null;
+  const feedUrl = feedUrlFor(feedParams);
+  const link = platform ? subscribeLinkFor(platform, feedUrl) : null;
   const filtered = feedParams.size > 0;
 
   if (!platform || !link) {
@@ -41,7 +42,7 @@ export default function AddToCalendarButton({
       href={link.href}
       target="_blank"
       rel="noreferrer"
-      onClick={() => trackEvent("subscribe_one_click", { source, platform, filtered })}
+      onClick={() => trackAddToCalendar({ method: "one_tap", platform, source, feedUrl })}
       className={className}
       style={style}
     >

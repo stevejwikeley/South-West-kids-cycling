@@ -1,16 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import { trackEvent } from "@/lib/analytics";
+import { trackAddToCalendar } from "@/lib/analytics";
 
-export default function CopyLink({ url }: { url: string }) {
+// platform and source are only for analytics — which calendar the visitor
+// was setting up, and where on the site they copied the link.
+export default function CopyLink({ url, platform = null, source = "subscribe_page" }: { url: string; platform?: string | null; source?: string }) {
   const [copied, setCopied] = useState(false);
 
   async function handleCopy() {
     try {
       await navigator.clipboard.writeText(url);
       setCopied(true);
-      trackEvent("calendar_link_copy");
+      trackAddToCalendar({ method: "copy_link", platform, source, feedUrl: url });
       setTimeout(() => setCopied(false), 2000);
     } catch {
       // Clipboard API unavailable — the URL is still visible in the field
