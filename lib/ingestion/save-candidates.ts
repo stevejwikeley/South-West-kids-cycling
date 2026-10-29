@@ -8,6 +8,7 @@ import { borrowFromKnownVenue, checkPostcode, type KnownVenue, type LocationFiel
 import { matchClubByName } from "@/lib/club-match";
 import { canAutoPublish } from "./publish-ready";
 import { publishPendingRow } from "./publish-candidate";
+import { candidateDiffersFromLive } from "./live-diff";
 import type { ExtractedEvent } from "./extract-events";
 import type { Database, EventRow, EventPendingRow, SourceTypeEnum, ClubRow } from "@/lib/supabase/types";
 
@@ -152,7 +153,7 @@ export async function saveCandidates(
     // page is rarely the organiser's own site) — re-flagging the same
     // already-approved event as changed on every weekly check.
     const diffCandidate = { ...values, status: candidate.status, organiser_url: candidate.organiser_url };
-    if (duplicate && liveIds.has(duplicate.id) && !candidateDiffersFromLive(diffCandidate, duplicate)) {
+    if (duplicate && liveIds.has(duplicate.id) && !candidateDiffersFromLive(diffCandidate, duplicate, location.coords)) {
       continue;
     }
 
@@ -219,60 +220,4 @@ async function enrichLocation(
     flags: { ...borrowed.flags, ...checked.flags },
     coords: lookup === "not_found" ? null : { lat: lookup.lat, lng: lookup.lng },
   };
-}
-
-// title and venue_name are deliberately excluded — they're the two fields
-// findDuplicate() (dedup.ts) already fuzzy-matched to decide this candidate
-// IS the live event in the first place, so an exact-string difference here
-// is expected extraction-wording noise (a dropped season year, a different
-// dash, "Newnham Bottom" vs "Newnham Bottom Field"), not a real change.
-// Comparing them here undid that entirely — every re-scan re-flagged the
-// same event as "changed" purely because its own re-extracted title/venue
-// text isn't byte-identical to what an earlier run produced.
-//
-// address is excluded for the same reason — it's free text re-extracted
-// fresh every scan (a dropped comma, "Rd" vs "Road", differently-ordered
-// clauses) and, unlike postcode, has no canonical form to normalize
-// against. postcode carries the location precision that actually matters
-// (it's what geocoding keys off), so it stays in the list.
-const COMPARISON_FIELDS = [
-  "discipline", "status", "start_datetime",
-  "postcode", "region", "age_categories", "kids_only",
-  "booking_status", "booking_link", "organiser_url", "organiser_name", "organiser_contact",
-] as const;
-
-function sameValue(a: unknown, b: unknown): boolean {
-  if (Array.isArray(a) && Array.isArray(b)) {
-    return JSON.stringify([...a].sort()) === JSON.stringify([...b].sort());
-  }
-  return a === b;
-}
-
-// A candidate field that's null/empty is "no opinion offered", not a
-// diff — extraction not finding an address doesn't mean the live address
-// changed. Only a populated field that actively disagrees with the live
-// value counts as something worth surfacing.
-function candidateDiffersFromLive(values: Record<string, unknown>, live: EventRow): boolean {
-  const liveRecord = live as unknown as Record<string, unknown>;
-  return COMPARISON_FIELDS.some((field) => {
-    const v = values[field];
-    if (v === null || v === undefined) return false;
-    if (Array.isArray(v) && v.length === 0) return false;
-    // start_datetime is built here as "...T00:00:00.000Z" but PostgREST
-    // serializes the same instant back as "...T00:00:00+00:00" — confirmed
-    // against live data. Comparing those strings with === always disagrees
-    // even when the date hasn't changed, so this field alone re-flagged
-    // every matched event as "changed" on every re-scan. Compare the
-    // parsed instant instead.
-    if (field === "start_datetime") {
-      return new Date(v as string).getTime() !== new Date(liveRecord[field] as string).getTime();
-    }
-    // Guards against live rows saved before postcode normalization existed —
-    // compare canonical forms so old-format live data doesn't itself look
-    // like a diff against a freshly-normalized candidate.
-    if (field === "postcode") {
-      return normalizePostcode(v as string | null) !== normalizePostcode(liveRecord[field] as string | null);
-    }
-    return !sameValue(v, liveRecord[field]);
-  });
 }
