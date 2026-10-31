@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { parseEventForm } from "./parse-event-form";
+import { safeActionRedirect } from "@/lib/safe-next";
 
 export interface EventFormState {
   error?: string;
@@ -25,11 +26,13 @@ export async function saveEvent(
   const id = String(formData.get("id") ?? "").trim() || null;
 
   if (id) {
-    const { error } = await supabase
+    const { data: updated, error } = await supabase
       .from("events")
       .update({ ...parsed.values, updated_by: user.id })
-      .eq("id", id);
+      .eq("id", id)
+      .select("id");
     if (error) return { error: error.message };
+    if (!updated || updated.length === 0) return { error: "You can't edit this event." };
   } else {
     const { error } = await supabase
       .from("events")
@@ -37,12 +40,12 @@ export async function saveEvent(
     if (error) return { error: error.message };
   }
 
-  redirect(redirectTo);
+  redirect(safeActionRedirect(redirectTo));
 }
 
 export async function deleteEvent(id: string, redirectTo: string) {
   const supabase = await createClient();
   const { error } = await supabase.from("events").delete().eq("id", id);
   if (error) throw new Error(error.message);
-  redirect(redirectTo);
+  redirect(safeActionRedirect(redirectTo));
 }

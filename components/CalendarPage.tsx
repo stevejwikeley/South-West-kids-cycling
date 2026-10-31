@@ -146,7 +146,7 @@ export default function CalendarPage({ events }: { events: CalendarEvent[] }) {
                         Book
                       </a>
                     ) : (
-                      <a href={e.organiserUrl} style={{ flexShrink: 0, fontSize: 12, fontWeight: 700, color: "#6B6B66", border: "1px solid #D8D6D0", padding: "8px 18px" }}>
+                      <a href={e.organiserUrl ?? "#"} style={{ flexShrink: 0, fontSize: 12, fontWeight: 700, color: "#6B6B66", border: "1px solid #D8D6D0", padding: "8px 18px" }}>
                         Club website
                       </a>
                     )}

@@ -4,6 +4,8 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { EVENT_FORM_FIELDS, parseEventForm, type EventFormValues } from "./parse-event-form";
 import type { EventPendingRow, EventRow } from "@/lib/supabase/types";
+import { PUBLIC_EVENT_SELECT, type PublicEventRow } from "@/lib/supabase/columns";
+import { safeActionRedirect } from "@/lib/safe-next";
 
 export interface SuggestChangeState {
   error?: string;
@@ -28,15 +30,16 @@ export async function submitChangeRequest(
 
   const { data: current, error: fetchError } = await supabase
     .from("events")
-    .select("*")
+    .select(PUBLIC_EVENT_SELECT)
     .eq("id", eventId)
+    .eq("approved", true)
     .single();
   if (fetchError || !current) return { error: "Event not found." };
 
   const parsed = parseEventForm(formData);
   if (!parsed.ok) return { error: parsed.error };
 
-  const currentRow = current as EventRow;
+  const currentRow = current as unknown as PublicEventRow;
   const diff: Diff = {};
   (Object.keys(parsed.values) as (keyof EventFormValues)[]).forEach((key) => {
     const to = parsed.values[key];
@@ -45,6 +48,7 @@ export async function submitChangeRequest(
   });
 
   const note = String(formData.get("note") ?? "").trim();
+  if (note.length > 2000) return { error: "Note is too long (max 2000 characters)." };
   if (note) diff._note = { from: null, to: note };
 
   if (Object.keys(diff).length === 0) {
@@ -58,7 +62,11 @@ export async function submitChangeRequest(
     diff_against: diff,
   });
 
-  if (error) return { error: error.message };
+  if (error) {
+    // The pending-queue trigger raises these when suggestions are throttled.
+    if (/too many/i.test(error.message)) return { error: error.message };
+    return { error: "Couldn't submit your suggestion — please try again later." };
+  }
   return { success: true };
 }
 
@@ -147,12 +155,12 @@ export async function approveChange(pendingId: string, redirectTo: string): Prom
     }
   }
 
-  redirect(redirectTo);
+  redirect(safeActionRedirect(redirectTo));
 }
 
 export async function rejectChange(pendingId: string, redirectTo: string) {
   const supabase = await createClient();
   const { error } = await supabase.from("events_pending").delete().eq("id", pendingId);
   if (error) throw new Error(error.message);
-  redirect(redirectTo);
+  redirect(safeActionRedirect(redirectTo));
 }

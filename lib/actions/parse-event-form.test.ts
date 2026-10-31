@@ -55,7 +55,30 @@ describe("parseEventForm", () => {
     [{ organiser_url: "" }, "Organiser URL is required."],
     [{ booking_status: "open" }, "Booking link is required when entries are open."],
     [{ all_day: null }, "Start time is required for a timed event."],
+    [{ organiser_url: "javascript:alert(1)" }, "Organiser URL must be a web address (https://…)."],
+    [{ organiser_url: "data:text/html,hi" }, "Organiser URL must be a web address (https://…)."],
+    [{ booking_link: "not a link" }, "Booking link must be a web address (https://…)."],
+    [{ title: "x".repeat(301) }, "Title is too long (max 300 characters)."],
+    [{ organiser_url: "https://a.example/" + "x".repeat(2000) }, "That link is too long."],
+    [{ discipline: "bmx" }, "Unknown discipline."],
+    [{ region: "dorset" }, "Unknown region."],
+    [{ ages: ["u8", "adult"] }, "Unknown age category."],
+    [{ date: "next tuesday" }, "Date isn't valid."],
+    [{ all_day: null, start_time: "9am" }, "Time isn't valid."],
   ])("rejects %j", (overrides, error) => {
     expect(parseEventForm(form(overrides))).toEqual({ ok: false, error });
+  });
+
+  it("adds https:// to a bare domain so the calendar feed stays valid", () => {
+    const result = parseEventForm(form({ organiser_url: "www.club.co.uk", booking_status: "open", booking_link: "club.co.uk/enter" }));
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.values.organiser_url).toBe("https://www.club.co.uk");
+    expect(result.values.booking_link).toBe("https://club.co.uk/enter");
+  });
+
+  it("leaves a valid URL exactly as typed (no spurious diff in change requests)", () => {
+    const result = parseEventForm(form({ organiser_url: "https://example.org" }));
+    expect(result.ok && result.values.organiser_url).toBe("https://example.org");
   });
 });
