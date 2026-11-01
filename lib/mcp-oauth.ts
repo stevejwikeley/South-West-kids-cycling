@@ -56,6 +56,15 @@ export function checkPasscode(candidate: string): boolean {
   return timingSafeStringEqual(candidate, secret());
 }
 
+// Constant-time bearer check for the MCP resource server. The access token
+// this shim issues is MCP_SECRET itself, so this is the same comparison as
+// checkPasscode, but returns false (not throw) when the secret is unset.
+export function checkBearerToken(candidate: string | undefined): boolean {
+  const s = process.env.MCP_SECRET;
+  if (!s || !candidate) return false;
+  return timingSafeStringEqual(candidate, s);
+}
+
 export function verifyPkce(codeVerifier: string, codeChallenge: string): boolean {
   const computed = crypto.createHash("sha256").update(codeVerifier).digest("base64url");
   return timingSafeStringEqual(computed, codeChallenge);
