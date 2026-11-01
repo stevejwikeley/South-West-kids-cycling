@@ -1,6 +1,7 @@
 import "server-only";
 import { NextResponse } from "next/server";
 import { issueCode, checkPasscode } from "@/lib/mcp-oauth";
+import { isAllowedRedirectUri } from "@/lib/oauth-redirect";
 
 // The authorization_endpoint half of the OAuth shim described in
 // lib/mcp-oauth.ts. GET renders a passcode gate; POST checks it and, on
@@ -53,6 +54,8 @@ export async function GET(request: Request) {
   const responseType = params.get("response_type");
 
   if (!redirectUri) return html("Missing redirect_uri.", 400);
+  // Checked before anything redirects to it, error redirects included.
+  if (!isAllowedRedirectUri(redirectUri)) return html("This redirect_uri isn't allowed.", 400);
 
   if (responseType !== "code" || !codeChallenge || codeChallengeMethod !== "S256") {
     const errUrl = new URL(redirectUri);
@@ -72,6 +75,7 @@ export async function POST(request: Request) {
   const state = String(form.get("state") ?? "");
 
   if (!redirectUri || !codeChallenge) return html("Missing form fields.", 400);
+  if (!isAllowedRedirectUri(redirectUri)) return html("This redirect_uri isn't allowed.", 400);
 
   if (!checkPasscode(passcode)) {
     return html(renderForm({ redirect_uri: redirectUri, code_challenge: codeChallenge, state }, "Incorrect passcode — try again."));

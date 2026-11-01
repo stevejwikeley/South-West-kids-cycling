@@ -33,7 +33,19 @@ async function findOrCreateAttendee(
     attendeeId = created.user.id;
   }
 
-  await admin.from("attendees").update({ contact_name: values.contactName, ...(values.phone ? { phone: values.phone } : {}) }).eq("id", attendeeId);
+  // Booking needs no sign-in, so whoever fills in the form only proves they
+  // know an email address. Fill in contact details that are missing, but
+  // never overwrite ones an existing attendee already has: otherwise anyone
+  // could replace a parent's name and phone number (what organisers see)
+  // just by booking with that parent's email.
+  const { data: current } = await admin.from("attendees").select("contact_name, phone").eq("id", attendeeId).maybeSingle();
+  const row = current as Pick<AttendeeRow, "contact_name" | "phone"> | null;
+  const patch: Partial<Pick<AttendeeRow, "contact_name" | "phone">> = {};
+  if (!row?.contact_name) patch.contact_name = values.contactName;
+  if (!row?.phone && values.phone) patch.phone = values.phone;
+  if (Object.keys(patch).length > 0) {
+    await admin.from("attendees").update(patch).eq("id", attendeeId);
+  }
   return attendeeId;
 }
 
@@ -49,7 +61,9 @@ export async function createBooking(
 
   const { data: eventData, error: eventError } = await admin.from("events").select("*").eq("id", eventId).single();
   const event = eventData as EventRow | null;
-  if (eventError || !event || !event.bookable) {
+  // Service-role read, so RLS doesn't hide unpublished events: check
+  // approved here or anyone with an event id could book a draft.
+  if (eventError || !event || !event.approved || !event.bookable) {
     return { error: "This event isn't taking bookings." };
   }
 
