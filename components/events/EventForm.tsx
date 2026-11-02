@@ -4,7 +4,7 @@ import { useActionState, useState } from "react";
 import { saveEvent, type EventFormState } from "@/lib/actions/events";
 import { utcIsoToUkLocalParts } from "@/lib/uk-time";
 import { EVENT_DISCIPLINES } from "@/lib/mock-data";
-import type { EventRow } from "@/lib/supabase/types";
+import type { PublicEventRow } from "@/lib/supabase/columns";
 import type { AgeCategory } from "@/lib/types";
 
 const AGE_OPTIONS: AgeCategory[] = ["u8", "u10", "u12", "u14", "u16"];
@@ -23,7 +23,7 @@ const label: React.CSSProperties = { fontSize: 10.5, color: "#6B6B66", display: 
 const input: React.CSSProperties = { width: "100%", background: "#FFFFFF", border: "1px solid #D8D6D0", color: "#111111", padding: "9px 11px", fontSize: 13.5 };
 const field: React.CSSProperties = { marginBottom: 18 };
 
-export default function EventForm({ event, redirectTo }: { event?: EventRow; redirectTo: string }) {
+export default function EventForm({ event, redirectTo }: { event?: PublicEventRow; redirectTo: string }) {
   const boundSave = saveEvent.bind(null, redirectTo);
   const [state, formAction, pending] = useActionState<EventFormState, FormData>(boundSave, {});
   const [allDay, setAllDay] = useState(event?.all_day ?? true);

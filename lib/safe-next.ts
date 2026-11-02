@@ -7,3 +7,15 @@ export function safeNextPath(next: string | null | undefined, fallback = "/admin
   }
   return next;
 }
+
+// Where a server action may send the user afterwards. Server action
+// arguments bound in a Client Component (saveEvent.bind(null, redirectTo))
+// are just values the browser sends back, so they're attacker-controlled;
+// only ever redirect to one of the app's own dashboards.
+const ACTION_REDIRECTS = ["/admin", "/admin/pending", "/organiser"] as const;
+
+export function safeActionRedirect(redirectTo: unknown, fallback = "/"): string {
+  return typeof redirectTo === "string" && (ACTION_REDIRECTS as readonly string[]).includes(redirectTo)
+    ? redirectTo
+    : fallback;
+}

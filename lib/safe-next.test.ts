@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { safeNextPath } from "./safe-next";
+import { safeActionRedirect, safeNextPath } from "./safe-next";
 
 describe("safeNextPath", () => {
   it("keeps same-site relative paths", () => {
@@ -18,4 +18,17 @@ describe("safeNextPath", () => {
     expect(safeNextPath(null)).toBe("/admin");
     expect(safeNextPath(undefined, "/organiser")).toBe("/organiser");
   });
+});
+
+describe("safeActionRedirect", () => {
+  it.each(["/admin", "/admin/pending", "/organiser"])("allows %j", (ok) => {
+    expect(safeActionRedirect(ok)).toBe(ok);
+  });
+
+  it.each(["https://evil.example", "//evil.example", "/admin/../evil", "/login", "", null, 42])(
+    "falls back for %j",
+    (bad) => {
+      expect(safeActionRedirect(bad)).toBe("/");
+    }
+  );
 });

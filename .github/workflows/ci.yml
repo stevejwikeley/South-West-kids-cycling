@@ -5,6 +5,10 @@ on:
   push:
     branches: [master]
 
+# Read-only token: this workflow only checks code, it never writes back.
+permissions:
+  contents: read
+
 jobs:
   check:
     runs-on: ubuntu-latest

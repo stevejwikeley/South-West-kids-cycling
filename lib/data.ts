@@ -1,9 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
 import { ukDateOf } from "@/lib/uk-time";
+import { httpUrlOrNull } from "@/lib/safe-url";
+import { PUBLIC_EVENT_SELECT, type PublicEventRow } from "@/lib/supabase/columns";
 import type { CalendarEvent, Club } from "@/lib/types";
 import type { EventRow, ClubRow, EventPendingRow } from "@/lib/supabase/types";
 
-function toCalendarEvent(row: EventRow): CalendarEvent {
+function toCalendarEvent(row: PublicEventRow): CalendarEvent {
   return {
     id: row.id,
     title: row.title,
@@ -15,8 +17,10 @@ function toCalendarEvent(row: EventRow): CalendarEvent {
     kidsOnly: row.kids_only,
     ages: row.age_categories,
     bookingStatus: row.booking_status,
-    booking: row.booking_link,
-    organiserUrl: row.organiser_url,
+    // Re-checked on the way out too: rows written before URL validation
+    // existed (or straight into the database) never reach an href unchecked.
+    booking: httpUrlOrNull(row.booking_link),
+    organiserUrl: httpUrlOrNull(row.organiser_url),
   };
 }
 
@@ -25,7 +29,7 @@ function toClub(row: ClubRow): Club {
     id: row.id,
     name: row.name,
     location: row.location,
-    website: row.website,
+    website: httpUrlOrNull(row.website),
     disciplines: row.disciplines,
     ageNote: row.age_note,
     kidsOnly: row.kids_only,
@@ -38,14 +42,14 @@ export async function getEvents(): Promise<CalendarEvent[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("events")
-    .select("*")
+    .select(PUBLIC_EVENT_SELECT)
     // Explicit, not left to RLS: a signed-in admin/organiser can read
     // unapproved rows, and they must never leak onto the public calendar.
     .eq("approved", true)
     .order("start_datetime", { ascending: true });
 
   if (error) throw error;
-  return (data as EventRow[]).map(toCalendarEvent);
+  return (data as unknown as PublicEventRow[]).map(toCalendarEvent);
 }
 
 export async function getClubs(): Promise<Club[]> {
@@ -56,12 +60,14 @@ export async function getClubs(): Promise<Club[]> {
   return (data as ClubRow[]).map(toClub);
 }
 
-export async function getEventRowById(id: string): Promise<EventRow | null> {
+// Used by the public suggest-a-change page as well as the edit pages, so it
+// sticks to the columns anon can read.
+export async function getEventRowById(id: string): Promise<PublicEventRow | null> {
   const supabase = await createClient();
-  const { data, error } = await supabase.from("events").select("*").eq("id", id).single();
+  const { data, error } = await supabase.from("events").select(PUBLIC_EVENT_SELECT).eq("id", id).single();
 
   if (error) return null;
-  return data as EventRow;
+  return data as unknown as PublicEventRow;
 }
 
 export async function getMyEventRows(userId: string): Promise<EventRow[]> {

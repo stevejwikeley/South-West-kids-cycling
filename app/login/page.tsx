@@ -28,9 +28,16 @@ export default function LoginPage() {
       },
     });
 
-    if (error) {
+    // Only surface errors that don't depend on whether the address has an
+    // account (rate limiting, network trouble). "No such user" looks exactly
+    // like success, so the form can't be used to discover who's registered.
+    if (error && (error.status === 429 || !error.status)) {
       setStatus("error");
-      setErrorMessage(error.message);
+      setErrorMessage(
+        error.status === 429
+          ? "Too many sign-in attempts — please wait a few minutes and try again."
+          : "Couldn't send the link — please check your connection and try again."
+      );
     } else {
       setStatus("sent");
     }
@@ -45,7 +52,7 @@ export default function LoginPage() {
 
       {status === "sent" ? (
         <p style={{ maxWidth: 420, fontSize: 15, lineHeight: 1.6, color: "#4A4A46", marginTop: 22 }}>
-          Check <strong>{email}</strong> for a sign-in link. It&apos;ll log you straight in — no password needed.
+          If <strong>{email}</strong> has an admin or organiser account, a sign-in link is on its way. It&apos;ll log you straight in — no password needed.
         </p>
       ) : (
         <form onSubmit={handleSubmit} style={{ maxWidth: 360, marginTop: 28 }}>

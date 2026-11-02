@@ -23,7 +23,7 @@ export interface CalendarEvent {
   ages: AgeCategory[];
   bookingStatus: BookingStatus;
   booking: string | null;
-  organiserUrl: string;
+  organiserUrl: string | null;
 }
 
 export interface Club {
