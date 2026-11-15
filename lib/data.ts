@@ -1,4 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
+import { createPublicClient } from "@/lib/supabase/public";
+import { isAuthRejection } from "@/lib/auth-rejection";
 import type { CalendarEvent, Club } from "@/lib/types";
 import type { EventRow, ClubRow, EventPendingRow, WatchedSourceRow, ProfileRow, EventSeriesRow, SignupStatus, BookingPersonRow } from "@/lib/supabase/types";
 import type { TrainingSession } from "@/lib/training";
@@ -50,12 +52,18 @@ export function toClub(row: ClubRow): Club {
 // Races by default — every current caller (the calendar, the embed, the
 // structured data) wants races. Training is opt-in, the same rule the .ics
 // feed follows.
+//
+// Public data, so it's read without the visitor's session (see
+// lib/supabase/public.ts) and filtered to approved rows explicitly: with the
+// session client a signed-in admin or organiser would also get unapproved
+// events back via RLS, and those must never appear on the public calendar.
 export async function getEvents(kind: "race" | "training" | "all" = "race"): Promise<CalendarEvent[]> {
-  const supabase = await createClient();
+  const supabase = createPublicClient();
   const today = new Date().toISOString().slice(0, 10);
   let query = supabase
     .from("events")
     .select("*")
+    .eq("approved", true)
     .gte("start_datetime", today)
     .order("start_datetime", { ascending: true });
 
@@ -77,8 +85,9 @@ export async function getUpcomingTraining(): Promise<TrainingSession[]> {
     .map((e) => ({ id: e.id, title: e.title, date: e.date, venue: e.venue, clubId: e.clubId }));
 }
 
+// Clubs are public to everyone (RLS: "public can read clubs"), so no session.
 export async function getClubs(): Promise<Club[]> {
-  const supabase = await createClient();
+  const supabase = createPublicClient();
   const { data, error } = await supabase.from("clubs").select("*").order("name");
 
   if (error) throw error;
@@ -86,16 +95,23 @@ export async function getClubs(): Promise<Club[]> {
 }
 
 export async function getClubById(id: string): Promise<Club | null> {
-  const supabase = await createClient();
+  const supabase = createPublicClient();
   const { data, error } = await supabase.from("clubs").select("*").eq("id", id).single();
 
   if (error) return null;
   return toClub(data as ClubRow);
 }
 
+// Uses the session so admins/organisers can open their unapproved events,
+// but if the session's token is refused it falls back to the public view
+// rather than 404ing a published event.
 export async function getEventRowById(id: string): Promise<EventRow | null> {
   const supabase = await createClient();
-  const { data, error } = await supabase.from("events").select("*").eq("id", id).single();
+  let { data, error } = await supabase.from("events").select("*").eq("id", id).single();
+
+  if (isAuthRejection(error)) {
+    ({ data, error } = await createPublicClient().from("events").select("*").eq("id", id).eq("approved", true).single());
+  }
 
   if (error) return null;
   return data as EventRow;
@@ -200,7 +216,7 @@ export async function getTeamProfiles(): Promise<ProfileRow[]> {
 }
 
 export async function getEventSpacesLeft(eventId: string): Promise<number | null> {
-  const supabase = await createClient();
+  const supabase = createPublicClient();
   const { data, error } = await supabase.rpc("event_spaces_left", { p_event_id: eventId });
   if (error) throw error;
   return data;
