@@ -6,6 +6,7 @@ import { saveCandidates } from "@/lib/ingestion/save-candidates";
 import { ExtractedEventSchema, KIND_DESCRIPTION } from "@/lib/ingestion/extract-events";
 import { EVENT_DISCIPLINES } from "@/lib/mock-data";
 import type { EventRow, EventPendingRow } from "@/lib/supabase/types";
+import { checkBearerToken } from "@/lib/mcp-oauth";
 
 // Lets a user-driven Claude session (e.g. a weekly Claude schedule) search
 // the web itself for new youth cycling events and queue candidates for
@@ -121,8 +122,7 @@ const handler = createMcpHandler(
 const authedHandler = withMcpAuth(
   handler,
   (_req, bearerToken) => {
-    const secret = process.env.MCP_SECRET;
-    if (!secret || bearerToken !== secret) return undefined;
+    if (!bearerToken || !checkBearerToken(bearerToken)) return undefined;
     return { token: bearerToken, clientId: "sw-kids-cycling-owner", scopes: [] };
   },
   { required: true }
