@@ -1,0 +1,25 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # Generates the route/layout types tsc relies on.
+      - run: npx next typegen
+      - run: npx tsc --noEmit
+      - run: npm run test:unit
+      # Lint is not gated yet: main already has one react-hooks/set-state-in-effect
+      # error. Remove continue-on-error once that is fixed.
+      - run: npm run lint
+        continue-on-error: true
