@@ -1,6 +1,6 @@
 import { NextRequest, after } from "next/server";
 import { createEvents, type DateArray, type EventAttributes } from "ics";
-import { createClient } from "@/lib/supabase/server";
+import { createPublicClient } from "@/lib/supabase/public";
 import { logFeedHit } from "@/lib/feed-hits";
 import { EVENT_DISCIPLINES } from "@/lib/mock-data";
 import type { DisciplineType, EventKind, EventRow, RegionType } from "@/lib/supabase/types";
@@ -182,7 +182,7 @@ export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const { disciplines, regions, clubs, kind } = parseFilters(searchParams);
 
-  const supabase = await createClient();
+  const supabase = createPublicClient();
 
   // Club only ever narrows training — a race isn't "this club's race" the
   // way a training session is "this club's session" (most races carry no

@@ -1,6 +1,6 @@
 import "server-only";
 import { createHash } from "node:crypto";
-import { createClient } from "@/lib/supabase/server";
+import { createPublicClient } from "@/lib/supabase/public";
 
 // Shared by /calendar.ics and /embed — every hit against either route is
 // anonymous by definition (neither is behind auth), so there's no user
@@ -53,7 +53,7 @@ export async function logFeedHit(
     const referer = feed === "embed" ? headerList.get("referer") : null;
     const fingerprint = fingerprintFrom(clientIp(headerList), userAgent ?? "");
 
-    const supabase = await createClient();
+    const supabase = createPublicClient();
     await supabase.from("calendar_feed_hits").insert({
       fingerprint,
       user_agent: userAgent,
