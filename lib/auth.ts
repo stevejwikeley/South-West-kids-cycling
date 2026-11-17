@@ -1,6 +1,5 @@
 import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
-import { retryWhileTokenFresh } from "@/lib/auth-rejection";
 import type { AttendeeRow, ProfileRow } from "@/lib/supabase/types";
 
 // Memoized per-request (React cache()) — the root layout and individual
@@ -14,7 +13,7 @@ export const getCurrentProfile = cache(async (): Promise<ProfileRow | null> => {
 
   if (!user) return null;
 
-  const { data } = await retryWhileTokenFresh(() => supabase.from("profiles").select("*").eq("id", user.id).single());
+  const { data } = await supabase.from("profiles").select("*").eq("id", user.id).single();
   return data as ProfileRow | null;
 });
 
@@ -34,6 +33,6 @@ export const getCurrentAttendee = cache(async (): Promise<AttendeeRow | null> =>
 
   if (!user) return null;
 
-  const { data } = await retryWhileTokenFresh(() => supabase.from("attendees").select("*").eq("id", user.id).single());
+  const { data } = await supabase.from("attendees").select("*").eq("id", user.id).single();
   return data as AttendeeRow | null;
 });

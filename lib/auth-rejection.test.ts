@@ -17,29 +17,40 @@ test("does not treat other errors as a refused session", () => {
   assert.equal(isAuthRejection({ code: "PGRST3", status: 400 }), false);
 });
 
-import { retryWhileTokenFresh } from "./auth-rejection.ts";
+import { fetchWithAuthRetry } from "./auth-rejection.ts";
 
-test("retries a refused token, then returns the first good answer", async () => {
-  const answers = [
-    { error: { code: "PGRST303" }, status: 401, data: null },
-    { error: { code: "PGRST303" }, status: 401, data: null },
-    { error: null, status: 200, data: "profile" },
-  ];
+const refusal = () => new Response(JSON.stringify({ code: "PGRST303", message: "JWT issued at future" }), { status: 401 });
+const ok = () => new Response("[]", { status: 200 });
+const REST = "https://x.supabase.co/rest/v1/profiles?select=*";
+
+test("retries 'JWT issued at future' on the Data API until it is accepted", async () => {
+  const answers = [refusal, refusal, ok];
   let calls = 0;
   const waits: number[] = [];
-  const result = await retryWhileTokenFresh(async () => answers[calls++], { sleep: async (ms) => { waits.push(ms); } });
-  assert.equal(result.data, "profile");
+  const res = await fetchWithAuthRetry(REST, { method: "GET" }, { doFetch: async () => answers[calls++](), sleep: async (ms) => { waits.push(ms); } });
+  assert.equal(res.status, 200);
   assert.equal(calls, 3);
-  assert.deepEqual(waits, [1500, 1500]);
+  assert.deepEqual(waits, [1000, 2000]);
 });
 
-test("gives up after the attempt limit and never retries other errors", async () => {
+test("gives up after the attempt limit", async () => {
   let calls = 0;
-  const refused = await retryWhileTokenFresh(async () => { calls++; return { error: { code: "PGRST303" }, status: 401 }; }, { attempts: 3, sleep: async () => {} });
-  assert.equal(refused.error?.code, "PGRST303");
+  const res = await fetchWithAuthRetry(REST, undefined, { attempts: 3, doFetch: async () => { calls++; return refusal(); }, sleep: async () => {} });
+  assert.equal(res.status, 401);
   assert.equal(calls, 3);
+});
+
+test("does not retry other 401s, other endpoints, or streamed bodies", async () => {
+  let calls = 0;
+  const expired = async () => { calls++; return new Response(JSON.stringify({ code: "PGRST303", message: "JWT expired" }), { status: 401 }); };
+  await fetchWithAuthRetry(REST, undefined, { doFetch: expired, sleep: async () => {} });
+  assert.equal(calls, 1); // an expired token will not heal by waiting
 
   calls = 0;
-  await retryWhileTokenFresh(async () => { calls++; return { error: { code: "PGRST116" }, status: 406 }; }, { sleep: async () => {} });
-  assert.equal(calls, 1); // "no such row" is a real answer
+  await fetchWithAuthRetry("https://x.supabase.co/auth/v1/user", undefined, { doFetch: async () => { calls++; return refusal(); }, sleep: async () => {} });
+  assert.equal(calls, 1);
+
+  calls = 0;
+  await fetchWithAuthRetry(REST, { method: "POST", body: new ReadableStream() }, { doFetch: async () => { calls++; return refusal(); }, sleep: async () => {} });
+  assert.equal(calls, 1);
 });
