@@ -54,6 +54,9 @@ export default async function EmbedPage({
 
   return (
     <div style={{ fontFamily: "var(--font-inter), sans-serif", padding: "16px 4px", maxWidth: 640 }}>
+      {/* The root layout paints the body with the site's paper colour; drop it
+          here so the iframe is transparent and takes on the host page's background. */}
+      <style>{"html,body{background:transparent !important}"}</style>
       {filtered.length === 0 && (
         <p style={{ color: "#6B6B66", fontSize: 13.5 }}>No upcoming events match right now — check back soon.</p>
       )}
